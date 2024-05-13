@@ -1,4 +1,4 @@
 import jax, jaxlib
 import numpyro
 
-from classes import  *
+from lightcurve import  *
