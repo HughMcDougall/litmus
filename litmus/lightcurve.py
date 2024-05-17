@@ -190,29 +190,6 @@ class lightcurve:
         out.normalized = False
         return(out)
 
-#=========================================================
-# LITMUS (Fit Handler)
-#=========================================================
-
-class litmus(object):
-    '''
-    Wrapper for lag recovery methods and configuration
-    TODO
-    - parameter search ranges
-    - add lightcurve
-    - 'fit_lag()'
-    - 'plot_lightcurves'
-    '''
-
-    def __init__(self):
-
-        return
-
-    def add_lightcurve(self):
-        return
-
-    def fit_lag(self, method = "hessian_scan"):
-        return
 
 
 #=========================================================

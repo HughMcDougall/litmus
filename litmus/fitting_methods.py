@@ -6,6 +6,8 @@ HM 24
 
 # ============================================
 # IMPORTS
+import sys
+
 import numpyro
 from numpyro import distributions as dist
 from tinygp import GaussianProcess
@@ -22,65 +24,193 @@ from models import _default_config
 
 from functools import partial
 
-_default_config |={
-    'Nboot': 1_000,
-    'NLagGrid': 512
-}
+from ICCF_working import *
 
 # ============================================
-#
 
-def ICCF(T,Y,E,bands, config_params = _default_config):
-    Nlags = config_params['NLagGrid']
-    Nboot = config_params['Nboot']
+# Base fitting procedure class
+class fitting_procedure(object):
+    '''
+    Generic class for lag fitting procedures. Contains parent methods for setting properties
+    '''
+    def __init__(self, out_stream = sys.stdout, err_stream = sys.stderr, debug = False, **fit_params):
 
-    # Un-sort Data
-    I1 = jnp.where(bands == 0)[0]
-    I2 = jnp.where(bands == 1)[0]
-    T1, T2 = T[I1], T[I2]
-    Y1, Y2 = Y[I1], Y[I2]
-    E1, E2 = E[I1], E[I2]
-    N1, N2 = len(I1), len(I2)
+        if self._default_params is None:
+            self._default_params = {"test_param": 0.0}
 
-    lags = jnp.linspace(config_params['lag'][0], config_params['lag'][1], Nlags)
+        self.debug = debug
+        self.out_stream = out_stream
+        self.err_stream = err_stream
 
-    E1_grid = np.tile(E1, (Nboot,1)) * np.random.randn(Nboot,N1)
-    E2_grid = np.tile(E2, (Nboot,1)) * np.random.randn(Nboot,N2)
+        self.is_ready = False
+        self.has_run = False
 
-    PHI, PHI_E = _ICCF_JAX(T1,T2,Y1,Y2,E1_grid,E2_grid,Nboot,lags)
+        self.fitting_params = {} | self._default_params
+        self.set_config( **(self._default_params | fit_params) )
 
-    return(lags, PHI, PHI_E)
-@partial(jax.jit, static_argnames=['Nboot'])
-def _ICCF_JAX(lag, T1, T2, Y1, Y2, E1, E2, Nboot, T_interp):
-    PHI_BOOT = jnp.zeros(Nboot)
-    for j in range(Nboot):
-        Y1_interp = jnp.interp(T_interp, T1, fp=Y1, left=0, right=0)
-        Y2_interp = jnp.interp(T_interp-lag, T1, fp=Y1, left=0, right=0)
-        PHI_BOOT[j] = jnp.corrcoef(x=Y1_interp, y = Y2_interp)
 
-    return (PHI_BOOT)
+        self.results = None
 
+        self.seed = np.random.randint(0, 2**16) if "seed" not in fit_params.keys() else fit_params['seed']
+
+
+    def fit(self, lc_1, lc_2, seed = None, stat_model = None):
+        '''
+        :param lc_1:
+        :param lc_2:
+        :param seed:
+        :return:
+        '''
+        seed = seed if isinstance(seed,int) else self.seed
+        print("This fitting method does not have method .fit()", file = self.err_stream)
+
+        return
+
+    def reset(self):
+        '''
+        Clears all memory and resets params to defaults
+        '''
+        self.set_config(**self._default_params)
+
+        self.has_run, self.is_ready = False, False
+        self.results = None
+
+        return
+
+    def get_samples(self, N=None):
+        print("This fitting method does not have method .get_samples()", file=self.err_stream)
+
+    def set_config(self, **fit_params):
+        '''
+        Configure fitting parameters for fitting_method() object
+        Accepts any parameters present with a name in fitting_method.fitting_params
+        Unlisted parameters will be ignored
+        '''
+
+        if self.debug: print("Doing config with keys", fit_params.keys())
+
+        badkeys = [key for key in fit_params.keys() if key not in self._default_params.keys()]
+
+        for key, val in zip(fit_params.keys(), fit_params.values()):
+            if key in badkeys: continue
+
+            # If something's changed, flag as having not run
+            if self.has_run and val != self.__getattr__(key): self.has_run = False
+
+            self.__setattr__(key, val)
+            self.fitting_params |= {key: val}
+            if self.debug: print("\t set attr", key, file=self.out_stream)
+
+        if len(badkeys)>0:
+            print("Tried to configure bad keys:", end="\t", file=self.err_stream)
+            for key in badkeys: print(key, end=', ', file=self.err_stream)
+
+        return
 
 
 # ============================================
-# Testing
-if __name__== "__main__":
-    import matplotlib.pyplot as plt
+# ICCF fitting procedure
 
-    print(":)")
-    T1 = np.linspace(0,4*np.pi,128)
-    T2 = np.linspace(0, 4 * np.pi, 128)
-    Y1 = np.sin(T1) * np.sqrt(2)
-    E1 = (np.random.poisson(100,size=len(T1)) / 100) * 1
-    E2 = (np.random.poisson(100,size=len(T2)) / 100) * 1
-    Y1+=np.random.randn(len(E1))*E1
-    Y2 = np.sin(T2 - 0.25) + 5 + np.random.randn(len(E2))*E2
+class ICCF(fitting_procedure):
+    def __init__(self, out_stream = sys.stdout, err_stream = sys.stderr, debug=False, **fit_params):
 
-    bands = np.concatenate([np.zeros_like(T1),np.ones_like(T2)]).astype(int)
-    T = np.concatenate([T1, T2])
-    Y = np.concatenate([Y1, Y2])
-    E = np.concatenate([E1, E2])
+        self._default_params = {
+                    'Nboot': 512,
+                    'Nterp': 2014,
+                    'lag_range': _default_config['lag'],
+                  }
 
-    #lags, PHI, PHI_E = ICCF(T, Y, E, bands, config_params=_default_config)
+        super().__init__(out_stream=out_stream, err_stream=err_stream, debug=debug, **fit_params)
 
-    _ICCF_JAX(0,T1,T2,Y1,Y2,E1,E2,100,jnp.linspace(-10,10,512))
+        self.results = {'samples': np.zeros(self.Nboot),
+                        'correl_curve': np.zeros(self.Nterp),
+                        'lag_mean': 0.0,
+                        'lag_err': 0.0
+                        }
+
+    def fit(self, lc_1, lc_2, seed = None, stat_model = None):
+        # Unpack lightcurve
+        X1, Y1, E1 = lc_1.T, lc_1.Y, lc_1.E
+        X2, Y2, E2 = lc_2.T, lc_2.Y, lc_2.E
+
+        if seed is None:
+            seed = self.seed
+
+        # Do bootstrap fitting
+        jax_samples = correl_func_boot_jax_wrapper_nomap(self.lags, X1, Y1, X2, Y2, E1, E2, Nterp=self.Nterp, Nboot=self.Nboot)
+
+        self.results['samples'] = jax_samples
+        self.results['lag_mean'] =  jax_samples.mean()
+        self.results['lag_err'] = jax_samples.std()
+        self.has_run = True
+
+    def get_samples(self, N=None):
+        if N is None:
+            return(self.results['samples'])
+        else:
+            if N>self.Nboot:
+                print("Warning, tried to get %i sub-samples from %i boot-strap itterations in ICCF" %(N, self.Nboot), file=self.err_stream)
+            return(np.random.choice(self.results['samples'], N, replace=True))
+
+    def set_config(self, **fit_params):
+        super().set_config(**fit_params)
+        self.lags = np.linspace(self.lag_range[0], self.lag_range[1], self.Nterp)
+
+# ============================================
+# Random Prior Sampling
+
+class prior_sampling(fitting_procedure):
+    '''
+    Randomly samples from the prior and weights with importance sampling
+    '''
+
+    def __init__(self, out_stream = sys.stdout, err_stream = sys.stderr, debug=False, **fit_params):
+
+        self._default_params = {
+                    'Nsamples': 4096
+                  }
+
+        super().__init__(out_stream=out_stream, err_stream=err_stream, debug=debug, **fit_params)
+
+        self.results = {'samples': np.zeros(self.Nsamples),
+                        'weights': np.zeros(self.Nsamples)}
+
+    def get_samples(self, N=None):
+        if N is None:
+            return(self.results['samples'])
+        else:
+            if N>self.Nsamples:
+                print("Warning, tried to get %i sub-samples from %i boot-strap itterations in ICCF" %(N, self.Nboot), file=self.err_stream)
+            return(np.random.choice(self.results['samples'], N, replace=True))
+
+
+if __name__=="__main__":
+    #::::::::::::::::::::
+    # Mock Data
+    print("Making Mock Data")
+    f = lambda x: np.exp(-((x - 8) / 2) ** 2 / 2)
+
+    X1 = np.linspace(0, 2 * np.pi * 3, 64)
+    X2 = np.copy(X1)[::2]
+    X1 += np.random.randn(len(X1)) * X1.ptp() / (len(X1) - 1) * 0.25
+    X2 += np.random.randn(len(X2)) * X2.ptp() / (len(X2) - 1) * 0.25
+
+    E1, E2 = [np.random.poisson(10, size=len(X)) * 0.005 for i, X in enumerate([X1, X2])]
+    E2 *= 2
+
+    lag_true = np.pi
+    Y1 = f(X1) + np.random.randn(len(E1)) * E1
+    Y2 = f(X2 + lag_true) + np.random.randn(len(E2)) * E2
+
+    #::::::::::::::::::::
+    # Lightcurve object
+    from lightcurve import lightcurve
+    data_1, data_2 = lightcurve(X1, Y1, E1), lightcurve(X2, Y2, E2)
+
+
+    #::::::::::::::::::::
+    # Make Litmus Object
+    test_ICCF = ICCF(Nboot = 512, Nterp = 1024)
+    test_ICCF.fit(data_1, data_2)
+    samples = test_ICCF.get_samples(1024)
+    print(samples.mean(), samples.std())
