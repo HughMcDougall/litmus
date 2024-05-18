@@ -19,9 +19,10 @@ import numpy as np
 import jax.numpy as jnp
 from lightcurve import lightcurve
 
-#=========================================================
+
+# =========================================================
 # LITMUS (Fit Handler)
-#=========================================================
+# =========================================================
 
 class litmus(object):
     '''
@@ -33,14 +34,14 @@ class litmus(object):
     - 'plot_lightcurves'
     '''
 
-    def __init__(self, model = None, fitproc = None):
+    def __init__(self, model=None, fitproc=None):
         self.model = model
         self.fitproc = fitproc
 
         self.lightcurves = {}
 
         self.main_stream = sys.stdout
-        self.err_stream  = sys.stderr
+        self.err_stream = sys.stderr
 
         return
 
@@ -82,11 +83,10 @@ if __name__ == "__main__":
     # Lightcurve object
     data_1, data_2 = lightcurve(X1, Y1, E1), lightcurve(X2, Y2, E2)
 
-
     #::::::::::::::::::::
     # Make Litmus Object
-    test_litmus = litmus(model = None,
-                         fitproc= fitprocs.ICCF)
+    test_litmus = litmus(model=None,
+                         fitproc=fitprocs.ICCF)
 
     test_litmus.add_lightcurve(data_1)
     test_litmus.add_lightcurve(data_2)
@@ -95,11 +95,7 @@ if __name__ == "__main__":
     test_litmus.fit()
     print("Fitting complete")
 
-    results = test_litmus.get_samples(N = 1_000)["lag"]
+    results = test_litmus.get_samples(N=1_000)["lag"]
 
-    print("Recovered lag is %.2f +/- %.2f, consistent with true of lag of %.2f at %.2f sigma" %(results.mean(), results.std(), lag_true, abs(lag_true-results.mean())/results.std()))
-
-
-
-
-
+    print("Recovered lag is %.2f +/- %.2f, consistent with true of lag of %.2f at %.2f sigma" % (
+    results.mean(), results.std(), lag_true, abs(lag_true - results.mean()) / results.std()))

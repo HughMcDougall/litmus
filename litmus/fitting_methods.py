@@ -26,6 +26,7 @@ from functools import partial
 
 from ICCF_working import *
 
+
 # ============================================
 
 # Base fitting procedure class
@@ -33,10 +34,11 @@ class fitting_procedure(object):
     '''
     Generic class for lag fitting procedures. Contains parent methods for setting properties
     '''
-    def __init__(self, out_stream = sys.stdout, err_stream = sys.stderr, debug = False, **fit_params):
 
-        if self._default_params is None:
-            self._default_params = {"test_param": 0.0}
+    def __init__(self, out_stream=sys.stdout, err_stream=sys.stderr, debug=False, **fit_params):
+
+        if not hasattr(self, "_default_params"):
+            self._default_params = {}
 
         self.debug = debug
         self.out_stream = out_stream
@@ -46,23 +48,21 @@ class fitting_procedure(object):
         self.has_run = False
 
         self.fitting_params = {} | self._default_params
-        self.set_config( **(self._default_params | fit_params) )
-
+        self.set_config(**(self._default_params | fit_params))
 
         self.results = None
 
-        self.seed = np.random.randint(0, 2**16) if "seed" not in fit_params.keys() else fit_params['seed']
+        self.seed = np.random.randint(0, 2 ** 16) if "seed" not in fit_params.keys() else fit_params['seed']
 
-
-    def fit(self, lc_1, lc_2, seed = None, stat_model = None):
+    def fit(self, lc_1, lc_2, seed=None, stat_model=None):
         '''
         :param lc_1:
         :param lc_2:
         :param seed:
         :return:
         '''
-        seed = seed if isinstance(seed,int) else self.seed
-        print("This fitting method does not have method .fit()", file = self.err_stream)
+        seed = seed if isinstance(seed, int) else self.seed
+        print("This fitting method does not have method .fit()", file=self.err_stream)
 
         return
 
@@ -101,7 +101,7 @@ class fitting_procedure(object):
             self.fitting_params |= {key: val}
             if self.debug: print("\t set attr", key, file=self.out_stream)
 
-        if len(badkeys)>0:
+        if len(badkeys) > 0:
             print("Tried to configure bad keys:", end="\t", file=self.err_stream)
             for key in badkeys: print(key, end=', ', file=self.err_stream)
 
@@ -112,13 +112,13 @@ class fitting_procedure(object):
 # ICCF fitting procedure
 
 class ICCF(fitting_procedure):
-    def __init__(self, out_stream = sys.stdout, err_stream = sys.stderr, debug=False, **fit_params):
+    def __init__(self, out_stream=sys.stdout, err_stream=sys.stderr, debug=False, **fit_params):
 
         self._default_params = {
-                    'Nboot': 512,
-                    'Nterp': 2014,
-                    'lag_range': _default_config['lag'],
-                  }
+            'Nboot': 512,
+            'Nterp': 2014,
+            'lag_range': _default_config['lag'],
+        }
 
         super().__init__(out_stream=out_stream, err_stream=err_stream, debug=debug, **fit_params)
 
@@ -128,7 +128,7 @@ class ICCF(fitting_procedure):
                         'lag_err': 0.0
                         }
 
-    def fit(self, lc_1, lc_2, seed = None, stat_model = None):
+    def fit(self, lc_1, lc_2, seed=None, stat_model=None):
         # Unpack lightcurve
         X1, Y1, E1 = lc_1.T, lc_1.Y, lc_1.E
         X2, Y2, E2 = lc_2.T, lc_2.Y, lc_2.E
@@ -137,24 +137,27 @@ class ICCF(fitting_procedure):
             seed = self.seed
 
         # Do bootstrap fitting
-        jax_samples = correl_func_boot_jax_wrapper_nomap(self.lags, X1, Y1, X2, Y2, E1, E2, Nterp=self.Nterp, Nboot=self.Nboot)
+        jax_samples = correl_func_boot_jax_wrapper_nomap(self.lags, X1, Y1, X2, Y2, E1, E2, Nterp=self.Nterp,
+                                                         Nboot=self.Nboot)
 
         self.results['samples'] = jax_samples
-        self.results['lag_mean'] =  jax_samples.mean()
+        self.results['lag_mean'] = jax_samples.mean()
         self.results['lag_err'] = jax_samples.std()
         self.has_run = True
 
     def get_samples(self, N=None):
         if N is None:
-            return(self.results['samples'])
+            return (self.results['samples'])
         else:
-            if N>self.Nboot:
-                print("Warning, tried to get %i sub-samples from %i boot-strap itterations in ICCF" %(N, self.Nboot), file=self.err_stream)
-            return(np.random.choice(self.results['samples'], N, replace=True))
+            if N > self.Nboot:
+                print("Warning, tried to get %i sub-samples from %i boot-strap itterations in ICCF" % (N, self.Nboot),
+                      file=self.err_stream)
+            return (np.random.choice(self.results['samples'], N, replace=True))
 
     def set_config(self, **fit_params):
         super().set_config(**fit_params)
         self.lags = np.linspace(self.lag_range[0], self.lag_range[1], self.Nterp)
+
 
 # ============================================
 # Random Prior Sampling
@@ -162,13 +165,14 @@ class ICCF(fitting_procedure):
 class prior_sampling(fitting_procedure):
     '''
     Randomly samples from the prior and weights with importance sampling
+    todo - change the way lag_range is generated to call a stats model
     '''
 
-    def __init__(self, out_stream = sys.stdout, err_stream = sys.stderr, debug=False, **fit_params):
+    def __init__(self, out_stream=sys.stdout, err_stream=sys.stderr, debug=False, **fit_params):
 
         self._default_params = {
-                    'Nsamples': 4096
-                  }
+            'Nsamples': 4096
+        }
 
         super().__init__(out_stream=out_stream, err_stream=err_stream, debug=debug, **fit_params)
 
@@ -177,40 +181,20 @@ class prior_sampling(fitting_procedure):
 
     def get_samples(self, N=None):
         if N is None:
-            return(self.results['samples'])
+            return (self.results['samples'])
         else:
-            if N>self.Nsamples:
-                print("Warning, tried to get %i sub-samples from %i boot-strap itterations in ICCF" %(N, self.Nboot), file=self.err_stream)
-            return(np.random.choice(self.results['samples'], N, replace=True))
+            if N > self.Nsamples:
+                print("Warning, tried to get %i sub-samples from %i boot-strap itterations in ICCF" % (N, self.Nboot),
+                      file=self.err_stream)
+            return (np.random.choice(self.results['samples'], N, replace=True))
 
 
-if __name__=="__main__":
-    #::::::::::::::::::::
-    # Mock Data
-    print("Making Mock Data")
-    f = lambda x: np.exp(-((x - 8) / 2) ** 2 / 2)
-
-    X1 = np.linspace(0, 2 * np.pi * 3, 64)
-    X2 = np.copy(X1)[::2]
-    X1 += np.random.randn(len(X1)) * X1.ptp() / (len(X1) - 1) * 0.25
-    X2 += np.random.randn(len(X2)) * X2.ptp() / (len(X2) - 1) * 0.25
-
-    E1, E2 = [np.random.poisson(10, size=len(X)) * 0.005 for i, X in enumerate([X1, X2])]
-    E2 *= 2
-
-    lag_true = np.pi
-    Y1 = f(X1) + np.random.randn(len(E1)) * E1
-    Y2 = f(X2 + lag_true) + np.random.randn(len(E2)) * E2
-
-    #::::::::::::::::::::
-    # Lightcurve object
-    from lightcurve import lightcurve
-    data_1, data_2 = lightcurve(X1, Y1, E1), lightcurve(X2, Y2, E2)
-
+if __name__ == "__main__":
+    from mocks import data_1, data_2
 
     #::::::::::::::::::::
     # Make Litmus Object
-    test_ICCF = ICCF(Nboot = 512, Nterp = 1024)
+    test_ICCF = ICCF(Nboot=512, Nterp=1024)
     test_ICCF.fit(data_1, data_2)
     samples = test_ICCF.get_samples(1024)
     print(samples.mean(), samples.std())

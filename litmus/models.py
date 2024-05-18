@@ -6,6 +6,9 @@ HM 24
 
 # ============================================
 # IMPORTS
+import sys
+
+import jax.scipy.optimize
 import numpyro
 from numpyro.distributions import MixtureGeneral
 from numpyro import distributions as dist
@@ -16,112 +19,170 @@ from jax.random import PRNGKey
 import jax.numpy as jnp
 import tinygp
 from gp_working import *
+
 # ============================================
 #
 
 # TODO - update these
 _default_config = {
-    'logtau':   (0, 10),
-    'logamp':   (0, 10),
-    'rel_amp':  (0,10),
-    'mean':     (-50,50),
+    'logtau': (0, 10),
+    'logamp': (0, 10),
+    'rel_amp': (0, 10),
+    'mean': (-50, 50),
     'rel_mean': 1.0,
-    'lag':      (0,1000),
+    'lag': (0, 1000),
 
-    'outlier_spread':   10.0,
-    'outlier_frac':     0.25,
+    'outlier_spread': 10.0,
+    'outlier_frac': 0.25,
 }
+
+
 # ============================================
-# # NUMPYRO FUNCTIONS
+# Base Class
 
-
-# -----------------------
-
-def GPjitter(T,Y,E,bands,
-              basekernel = tinygp.kernels.quasisep.Exp,
-              config_params = _default_config):
+class stats_model(object):
     '''
-    :param T:
-    :param Y:
-    :param E:
-    :param bands:
-    :param basekernel:
-    :param config_params:
-    :return:
+    Base class for bayesian generative models. Includes a series of utilities for evaluating and adjusting as required
     '''
 
-    # Sample distributions
-    logtau   = numpyro.sample('logtau', dist.Uniform(config_params['logtau'][0], config_params['logtau'][1]))
-    logamp   = numpyro.sample('logamp', dist.Uniform(config_params['logamp'][0], config_params['logamp'][1]))
+    def __init__(self, prior_ranges=None):
+        if not hasattr(self, "_default_priors"):
+            self._default_prior_ranges = {'lag': _default_config['lag']}
+        self.prior_ranges = {} | self._default_prior_ranges  # Create empty priors
+        self.prior_volume = 1.0
 
-    rel_amp  = numpyro.sample('rel_amp', dist.Uniform(0.0, config_params['rel_amp']))
-    mean     = numpyro.sample('mean', dist.Uniform(config_params['mean'][0], config_params['mean'][1]))
-    rel_mean = numpyro.sample('rel_mean', dist.Uniform(config_params['rel_mean'][0], config_params['rel_mean'][1]))
-    jitter   = numpyro.sample('jitter', dist.Uniform(0.0, config_params['jitter']))
+        # Update with args
+        self.set_priors(self._default_prior_ranges | prior_ranges) if prior_ranges is not None else self.set_priors(
+            self._default_prior_ranges)
 
-    lag = numpyro.sample('lag', dist.Uniform(config_params['lag'][0], config_params['lag'][1]))
+        self._log_likelihood_vector = lambda data, params: self._log_likelihood(data=data, params=params)
+        self._log_likelihood_vector = jax.vmap(self._log_likelihood_vector,
+                                               in_axes=(None,
+                                                        {key: 0 for key in self._default_prior_ranges.keys()}
+                                                        )
+                                               )
 
-    # Conversions to gp-friendly form
-    amp, tau = jnp.exp(logamp), jnp.exp(logtau)
+        self._log_likelihood_vector = jax.jit(self._log_likelihood_vector)
+        self._log_likelihood_single = jax.jit(self._log_likelihood)
+        self._log_likelihood_single.__doc__ = "Jitted single eval likelihood"
+        self._log_likelihood_vector.__doc__ = "Jitted array eval likelihood"
 
-    diag = jnp.diag(jnp.square(E + bands * jitter * (amp * rel_amp)))
+        return
 
-    delays = jnp.array([0, lag])
-    amps   = jnp.array([amp,  rel_amp*amp])
-    means  = jnp.array([mean, mean + rel_mean])
+    def set_priors(self, prior_ranges):
+        '''
+        Sets the stats model prior ranges for uniform priors. Does some sanity checking to avoid negative priors
+        :param prior_ranges:
+        :return: 
+        '''
 
-    # Build and sample GP
-    gp = build_gp(T-delays[bands], Y, diag, bands, tau, amps, means, basekernel=basekernel)
-    numpyro.sample("Y", gp.numpyro_dist(), obs = Y)
+        prior_volume = 1.0
 
-# -----------------------
-GPsimple = handlers.substitute(GPjitter, {'jitter':0.0})
+        badkeys = [key for key in prior_ranges.keys() if key not in self._default_prior_ranges.keys()]
 
-# -----------------------
+        for key, val in zip(prior_ranges.keys(), prior_ranges.values()):
+            if key in badkeys: continue
 
-def GPoutlier(T,Y,E,bands,
-              basekernel = tinygp.kernels.quasisep.Exp,
-              config_params = _default_config):
-    '''
-    :param T:
-    :param Y:
-    :param E:
-    :param bands:
-    :param basekernel:
-    :param config_params:
-    :return:
-    '''
+            assert (len(val) == 2), "Bad input shape in set_priors for key %s" % key  # todo - make this go to std.err
+            a, b = float(min(val)), float(max(val))
+            self.prior_ranges[key] = [a, b]
+            prior_volume *= b - a
 
-    # Sample distributions
-    logtau   = numpyro.sample('logtau', dist.Uniform(config_params['logtau'][0], config_params['logtau'][1]))
-    logamp   = numpyro.sample('logamp', dist.Uniform(config_params['logamp'][0], config_params['logamp'][1]))
+            print(key, a, b, prior_volume)
 
-    rel_amp  = numpyro.sample('rel_amp', dist.Uniform(0.0, config_params['rel_amp']))
-    mean     = numpyro.sample('mean', dist.Uniform(config_params['mean'][0], config_params['mean'][1]))
-    rel_mean = numpyro.sample('rel_mean', dist.Uniform(config_params['rel_mean'][0], config_params['rel_mean'][1]))
+        self.prior_volume = prior_volume
 
-    lag = numpyro.sample('lag', dist.Uniform(config_params['lag'][0], config_params['lag'][1]))
+        return
 
-    outlier_spread = numpyro.sample('outlier_spread', dist.Uniform(0.0, config_params['outlier_spread']), sample_shape=(2,))
-    Q = numpyro.sample('outlifer_frac', dist.Uniform(0.0, config_params['outlier_frac']))
+    # --------------------------------
+    def model_function(self, data):
+        '''
+        A NumPyro callable function
+        '''
+        lag = numpyro.sample('lag', dist.Uniform(self.prior_ranges['lag'][0], self.prior_ranges['lag'][1]))
 
-    # Conversions to gp-friendly form
-    amp, tau = jnp.exp(logamp), jnp.exp(logtau)
-    diag = jnp.diag(jnp.square(E))
+        numpyro.sample('test_sample', dist.Normal(lag, 100), obs=data[0])
 
-    delays = jnp.array([0, lag])
-    amps   = jnp.array([amp,  rel_amp*amp])
-    means  = jnp.array([mean, mean + rel_mean])
+    # --------------------------------
 
-    # Build and sample GP
-    gp_fg = build_gp(T-delays[bands], Y, diag, bands, tau, amps, means, basekernel=basekernel)
-    gp_bg = build_gp(T - delays[bands], Y, diag, bands, tau=0.0, amps = outlier_spread, means = means, basekernel=basekernel)
+    def log_likelihood(self, data, params):
+        '''
+        Gives the log likelihood of a set of sample params
+        '''
+        print(params.keys(), self._default_prior_ranges.keys())
+        assert params.keys() == self._default_prior_ranges.keys(), "Tried to call log_likelihood with bad parameter names"
 
-    mix_dist = MixtureGeneral(dist.Categorical(1.0-Q,Q),
-                          [
-                              gp_fg.numpyro_dist(),
-                              gp_bg.numpyro_dist()
-                          ])
+        if len(list(params.keys())[0]) == 1:
+            out = self._log_likelihood_single(data, params)
+        else:
+            out = self._log_likelihood_vector(data, params)
+
+        return out
+
+    def _log_likelihood(self, data, params):
+        '''
+        Raw, un-jitted and un-vmapped log likelihood evaluation
+        '''
+        out = numpyro.infer.util.log_density(self.model_function, (), {'data': data}, params)[0]
+        return (out)
+
+    def prior_sample(self, data=None, num_samples=1):
+        '''
+        Blind sampling from the prior without conditioning
+        '''
+
+        pred = numpyro.infer.Predictive(self.model_function,
+                                        num_samples=num_samples,
+                                        return_sites=list(self._default_prior_ranges.keys())
+                                        )
+
+        params = pred(rng_key=jax.random.PRNGKey(np.random.randint(0, sys.maxsize // 1024)), data=data)
+        return (params)
+
+    def _scan(self, fixed_params, init_params=None, data=None, tol=1E-3):
+        '''
+        :param fixed_params: dict
+        :param init_params: dict
+        :param data: model arguments
+        :return:
+        '''
+
+        # If init_params is empty or incomplete, fill in with values drawn from prior
+        if init_params is None: init_params = {}
+        if (fixed_params | init_params).keys() != self._default_prior_ranges.keys():
+            prior_params = self.prior_sample(data=data, num_samples=1)
+            prior_params |= init_params
+            init_params = {key: prior_params[key] for key in prior_params.keys() if key not in fixed_params.keys()}
 
 
-    numpyro.sample("Y", mix_dist, obs = Y)
+        # array-like function for use with optimize
+        x0 = jnp.array(init_params.values())
+        def f(x):
+            free_params = {key:val for key, val in zip(init_params.keys(),x)}
+            params = fixed_params | free_params
+            out = -1.0 * self._log_likelihood(data=data, params=params)
+            return (out)
+
+        res = jax.scipy.optimize.minimize(fun=f, x0=init_params, tol=tol, options={'maxiter'}, method='BFGS')
+
+        return (res.x)
+
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+
+    test_statmodel = stats_model()
+    test_statmodel.set_priors({
+        'lag': [0, 500],
+        'alpha': [0, 1]
+    })
+
+    test_data = jnp.array([100., 200.])
+    test_params = test_statmodel.prior_sample(num_samples=1_000, data=test_data)
+    log_likes = test_statmodel.log_likelihood(data=test_data, params=test_params)
+
+    opt_lag = test_statmodel._scan(fixed_params={}, data=[1])
+    print(opt_lag)
+    # ------------------------------
+    plt.scatter(test_params['lag'], np.exp(log_likes) * test_statmodel.prior_volume)
+    plt.show()
