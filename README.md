@@ -1,6 +1,6 @@
 # LITMUS
 
-*L*ag *I*nference *T*hrough *T*he *M*ixed *U*sed of *S*amplers
+**L**ag **I**nference **T**hrough the **M**ixed **U**se of **S**amplers
 
 LITMUS is an in-progress program that uses modern statistical techniques, like nested sampling and stochastic variational inference, in combination with cutting edge programming tools like the just-in-time compilation framework `jax` and its bayesian modelling package `NumPyro`, to perform the messy task of lag recovery in AGN reverberation mapping.
 
