@@ -5,6 +5,8 @@ Handy internal utilities for brevity and convenience
 
 # ============================================
 # IMPORTS
+import sys
+
 import numpy as np
 
 
@@ -73,6 +75,9 @@ def dict_pack(X: np.array, keys: [str]) -> np.array:
     return (out)
 
 
+# ===================================
+def randint():
+    return(np.random.randint(0,sys.maxsize//1024))
 # ===================================
 # Testing
 if __name__ == "__main__":

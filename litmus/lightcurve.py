@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 # LIGHT CURVE
 # ============================================
 
-class lightcurve:
+class lightcurve(dict):
     '''
     A wrapper class for lightcurves. Construct /w array-like inputs for time, signal and error (optional)
     like:   lightcurve(T,Y,E)
@@ -189,6 +189,25 @@ class lightcurve:
         out._norm_mean = 0.0
         out.normalized = False
         return (out)
+
+    def trim(self, Tmin=None, Tmax=None):
+        '''
+        Returns a copy sub-sampled to only datapoints in the domain T in [Tmin,Tmax]
+        '''
+        if Tmin is None: Tmin = self.T.min()
+        if Tmax is None: Tmax = self.T.max()
+        I = np.where((self.T > Tmin) * (self.T < Tmax))[0]
+
+        return (lightcurve(T=self.T[I],
+                           Y=self.Y[I],
+                           E=self.E[I]
+                           ))
+
+    def __getattr__(self, item):
+        if item == "N":
+            return(self.T.size)
+        else:
+            super().__getattribute__(item)
 
 
 # =========================================================

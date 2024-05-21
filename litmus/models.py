@@ -9,6 +9,7 @@ HM 24
 import sys
 
 import jax.scipy.optimize
+import numpy as np
 import numpyro
 from numpyro.distributions import MixtureGeneral
 from numpyro import distributions as dist
@@ -34,7 +35,7 @@ _default_config = {
     'logamp': (0, 10),
     'rel_amp': (0, 10),
     'mean': (-50, 50),
-    'rel_mean': 1.0,
+    'rel_mean': (0.0, 1.0),
     'lag': (0, 1000),
 
     'outlier_spread': 10.0,
@@ -51,10 +52,10 @@ class stats_model(object):
     as well as various
 
     Todo:
-    - Change prior volume calc to be a function call for flexibility
-    - Add kwarg support to model_function and model calls to be more flexible / allow for different prior types
-    - Fix the _scan method to use jaxopt and be jitted / vmapped
-    - Add Hessian & Grad functions
+        - Change prior volume calc to be a function call for flexibility
+        - Add kwarg support to model_function and model calls to be more flexible / allow for different prior types
+        - Fix the _scan method to use jaxopt and be jitted / vmapped
+        - Add Hessian & Grad functions
     '''
 
     def __init__(self, prior_ranges=None):
@@ -98,7 +99,7 @@ class stats_model(object):
         for key, val in zip(prior_ranges.keys(), prior_ranges.values()):
             if key in badkeys: continue
 
-            assert (len(val) == 2), "Bad input shape in set_priors for key %s" % key  # todo - make this go to std.err
+            assert (isiter(val)), "Bad input shape in set_priors for key %s" % key  # todo - make this go to std.err
             a, b = float(min(val)), float(max(val))
             self.prior_ranges[key] = [a, b]
             prior_volume *= b - a
@@ -114,9 +115,8 @@ class stats_model(object):
         '''
         A NumPyro callable function
         '''
-        lag = numpyro.sample('lag', dist.Uniform(self.prior_ranges['lag'][0], self.prior_ranges['lag'][1]))
 
-        numpyro.sample('test_sample', dist.Normal(lag, 100), obs=data[0])
+        lag = numpyro.sample('lag', dist.Uniform(self.prior_ranges['lag'][0], self.prior_ranges['lag'][1]))
 
     # --------------------------------
     # Un-Jitted Functions
@@ -133,13 +133,13 @@ class stats_model(object):
         Un-jitted gradient evaluation
         '''
 
-    def _hessian(self):
+    def _grad(self, data, params):
         '''
         Un-jitted hessian evaluation
         '''
-        return()
+        return ()
 
-    def _scan(self, fixed_params, init_params=None, data=None, tol=1E-3):
+    def _scan(self, fixed_params, init_params=None, data=None, tol=1E-3, **kwargs):
         '''
         un-jitted optimizer over fixed and free vars
         :param fixed_params: dict
@@ -201,8 +201,9 @@ class stats_model(object):
                                         return_sites=list(self._default_prior_ranges.keys())
                                         )
 
-        params = pred(rng_key=jax.random.PRNGKey(np.random.randint(0, sys.maxsize // 1024)), data=data)
+        params = pred(rng_key=jax.random.PRNGKey(randint()), data=data)
         return (params)
+
 
 # ============================================
 # Custom statmodel example
@@ -221,13 +222,91 @@ class dummy_statmodel(stats_model):
             'test_param': [0.0, 1.0]
         }
         super().__init__(prior_ranges=prior_ranges)
+        self.lag_peak = 250.0
+        self.amp_peak = 0.5
 
-    def model_function(self, data):
+    def model_function(self, data, **kwargs):
         lag = numpyro.sample('lag', dist.Uniform(self.prior_ranges['lag'][0], self.prior_ranges['lag'][1]))
         test_param = numpyro.sample('test_param', dist.Uniform(self.prior_ranges['test_param'][0],
                                                                self.prior_ranges['test_param'][1]))
-        numpyro.sample('test_sample', dist.Normal(lag, 100), obs=data[0])
-        numpyro.sample('test_sample_2', dist.Normal(test_param, 1.0), obs=data[1])
+
+        numpyro.sample('test_sample', dist.Normal(lag, 100), obs=self.lag_peak)
+        numpyro.sample('test_sample_2', dist.Normal(test_param, 1.0), obs=self.amp_peak)
+
+
+# ============================================
+# Custom statmodel example
+class GP_simple(stats_model):
+    '''
+    An example of how to construct your own stats_model in the simplest form.
+    Requirements are to:
+        1. Set a default prior range for all parameters used in model_function
+        2. Define a numpyro generative model model_function
+    You can add / adjust methods as required, but these are the only main steps
+    '''
+
+    def __init__(self, prior_ranges=None, **kwargs):
+        self._default_prior_ranges = {
+            'lag': _default_config['lag'],
+            'logtau': _default_config['logtau'],
+            'logamp': _default_config['logamp'],
+            'rel_amp': _default_config['rel_amp'],
+            'mean': _default_config['mean'],
+            'rel_mean': _default_config['rel_mean'],
+        }
+        super().__init__(prior_ranges=prior_ranges)
+
+        self.basekernel = kwargs['basekernel'] if 'basekernel' in kwargs.keys() else tinygp.kernels.quasisep.Exp
+
+    def model_function(self, data):
+        T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
+
+        '''
+        bands = jnp.concatenate([
+            jnp.zeros(data[0].N), jnp.ones(data[1].N)
+        ])
+
+        T, Y, E = (jnp.concatenate([data[0][key], data[1][key]]) for key in ['T', 'Y', 'E'])
+        '''
+
+        '''
+        T = jnp.arange(50)
+        Y = jnp.sin(T)
+        E = jnp.ones(len(T))
+        bands = jnp.concatenate([jnp.zeros(25),jnp.ones(25)])
+        '''
+
+        # Sample distributions
+        lag = numpyro.sample('lag', dist.Uniform(self.prior_ranges['lag'][0], self.prior_ranges['lag'][1]))
+
+        logtau = numpyro.sample('logtau', dist.Uniform(self.prior_ranges['logtau'][0], self.prior_ranges['logtau'][1]))
+        logamp = numpyro.sample('logamp', dist.Uniform(self.prior_ranges['logamp'][0], self.prior_ranges['logamp'][1]))
+
+        rel_amp = numpyro.sample('rel_amp', dist.Uniform(0.0, self.prior_ranges['rel_amp'][1]))
+        mean = numpyro.sample('mean', dist.Uniform(self.prior_ranges['mean'][0], self.prior_ranges['mean'][1]))
+        rel_mean = numpyro.sample('rel_mean',
+                                  dist.Uniform(self.prior_ranges['rel_mean'][0], self.prior_ranges['rel_mean'][1]))
+
+        # Conversions to gp-friendly form
+        amp, tau = jnp.exp(logamp), jnp.exp(logtau)
+
+        diag = jnp.square(E)
+
+        delays = jnp.array([0, lag])
+        amps = jnp.array([amp, rel_amp * amp])
+        means = jnp.array([mean, mean + rel_mean])
+
+        T_delayed = T - delays[bands]
+        I = T_delayed.argsort()
+
+        # Build and sample GP
+
+        gp = build_gp(T_delayed[I], Y[I], diag[I], bands[I], tau, amps, means, basekernel=self.basekernel)
+        numpyro.sample("Y", gp.numpyro_dist(), obs=Y[I])
+
+
+    # -----------------------
+
 
 # ============================================
 # ============================================
@@ -251,6 +330,7 @@ if __name__ == '__main__':
     # Try a scan
     opt_lag = test_statmodel._scan(fixed_params={}, data=test_data, init_params={'lag': 300.0})
     print("best lag is", opt_lag)
+
     # ------------------------------
     fig, (a1, a2) = plt.subplots(2, 1, sharex=True)
     a1.scatter(test_params['lag'], np.exp(log_likes))

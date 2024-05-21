@@ -21,11 +21,14 @@ import jax.numpy as jnp
 from tinygp import GaussianProcess
 import tinygp
 
+from _utils import *
+
 from copy import deepcopy as copy
+from lightcurve import lightcurve
 
 
 # ============================================
-
+# Likelihood function working
 def mean_func(means, Y):
     '''
     DEPRECATED - means are subtracted in the model now
@@ -34,6 +37,7 @@ def mean_func(means, Y):
     '''
     t, band = Y
     return (means[band])
+
 
 @tinygp.helpers.dataclass
 class Multiband(tinygp.kernels.quasisep.Wrapper):
@@ -57,7 +61,8 @@ class Multiband(tinygp.kernels.quasisep.Wrapper):
         return self.amplitudes[band] * self.kernel.observation_model(t)
 
 
-def build_gp(T, Y, diag, bands, tau, amps, means, basekernel = tinygp.kernels.quasisep.Exp):
+def build_gp(T: [float], Y: [float], diag: [[float]], bands: [int], tau: float, amps: [float], means: [float],
+             basekernel=tinygp.kernels.quasisep.Exp) -> GaussianProcess:
     '''
     Constructs the tinyGP gaussian process for use in numpyro sampling
     TODO: update this documentation. Possibly change to dict input
@@ -68,20 +73,25 @@ def build_gp(T, Y, diag, bands, tau, amps, means, basekernel = tinygp.kernels.qu
     :return:            Returns tinygp gp object and jnp.array of data sorted by lag-corrected time
     '''
 
-    #Create GP kernel with Multiband
+    # Create GP kernel with Multiband
     multi_kernel = Multiband(
-                        kernel      =   basekernel(scale=tau),
-                        amplitudes  =   amps,
-                    )
+        kernel=basekernel(scale=tau),
+        amplitudes=amps,
+    )
 
     # Mean functions for offsetting signals
-    meanf = lambda X: mean_func(means,X)
+    meanf = lambda X: mean_func(means, X)
 
     # Construct GP object and return
     gp = GaussianProcess(
-                        multi_kernel,
-                        (T, bands),
-                        diag=diag,
-                        mean=meanf
-                        )
-    return(gp)
+        multi_kernel,
+        (T, bands),
+        diag=diag,
+        mean=meanf
+    )
+    return (gp)
+
+
+#-------------------
+if __name__=="__main__":
+    print(":)")
