@@ -8,6 +8,7 @@ HM 24
 # IMPORTS
 import sys
 
+import jaxopt
 import numpyro
 from numpyro import distributions as dist
 from tinygp import GaussianProcess
@@ -19,9 +20,11 @@ from numpyro import infer
 
 import jax.numpy as jnp
 import numpy as np
+from numpy import nan
 
 from models import _default_config
 
+import _utils
 from functools import partial
 
 from ICCF_working import *
@@ -37,23 +40,27 @@ class fitting_procedure(object):
     Generic class for lag fitting procedures. Contains parent methods for setting properties
     '''
 
-    def __init__(self, out_stream=sys.stdout, err_stream=sys.stderr, debug=False, **fit_params):
+    def __init__(self, stat_model: stats_model,
+                 out_stream=sys.stdout, err_stream=sys.stderr,
+                 verbose=True, debug=False, **fit_params):
 
         if not hasattr(self, "_default_params"):
             self._default_params = {}
         if not hasattr(self, "results"):
             self.results = {}
 
-        self.debug = debug
+        self.stat_model = stat_model
+
+        self.debug = verbose
         self.out_stream = out_stream
         self.err_stream = err_stream
+
         self.name = "Base Fitting Procedure"
 
         self.is_ready = False
         self.has_run = False
 
         self.fitting_params = {} | self._default_params
-
         self.set_config(**(self._default_params | fit_params))
 
         self.seed = np.random.randint(0, 2 ** 16) if "seed" not in fit_params.keys() else fit_params['seed']
@@ -83,6 +90,7 @@ class fitting_procedure(object):
                 and hasattr(self, "fitting_params") \
                 and key in self._default_params.keys():
             self.fitting_params[key] = value
+            self.has_run, self.is_ready = False, False
         elif False and key not in ['results'] \
                 and hasattr(self, 'results') \
                 and key in self.results.keys():
@@ -99,7 +107,6 @@ class fitting_procedure(object):
         self.set_config(**self._default_params)
 
         self.has_run, self.is_ready = False, False
-        self.results = None
 
         return
 
@@ -130,9 +137,31 @@ class fitting_procedure(object):
 
         return
 
-    # ----------------------
+    def readyup(self):
+        '''
+        Performs pre-fit preparation calcs. Should only be called if not self.is_ready()
+        '''
+        self.is_ready = True
 
-    def fit(self, lc_1, lc_2, seed=None, stat_model=None):
+    # ----------------------
+    # Error message printing
+    def errmsg(self, x):
+        if self.debug:
+            print(x, self.err_stream)
+        return
+    def runmsg(self, x):
+        if self.verbose:
+            print(x, self.out_stream)
+        return
+    def dbgmsg(self, x):
+        if self.debug:
+            print(x, self.err_stream)
+        return
+
+    # ----------------------
+    # Main methods
+
+    def fit(self, lc_1, lc_2, seed=None):
         '''
         Fit lags
         :param lc_1: Lightcurve 1 (Main)
@@ -140,42 +169,62 @@ class fitting_procedure(object):
         :param stat_model: a statistical model object
         :param seed: A random seed for feeding to the fitting process. If none, will select randomly
         '''
+
+        if not self.is_ready: self.readyup()
+        if seed is None: seed = _utils.randint()
+
         seed = seed if isinstance(seed, int) else self.seed
         print("Fitting \"%s\" method does not have method .fit() implemented" % self.name, file=self.err_stream)
 
         return
 
-    def get_samples(self, N=None):
+    def get_samples(self, N=None, seed=None, importance_sampling=False):
         '''
         Returns MCMC-like posterior samples
         :param N: Number of samples to return. If None, return all
-
-        :return: keyed dictionary of model parameters
-        '''
-        print("Fitting \"%s\" method does not have method .get_samples() implemented" % self.name, file=self.err_stream)
-
-    def get_evidence(self):
-        '''
+        :param seed: Random seed for any stochastic elements
+        :param importance_sampling: If true, will weight the results by
         :return:
         '''
+
+
+        if not self.is_ready: self.readyup()
+        if not self.has_run: self.fit()
+        if seed is None: seed = _utils.randint()
+        print("Fitting \"%s\" method does not have method .get_samples() implemented" % self.name, file=self.err_stream)
+
+    def get_evidence(self, seed=None):
+        '''
+        Returns the estimated evidence for the fit model
+        '''
+
+        if not self.is_ready: self.readyup()
+        if not self.has_run: self.fit()
+        if seed is None: seed = _utils.randint()
         print("Fitting \"%s\" method does not have method .get_evidence() implemented" % self.name,
               file=self.err_stream)
 
         return (0.0)
 
-    def get_pvalue(self):
+    def get_information(self, seed=None):
         '''
-        :return:
+        Returns an estimate of the information for the fit sample
         '''
-        print("Fitting \"%s\" method does not have method .get_pvalue() implemented" % self.name, file=self.err_stream)
+        if not self.is_ready: self.readyup()
+        if not self.has_run: self.fit()
+        if seed is None: seed = _utils.randint()
+        print("Fitting \"%s\" method does not have method .get_information() implemented" % self.name,
+              file=self.err_stream)
 
         return (0.0)
 
-    def get_FPR(self):
+    def get_peak(self, stat_model=None, seed=None):
         '''
-        :return:
+        Returns the maximum posterior position in parameter space
         '''
-        print("Fitting \"%s\" method does not have method .get_FPR() implemented" % self.name, file=self.err_stream)
+        if seed is None: seed = _utils.randint()
+        print("Fitting \"%s\" method does not have method .get_map() implemented" % self.name,
+              file=self.err_stream)
 
         return (0.0)
 
@@ -194,7 +243,9 @@ class ICCF(fitting_procedure):
         - Change __getattr__ and __setattr_ to make anything in fitting_params or results work as an alias
     '''
 
-    def __init__(self, out_stream=sys.stdout, err_stream=sys.stderr, debug=False, **fit_params):
+    def __init__(self, stat_model: stats_model,
+                 out_stream=sys.stdout, err_stream=sys.stderr,
+                 verbose=True, debug=False, **fit_params):
 
         self._default_params = {
             'Nboot': 512,
@@ -203,7 +254,7 @@ class ICCF(fitting_procedure):
             'lag_range': _default_config['lag'],
         }
 
-        super().__init__(out_stream=out_stream, err_stream=err_stream, debug=debug, **fit_params)
+        super().__init__(out_stream=out_stream, err_stream=err_stream, verbose=verbose, **fit_params)
 
         self.name = "ICCF Fitting Procedure"
 
@@ -213,7 +264,8 @@ class ICCF(fitting_procedure):
                         'lag_err': 0.0
                         }
 
-    def fit(self, lc_1, lc_2, stat_model=None, seed=None):
+    #-------------------------
+    def fit(self, lc_1, lc_2, seed=None):
         # Unpack lightcurve
         X1, Y1, E1 = lc_1.T, lc_1.Y, lc_1.E
         X2, Y2, E2 = lc_2.T, lc_2.Y, lc_2.E
@@ -231,8 +283,14 @@ class ICCF(fitting_procedure):
         self.results['lag_err'] = jax_samples.std()
         self.has_run = True
 
-    def get_samples(self, N=None, importance_sampling=False, stat_model=None):
+    def get_samples(self, N=None, seed=None, importance_sampling=False):
 
+        if not self.has_run:
+            print("Error! Tried to called `get_samples` in %s without running.", file=self.err_stream)
+            return
+        if seed is None: seed = _utils.randint()
+
+        # Todo - change this
         if importance_sampling:
             print("Warning! Cannot use important sampling with ICCF. Try implementing manually")
             return
@@ -255,16 +313,19 @@ class ICCF(fitting_procedure):
 
 class prior_sampling(fitting_procedure):
     '''
-    Randomly samples from the prior and weights with importance sampling
+    Randomly samples from the prior and weights with importance sampling.
+    The crudest available sampler outside of a gridsearch.
     '''
 
-    def __init__(self, out_stream=sys.stdout, err_stream=sys.stderr, debug=False, **fit_params):
+    def __init__(self, stat_model: stats_model,
+                 out_stream=sys.stdout, err_stream=sys.stderr,
+                 verbose=True, debug=False, **fit_params):
 
         self._default_params = {
             'Nsamples': 4096
         }
 
-        super().__init__(out_stream=out_stream, err_stream=err_stream, debug=debug, **fit_params)
+        super().__init__(out_stream=out_stream, err_stream=err_stream, verbose=verbose, **fit_params)
 
         self.name = "Prior Sampling Fitting Procedure"
 
@@ -273,10 +334,10 @@ class prior_sampling(fitting_procedure):
                         }
 
     # --------------
-    def fit(self, lc_1, lc_2, seed=None, stat_model=None):
+    def fit(self, lc_1, lc_2, seed=None):
         # Generate samples & calculate likelihoods
-        samples = stat_model.prior_sample(data=None, num_samples=self.Nsamples)
-        log_likes = stat_model.log_likelihood(data=(lc_1, lc_2), params=samples)
+        samples = self.stat_model.prior_sample(data=None, num_samples=self.Nsamples)
+        log_likes = self.stat_model.log_likelihood(data=(lc_1, lc_2), params=samples)
         likes = np.exp(log_likes)
 
         # Store results
@@ -286,7 +347,8 @@ class prior_sampling(fitting_procedure):
         # Mark good for retrieval
         self.has_run = True
 
-    def get_samples(self, N=None, importance_sampling=True, stat_model=None):
+    def get_samples(self, N=None, seed=None, importance_sampling=False):
+        if seed is None: seed = _utils.randint()
 
         if N is None:
             N = self.Nsamples
@@ -307,6 +369,142 @@ class prior_sampling(fitting_procedure):
         })
 
 
+# ============================================
+# Nested Sampling
+class nested_sampling(fitting_procedure):
+    '''
+    Simple direct nested sampling. Not ideal.
+    '''
+
+    def __init__(self, stat_model: stats_model,
+                 out_stream=sys.stdout, err_stream=sys.stderr,
+                 verbose=True, debug=False, **fit_params):
+
+        self._default_params = {
+            'num_live_points': 5000,
+            'max_samples': 50000,
+            'num_parallel_samplers': 1,
+            'uncert_improvement_patience': 2,
+            'live_evidence_frac': 0.01,
+        }
+
+        super().__init__(out_stream=out_stream, err_stream=err_stream, verbose=verbose, **fit_params)
+
+        self.name = "Prior Sampling Fitting Procedure"
+
+        self.sampler = None
+
+        self.results = {
+            'logevidence': jnp.zeros(3),
+            'priorvolume': 0.0,
+        }
+
+    # --------------
+    def fit(self, lc_1, lc_2, seed=None):
+        if seed is None: seed = _utils.randint()
+
+        NS = NestedSampler(self.stat_model,
+                           constructor_kwargs={key: self.fitting_params[key]
+                                               for key in ['num_live_points',
+                                                           'max_samples',
+                                                           'num_parallel_samplers',
+                                                           'uncert_improvement_patience']
+                                               },
+                           termination_kwargs={'live_evidence_frac': self.fitting_params['live_evidence_frac']})
+
+        self.sampler = NS
+
+        NS.run(data=(lc_1, lc_2), rng_key=jax.random.PRNGKey(seed))
+
+        # Store Results & Necessary Values
+        self.results['priorvolume'] = self.stat_model.prior_volume
+        self.results['logevidence'] = np.array(
+            [NS._results.log_Z_mean - np.log(self.stat_model.prior_volume), NS._results.log_Z_uncert])
+
+        # Mark good for retrieval
+        self.has_run = True
+
+    def get_samples(self, N=None, seed=None, importance_sampling=False):
+        if seed is None: seed = _utils.randint()
+
+        NS = self.sampler
+
+        if not importance_sampling:
+            samples, weights = NS.get_weighted_samples()
+        else:
+            samples = NS.get_samples(jax.random.PRNGKey(seed), N)
+
+        return (samples)
+
+    def get_evidence(self, seed=None):
+        '''
+        Returns the -1, 0 and +1 sigma values for model evidence from nested sampling.
+        This represents an estimate of numerical uncertainty
+
+        Todo  redundant results call. Rearrange to call directly from NS sampler (?)
+        '''
+
+        if seed is None: seed = _utils.randint()
+
+        l, l_e = self.results['logevidence']
+
+        out = np.exp([
+            l - l_e,
+            l,
+            l + l_e
+        ])
+
+        return (out)
+
+    def get_information(self, seed=None):
+        '''
+        Todo - Fix this /w weighted ln|p| integral from NS samples
+        '''
+        if seed is None: seed = _utils.randint()
+
+    def get_peak(self, seed=None):
+        '''
+        :param stat_model:
+        :param seed:
+        :return:
+        '''
+        if seed is None: seed = _utils.randint()
+
+
+#------------------------------------------------------
+class hessian_scan(fitting_procedure):
+    def __init__(self, stat_model: stats_model,
+                 out_stream=sys.stdout, err_stream=sys.stderr,
+                 verbose=True, debug=False, **fit_params):
+
+        self._default_params = {
+            'num_lags': 1024,
+            'opt_tol': 1E-5,
+            'constrained_domain': False,
+            'max_opt_eval': 1_000,
+            'solvertype': jaxopt.GradientDescent
+        }
+
+        super().__init__(out_stream=out_stream, err_stream=err_stream, verbose=verbose, **fit_params)
+
+        self.name = "Hessian Scan Fitting Procedure"
+        self.results = {
+            'lags':None,
+            'opt_positions': None,
+            'opt_densities': None,
+            'opt_evidence': None,
+            'opt_hessians': None,
+            'evidence': None,
+        }
+
+    def fit(self, lc_1, lc_2, seed=None, stat_model=None):
+        data = stat_model.lc_to_data(lc_1,lc_2)
+
+        stat_model = stats_model()
+        stat_model.scan(start_params=None)
+
+    # --------------
+
 if __name__ == "__main__":
     from mocks import mock_A_01, mock_A_02, lag_A
     from mocks import mock_B_01, mock_B_02, lag_B
@@ -317,9 +515,9 @@ if __name__ == "__main__":
 
     #::::::::::::::::::::
     # ICCF Test
-    test_ICCF = ICCF(Nboot=1024, Nterp=1024, Nlags=1024)
+    test_ICCF = ICCF(Nboot=128, Nterp=128, Nlags=128)
     print("Doing Fit")
-    # test_ICCF.fit(mock_C_01, mock_C_02)
+    test_ICCF.fit(mock_C_01, mock_C_02)
     print("Fit done")
 
     ICCF_samples = test_ICCF.get_samples()['lag']
