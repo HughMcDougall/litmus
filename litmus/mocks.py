@@ -15,8 +15,10 @@ from tinygp import GaussianProcess
 from _utils import randint, isiter
 
 import jax
+from copy import deepcopy as copy
+import matplotlib.pyplot as plt
 
-
+import types
 # ===================================================
 
 def mock_cadence(maxtime, seed=0, cadence=7, cadence_var=1, season=180, season_var=14, N=1024):
@@ -68,15 +70,16 @@ def subsample(X, Y, Xsample):
     out = np.interp(Xsample, X, Y)
     return (out)
 
-def outly(Y,q):
+
+def outly(Y, q):
     '''
     outly(Y,q):
     Returns a copy of Y with fraction 'q' elements replaced with
     normally distributed outliers
     '''
-    I = np.random.rand(len(Y))<q
-    Y[I] = np.random.randn()*len(I)
-    return(Y)
+    I = np.random.rand(len(Y)) < q
+    Y[I] = np.random.randn() * len(I)
+    return (Y)
 
 
 def gp_realization(X, err=0.0, tau=400.0,
@@ -141,15 +144,26 @@ class mock(object):
 
     def __call__(self, seed=0):
         self.generate(seed=seed)
-        return
+        return (self)
 
     def generate_true(self, seed=0):
+        '''
+        Generates an underlying true DRW signal and stores in the self attribute self.lc
+        :param seed:
+        :return:
+        '''
         X = np.linspace(0.0, self.maxtime + self.lag * 2, self.N)
         Y = gp_realization(X, tau=self.tau, seed=seed).Y
         self.lc = lightcurve(X, Y).trim(Tmin=0, Tmax=self.maxtime)
         return (X, Y)
 
     def generate(self, seed=0):
+        '''
+        Generates a mock and sampled light-curve including a delayed response and stores in the self-attributes
+        self.lc_1 and self.lc_2
+        :param seed:
+        :return:
+        '''
         X, Y = self.generate_true(seed=seed)
 
         X1 = mock_cadence(self.maxtime, seed, cadence=self.cadence[0], cadence_var=self.cadence_var[0],
@@ -170,12 +184,32 @@ class mock(object):
 
         return
 
+    def plot(self, axis=None, true_args={}, series_args={}):
+        if axis is None:
+            plt.figure()
+            axis = plt.gca()
+        true_args |= {'lw': 1, 'c': 'k', 'alpha': 0.5, 'label': 'True Signal'}
+        series_args |= {'lw': 1, 'c1': 'tab:blue', 'c2': 'tab:orange', 'alpha': 1.0, 'capsize': 2}
+        axis.plot(self.lc.T, self.lc.Y, **true_args)
+        axis.plot(self.lc.T-self.lag, self.lc.Y, **true_args|{'c':'tab:red', 'alpha':0.5})
+
+        series_args1, series_args2 = copy(series_args)| {'c':series_args['c1']}, copy(series_args) | {'c':series_args['c2']}
+        series_args1.pop('c1'), series_args2.pop('c1')
+        series_args1.pop('c2'), series_args2.pop('c2')
+        axis.errorbar(self.lc_1.T, self.lc_1.Y, self.lc_1.E, fmt='none',
+                      label="Time Series 1",
+                      **series_args1
+                      )
+        axis.errorbar(self.lc_2.T, self.lc_2.Y, self.lc_2.E, fmt='none',
+                      label="Time Series 2",
+                      **series_args2
+                      )
+
 
 # ================================================
 
 # ================================================
 # CASE A - WELL OBSERVED SMOOTH CURVES
-import types
 
 
 def determ_gen(self, seed=0):
@@ -185,8 +219,8 @@ def determ_gen(self, seed=0):
     self.lc = lightcurve(X, Y).trim(Tmin=0, Tmax=self.maxtime)
     return (X, Y)
 
-
-mock_A = mock(season=None, lag = 300)
+# Change the way mock A generates a time series
+mock_A = mock(season=None, lag=300)
 mock_A.generate_true = types.MethodType(determ_gen, mock_A)
 mock_A()
 
@@ -211,15 +245,13 @@ lag_C = mock_C.lag
 
 # ================================================
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
     for x in mock_A, mock_B, mock_C:
         plt.figure()
         plt.title("Seasonal GP, lag = %.2f" % x.lag)
 
-        plt.errorbar(x.lc_1.T, x.lc_1.Y, x.lc_1.E, fmt='none', capsize=2, color='tab:blue', label = 'Main Signal')
-        plt.errorbar(x.lc_2.T, x.lc_2.Y, x.lc_2.E, fmt='none', capsize=2, color='tab:red', label = 'Second Signal')
-        plt.plot(x.lc.T, x.lc.Y, c='tab:orange', zorder=-1, label = 'True Signal', lw=1)
+        plt.errorbar(x.lc_1.T, x.lc_1.Y, x.lc_1.E, fmt='none', capsize=2, color='tab:blue', label='Main Signal')
+        plt.errorbar(x.lc_2.T, x.lc_2.Y, x.lc_2.E, fmt='none', capsize=2, color='tab:red', label='Second Signal')
+        plt.plot(x.lc.T, x.lc.Y, c='tab:orange', zorder=-1, label='True Signal', lw=1)
 
         plt.legend()
         plt.xlabel("Time (Days)")

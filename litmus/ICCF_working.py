@@ -35,11 +35,12 @@ def correl_jax(X1, Y1, X2, Y2, Nterp=1024):
         Y1_interp = jnp.interp(X_interp, X1, fp=Y1, left=extrap, right=extrap)
         Y2_interp = jnp.interp(X_interp, X2, fp=Y2, left=extrap, right=extrap)
         out = jnp.corrcoef(x=Y1_interp, y=Y2_interp)[0][1]
-        return(out)
+        return (out)
 
-    out = jax.lax.cond(Xmax>Xmin,f,lambda : 0.0)
+    out = jax.lax.cond(Xmax > Xmin, f, lambda: 0.0)
 
     return (out)
+
 
 correl_jax_jitted = jax.jit(correl_jax, static_argnames=["Nterp"])
 
@@ -51,11 +52,12 @@ def correlfunc_jax(lag: float, X1: [float], Y1: [float], X2: [float], Y2: [float
     Like correl_jax, but with signal 2 delayed by some lag
     '''
     return (
-        correl_jax(X1, Y1, X2 - lag, Y2, Nterp)
+        correl_jax(X1, Y1, X2 + lag, Y2, Nterp)
     )
 
 
 correlfunc_jax_vmapped = jax.vmap(correlfunc_jax, in_axes=(0, None, None, None, None, None))
+correlfunc_jax_vmapped.__doc__ += "Accepts array of lags for 'lag' param"
 
 
 #::::::::
@@ -115,10 +117,16 @@ if __name__ == "__main__":
 
     #::::::::::::::::::::
     # Mock Data
-    from mocks import mock_C_01 as mock01, mock_C_02 as mock02, lag_C as true_lag
+    from mocks import mock_A, mock_B, mock_C
+
+    mock = mock_B(seed=3)
+    mock01 = mock.lc_1
+    mock02 = mock.lc_2
 
     X1, Y1, E1 = mock01.T, mock01.Y, mock01.E
     X2, Y2, E2 = mock02.T, mock02.Y, mock02.E
+
+    true_lag = mock.lag
 
     #::::::::::::::::::::
     # Plot Mock Signals
@@ -140,27 +148,44 @@ if __name__ == "__main__":
     jax_samples = correl_func_boot_jax_wrapper_nomap(lags, X1, Y1, X2, Y2, E1, E2, Nterp=Nterp, Nboot=Nboot)
 
     #::::::::::::::::::::
+    print("ICCF RESULTS:")
     res_mean, res_std = jax_samples.mean(), jax_samples.std()
+    res_p1, res_med, res_p2 = [np.percentile(jax_samples, p) for p in [14,50,86]]
+    if res_med>true_lag:
+        z_med = (res_med - true_lag) / (res_p2 - res_med)
+    else:
+        z_med = (true_lag - res_med) / (res_med - res_p1)
+
+    print("Mean Statistics:")
     print("Lag = %.2f +/- %.2f, consistent with true lag of %.2f at %.2f sigma" % (
         res_mean, res_std, true_lag, abs(true_lag - res_mean) / res_std))
+    print("Median Statistics:")
+    print("Lag = %.2f + %.2f, -%.2f, consistent with true lag of %.2f at %.2f sigma" % (
+        res_med, res_p2-res_med, res_med-res_p1, true_lag, z_med))
 
     #::::::::::::::::::::
     # Plot Results
-    range = np.array([-true_lag, true_lag*3])
+    range = np.array([-true_lag, true_lag * 3])
 
     plt.figure()
-    plt.plot(lags, correls_jax/range.ptp()*4, label="Un-Bootstrapped ICCF Correlation")
+    plt.plot(lags, correls_jax / range.ptp() * 4, label="Un-Bootstrapped ICCF Correlation")
     plt.axhline(0, c='k')
 
-    plt.hist(jax_samples, density=True, bins=24, alpha=0.75, label="ICCF Samples", range=range)
+    plt.hist(jax_samples, density=True, bins=32, alpha=0.75, label="ICCF Samples", range=range)
 
     plt.axvline(true_lag, c='k', ls='--', label="True Lag")
 
-    plt.axvline(res_mean, c='tab:red', ls='--', label="ICCF Mean + std")
+    plt.axvline(res_mean, c='tab:red', ls='--', label="ICCF Mean $\pm$ std")
     plt.axvline(res_mean - res_std, c='tab:red', ls=':')
     plt.axvline(res_mean + res_std, c='tab:red', ls=':')
 
-    plt.ylim(0, 1.5 / range.ptp()*6)
+
+    plt.axvline(res_med, c='tab:blue', ls='--', label="ICCF Med $\pm 1 \sigma$")
+    plt.axvline(res_p1, c='tab:blue', ls=':')
+    plt.axvline(res_p2, c='tab:blue', ls=':')
+
+
+    plt.ylim(0, 1.5 / range.ptp() * 6)
     plt.xlim(*range)
     plt.xlabel("Lag")
     plt.ylabel("ICCF Correl (Normalized")
