@@ -108,7 +108,7 @@ class stats_model(object):
             self.__setattr__(name + "_grad", graded_func)
             self.__setattr__(name + "_hess", hessed_func)
 
-    def set_priors(self, prior_ranges):
+    def set_priors(self, prior_ranges: dict):
         '''
         Sets the stats model prior ranges for uniform priors. Does some sanity checking to avoid negative priors
         :param prior_ranges:
@@ -150,6 +150,32 @@ class stats_model(object):
         '''
         lag = self.prior()
 
+    def lc_to_data(self, lc_1: lightcurve, lc_2: lightcurve):
+        '''
+        Converts light-curves into the format required for the model. For most models this will return as some sort
+        of sorted dictionary
+        :param lc_1: First lightcurve object
+        :param lc_2: Second lightcurve object
+        :return:
+        '''
+
+        T = jnp.array([*lc_1.T, *lc_2.T])
+        Y = jnp.array([*lc_1.Y, *lc_2.Y])
+        E = jnp.array([*lc_1.E, *lc_2.E])
+        bands = jnp.array([*np.zeros(lc_1.N), *np.ones(lc_2.N)]).astype(int)
+
+        I = T.argsort()
+
+        T, Y, E, bands = T[I], Y[I], E[I], bands[I]
+
+        data = {'T': T,
+                'Y': Y,
+                'E': E,
+                'bands': bands
+                }
+
+        return (data)
+
     # --------------------------------
     # Parameter transforms and other utils
     def to_uncon(self, params, data=None):
@@ -174,13 +200,29 @@ class stats_model(object):
         '''
         return (list(self.prior_ranges.keys()))
 
+    def fixed_params(self):
+        '''
+        Returns the names of all model parameters. Purely for brevity.
+        '''
+        is_fixed = {key: np.ptp(self.prior_ranges[key]) == 0 for key in self.prior_ranges.keys()}
+        out = [key for key in is_fixed.keys() if is_fixed[key]]
+        return (out)
+
+    def free_params(self):
+        '''
+        Returns the names of all model parameters. Purely for brevity.
+        '''
+        is_fixed = {key: np.ptp(self.prior_ranges[key]) == 0 for key in self.prior_ranges.keys()}
+        out = [key for key in is_fixed.keys() if not is_fixed[key]]
+        return (out)
 
     def dim(self):
         '''
         Quick and easy call for the number of model parameters
         :return:
         '''
-        return(len(self.paramnames()))
+        return (len(self.paramnames()))
+
     # --------------------------------
     # Un-Jitted / un-vmapped likelihood calls
     '''
@@ -218,7 +260,7 @@ class stats_model(object):
         '''
         Model prior density in unconstrained space
         '''
-        out = numpyro.infer.util.log_density(self.prior(), (), {}, params)
+        out = numpyro.infer.util.log_density(self.prior, (), {}, params)[0]
         return (out)
 
     # --------------------------------
@@ -232,7 +274,7 @@ class stats_model(object):
                 p = {key: params[key][i] for key in params.keys()}
                 out[i] = self._log_density_jit(p, data)
         else:
-            out = self._log_density_jit(params, data)
+            out = np.array([self._log_density_jit(params, data)])
 
         return out
 
@@ -268,9 +310,9 @@ class stats_model(object):
             out = np.zeros(N)
             for i in range(N):
                 p = {key: params[key][i] for key in params.keys()}
-                out[i] = self._log_prior_jit(p, data)
+                out[i] = self._log_prior_jit(p)
         else:
-            out = self._log_prior_jit(params, data)
+            out = self._log_prior_jit(params)
 
         return out
 
@@ -310,9 +352,9 @@ class stats_model(object):
             out = np.zeros(N)
             for i in range(N):
                 p = {key: params[key][i] for key in params.keys()}
-                out[i, :] = self._log_prior_grad(p, data)
+                out[i, :] = self._log_prior_grad(p)
         else:
-            out = self._log_prior_grad(params, data)
+            out = self._log_prior_grad(params)
 
         return out
 
@@ -326,16 +368,16 @@ class stats_model(object):
             for i in range(N):
                 p = {key: params[key][i] for key in params.keys()}
                 hess_eval = self._log_density_hess(p, data)
-                for j, key in enumerate(self.paramnames()):
-                    for k, key in enumerate(self.paramnames()):
-                        out[i, j, k] = hess_eval[key][key]
+                for j, key1 in enumerate(self.paramnames()):
+                    for k, key2 in enumerate(self.paramnames()):
+                        out[i, j, k] = hess_eval[key1][key2]
         else:
             m = len(self.paramnames())
             out = np.zeros([m, m])
             hess_eval = self._log_density_hess(params, data)
-            for j, key in enumerate(self.paramnames()):
-                for k, key in enumerate(self.paramnames()):
-                    out[j, k] = hess_eval[key][key]
+            for j, key1 in enumerate(self.paramnames()):
+                for k, key2 in enumerate(self.paramnames()):
+                    out[j, k] = hess_eval[key1][key2]
 
         return out
 
@@ -347,16 +389,16 @@ class stats_model(object):
             for i in range(N):
                 p = {key: params[key][i] for key in params.keys()}
                 hess_eval = self._log_density_uncon_hess(p, data)
-                for j, key in enumerate(self.paramnames()):
-                    for k, key in enumerate(self.paramnames()):
-                        out[i, j, k] = hess_eval[key][key]
+                for j, key1 in enumerate(self.paramnames()):
+                    for k, key2 in enumerate(self.paramnames()):
+                        out[i, j, k] = hess_eval[key1][key2]
         else:
             m = len(self.paramnames())
             out = np.zeros([m, m])
             hess_eval = self._log_density_uncon_hess(params, data)
-            for j, key in enumerate(self.paramnames()):
-                for k, key in enumerate(self.paramnames()):
-                    out[j, k] = hess_eval[key][key]
+            for j, key1 in enumerate(self.paramnames()):
+                for k, key2 in enumerate(self.paramnames()):
+                    out[j, k] = hess_eval[key1][key2]
 
         return out
 
@@ -367,23 +409,23 @@ class stats_model(object):
             out = np.zeros([N, m, m])
             for i in range(N):
                 p = {key: params[key][i] for key in params.keys()}
-                hess_eval = self._log_prior_hess(p, data)
-                for j, key in enumerate(self.paramnames()):
-                    for k, key in enumerate(self.paramnames()):
-                        out[i, j, k] = hess_eval[key][key]
+                hess_eval = self._log_prior_hess(p)
+                for j, key1 in enumerate(self.paramnames()):
+                    for k, key2 in enumerate(self.paramnames()):
+                        out[i, j, k] = hess_eval[key1][key2]
         else:
             m = len(self.paramnames())
             out = np.zeros([m, m])
-            hess_eval = self._log_prior_hess(params, data)
-            for j, key in enumerate(self.paramnames()):
-                for k, key in enumerate(self.paramnames()):
-                    out[j, k] = hess_eval[key][key]
+            hess_eval = self._log_prior_hess(params)
+            for j, key1 in enumerate(self.paramnames()):
+                for k, key2 in enumerate(self.paramnames()):
+                    out[j, k] = hess_eval[key1][key2]
 
         return out
 
     # --------------------------------
     # Wrapped evaluation utilities
-    def scan(self, start_params, data, optim_params=[], use_vmap=False):
+    def scan(self, start_params, data, optim_params=[], use_vmap=False, stepsize=0.1, maxiter=1_000, tol=1E-5):
         '''
         Beginning at position 'start_params', optimize parameters in 'optim_params' to find maximum
         '''
@@ -393,9 +435,11 @@ class stats_model(object):
         y0 = {key: x0[key] for key in start_params.keys() if key not in optim_params}
         x0 = jnp.array([x0[key] for key in optim_params])
 
+        # todo - this seems to not be working
         f = pack_function(self._log_density_uncon, packed_keys=optim_params, fixed_values=y0)
         optfunc = lambda x: -f(x, data=data)
 
+        # or possibly this
         solver = jaxopt.GradientDescent(fun=optfunc,
                                         stepsize=0.1,
                                         maxiter=1_000,
@@ -403,7 +447,7 @@ class stats_model(object):
                                         jit=True)
 
         out, _ = solver.run(init_params=x0)
-        out = {key: out[i] for i,key in enumerate(optim_params)}
+        out = {key: out[i] for i, key in enumerate(optim_params)}
         out = out | y0
         out = self.to_con(out)
 
@@ -418,6 +462,8 @@ class stats_model(object):
         :param use_vmap:
         :return:
         '''
+        if integrate_axes is None:
+            integrate_axes = self.paramnames()
 
         if not constrained:
             uncon_params = self.to_uncon(params, data=data)
@@ -431,44 +477,87 @@ class stats_model(object):
         I = np.where([key in integrate_axes for key in self.paramnames()])[0]
 
         hess = hess[I, I]
-        if len(I)>1:
+        if len(I) > 1:
             dethess = np.linalg.det(hess)
         else:
             dethess = hess
 
         D = len(integrate_axes)
-        out = np.log(2*np.pi)*(D/2) - np.log(-dethess)/2 + log_height
+        out = np.log(2 * np.pi) * (D / 2) - np.log(-dethess) / 2 + log_height
+        return out
+
+    def laplace_log_info(self, params, data, integrate_axes=None, use_vmap=False, constrained=False):
+        '''
+        At some point 'params' in parameter space, gets the hessian in unconstrained space and uses to estimate the
+        model information relative to the prior
+        :param data:
+        :param params:
+        :param use_vmap:
+        :return:
+        '''
+
+        if integrate_axes is None:
+            integrate_axes = self.paramnames()
+
+        if not constrained:
+            uncon_params = self.to_uncon(params, data=data)
+
+            log_height = self.log_density_uncon(uncon_params, data)
+            hess = self.log_density_uncon_hess(uncon_params, data)
+        else:
+            log_height = self.log_density(params, data)
+            hess = self.log_density_hess(params, data)
+
+        I = np.where([key in integrate_axes for key in self.paramnames()])[0]
+
+        hess = hess[I, I]
+        if len(I) > 1:
+            dethess = np.linalg.det(hess)
+        else:
+            dethess = hess
+
+        # todo - double check sign on the log term. Might be wrong
+        # todo - add case check for non-uniform priors.
+        D = len(integrate_axes)
+        out = -(np.log(2 * np.pi) + 1) * (D / 2) - np.log(-dethess) / 2 + np.log(self.prior_volume)
         return out
 
     # --------------------------------
     # Sampling Utils
-    def prior_sample(self, data=None, num_samples=1):
+    def prior_sample(self, num_samples: int = 1, seed: int = None) -> dict:
         '''
         Blind sampling from the prior without conditioning. Returns model parameters only
         :param num_samples: Number of realizations to generate
         :return:
         '''
-        pred = numpyro.infer.Predictive(self.model_function,
+
+        if seed == None: seed = _utils.randint()
+
+        pred = numpyro.infer.Predictive(self.prior,
                                         num_samples=num_samples,
                                         return_sites=self.paramnames()
                                         )
 
-        params = pred(rng_key=jax.random.PRNGKey(randint()), data=data)
+        params = pred(rng_key=jax.random.PRNGKey(seed))
+
+        if num_samples == 1:
+            params = {key: params[key][0] for key in params.keys()}
         return (params)
 
-    def realization(self, data=None, num_samples=1):
+    def realization(self, data=None, num_samples: int = 1, seed: int = None):
         '''
         Generates realizations by blindly sampling from the prior
         :param num_samples: Number of realizations to generate
         :return:
         '''
+        if seed == None: seed = _utils.randint()
 
         pred = numpyro.infer.Predictive(self.model_function,
                                         num_samples=num_samples,
                                         return_sites=None
                                         )
 
-        params = pred(rng_key=jax.random.PRNGKey(randint()), data=data)
+        params = pred(rng_key=jax.random.PRNGKey(seed), data=data)
         return (params)
 
 
@@ -539,16 +628,6 @@ class GP_simple(stats_model):
     # --------------------
     def prior(self):
         # Sample distributions
-        '''
-        lag = numpyro.sample('lag', dist.Uniform(self.prior_ranges['lag'][0], self.prior_ranges['lag'][1]))
-        logtau = numpyro.sample('logtau', dist.Uniform(self.prior_ranges['logtau'][0], self.prior_ranges['logtau'][1]))
-        logamp = numpyro.sample('logamp', dist.Uniform(self.prior_ranges['logamp'][0], self.prior_ranges['logamp'][1]))
-        rel_amp = numpyro.sample('rel_amp', dist.Uniform(0.0, self.prior_ranges['rel_amp'][1]))
-        mean = numpyro.sample('mean', dist.Uniform(self.prior_ranges['mean'][0], self.prior_ranges['mean'][1]))
-        rel_mean = numpyro.sample('rel_mean',
-                                  dist.Uniform(self.prior_ranges['rel_mean'][0], self.prior_ranges['rel_mean'][1]))
-        '''
-
         lag = quickprior(self, 'lag')
 
         logtau = quickprior(self, 'logtau')
@@ -574,7 +653,7 @@ class GP_simple(stats_model):
         amps = jnp.array([amp, rel_amp * amp])
         means = jnp.array([mean, mean + rel_mean])
 
-        T_delayed = T - delays[bands]
+        T_delayed = T + delays[bands]
         I = T_delayed.argsort()
 
         # Build and sample GP
@@ -601,7 +680,7 @@ if __name__ == '__main__':
 
     # Generate prior samples and evaluate likelihoods
     test_data = jnp.array([100., 0.25])
-    test_params = test_statmodel.prior_sample(num_samples=1_000, data=test_data)
+    test_params = test_statmodel.prior_sample(num_samples=1_000)
     log_likes = test_statmodel.log_density(data=test_data, params=test_params)
     log_grads = test_statmodel.log_density_grad(data=test_data, params=test_params)['lag']
     log_hess = test_statmodel.log_density_hess(data=test_data, params=test_params)[:, 0, 0]
@@ -632,23 +711,25 @@ if __name__ == '__main__':
 
     plt.show()
 
-
-    #===============================
+    # ===============================
     # Try a scan
-    opt_lag = test_statmodel.scan(start_params={'lag':0.1, 'test_param': 0.0}, data=test_data, optim_params=['lag'], use_vmap=False)['lag']
+    opt_lag = test_statmodel.scan(start_params={'lag': 0.1, 'test_param': 0.0}, data=test_data, optim_params=['lag', 'test_param'],
+                                  use_vmap=False)['lag']
     print("best lag is", opt_lag)
 
-    Z1 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data, integrate_axes=['lag'])
-    Z2 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data, integrate_axes=['lag'], constrained=True)
+    Z1 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data,
+                                             integrate_axes=['lag'])
+    Z2 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data,
+                                             integrate_axes=['lag'], constrained=True)
     print("Estimate for evidence is %.2f" % np.exp(Z1))
     print("Estimate for evidence is %.2f" % np.exp(Z2))
 
     # ------------------------------
     fig = plt.figure()
     plt.title("Normalization Demonstration")
-    plt.scatter(test_params['lag'], np.exp(log_likes) / np.exp(log_likes).mean() / 500, s=1, label = "Monte Carlo Approx")
-    plt.scatter(test_params['lag'], np.exp(log_likes-Z1), s=1, label = "Laplace norm from unconstrained domain")
-    plt.scatter(test_params['lag'], np.exp(log_likes-Z2), s=1, label = "Laplace norm from constrained domain")
+    plt.scatter(test_params['lag'], np.exp(log_likes) / np.exp(log_likes).mean() / 500, s=1, label="Monte Carlo Approx")
+    plt.scatter(test_params['lag'], np.exp(log_likes - Z1), s=1, label="Laplace norm from unconstrained domain")
+    plt.scatter(test_params['lag'], np.exp(log_likes - Z2), s=1, label="Laplace norm from constrained domain")
 
     plt.legend()
 

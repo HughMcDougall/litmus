@@ -8,6 +8,7 @@ HM 24
 # IMPORTS
 import sys
 
+import clustering
 import jaxopt
 import numpyro
 from numpyro import distributions as dist
@@ -53,7 +54,8 @@ class fitting_procedure(object):
 
         self.stat_model = stat_model
 
-        self.debug = verbose
+        self.debug = debug
+        self.verbose = verbose
         self.out_stream = out_stream
         self.err_stream = err_stream
 
@@ -67,6 +69,7 @@ class fitting_procedure(object):
 
         self.seed = _utils.randint() if "seed" not in fit_params.keys() else fit_params['seed']
         self._tempseed = self.seed
+        self._data = None
 
     # ----------------------
     '''
@@ -149,28 +152,37 @@ class fitting_procedure(object):
 
     # ----------------------
     # Error message printing
-    def msg_err(self, x: str):
+    def msg_err(self, *x: str, end='\n', delim=' '):
         '''
         Messages for when something has broken or been called incorrectly
         '''
         if True:
-            print(x, self.err_stream)
+            for a in x:
+                print(a, file=self.err_stream, end=delim)
+
+        print(end, end='')
         return
 
-    def mgs_run(self, x: str):
+    def msg_run(self, *x: str, end='\n', delim=' '):
         '''
         Standard messages about when things are running
         '''
         if self.verbose:
-            print(x, self.out_stream)
+            for a in x:
+                print(a, file=self.out_stream, end=delim)
+
+        print(end, end='')
         return
 
-    def msg_verbose(self, x: str):
+    def msg_verbose(self, *x: str, end='\n', delim=' '):
         '''
         Explicit messages to help debug when things are behaving strangely
         '''
         if self.debug:
-            print(x, self.err_stream)
+            for a in x:
+                print(a, file=self.out_stream, end=delim)
+
+        print(end, end='')
         return
 
     # ----------------------
@@ -192,9 +204,12 @@ class fitting_procedure(object):
             self._tempseed = _utils.randint()
         seed = self._tempseed
 
+        self._data = self.stat_model.lc_to_data(lc_1, lc_2)
+        data = self._data
+
         # An error message raised if this fitting procedure doesn't have .fit()
-        if self.__class__.get_samples == fitting_procedure.get_samples:
-            self.msg_err("Fitting \"%s\" method does not have method .get_samples() implemented" % self.name)
+        if self.__class__.fit == fitting_procedure.fit:
+            self.msg_err("Fitting \"%s\" method does not have method .fit() implemented" % self.name)
 
         return
 
@@ -406,15 +421,20 @@ class prior_sampling(fitting_procedure):
         seed = self._tempseed
         # -------------------
 
-        # Generate samples & calculate likelihoods
-        samples = self.stat_model.prior_sample(data=None, num_samples=self.Nsamples)
-        log_likes = self.stat_model.log_likelihood(data=(lc_1, lc_2), params=samples)
+        # Generate samples & calculate likelihoods todo - These currently give posterior densities and not log likes
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+        samples = self.stat_model.prior_sample(num_samples=self.Nsamples, seed=seed)
+        log_density = self.stat_model.log_density(data=data, params=samples)
+        log_prior = self.stat_model.log_prior(params=samples)
+        log_likes = log_density - log_prior
         likes = np.exp(log_likes)
 
         # Store results
+        self.results['log_prior'] = log_prior
         self.results['log_likes'] = log_likes
+        self.results['log_density'] = log_density
         self.results['samples'] = samples
-        self.results['weights'] = likes
+        self.results['weights'] = likes / likes.sum()
 
         # Mark as having completed a run
         self.has_run = True
@@ -447,8 +467,24 @@ class prior_sampling(fitting_procedure):
         fitting_procedure.get_samples(**locals())
         seed = self._tempseed
         # -------------------
-        out = self.results['weights'].mean()
-        return (np.array([out, out, np.inf]))
+        density = np.exp(self.results['log_density'])
+
+        Z = density.mean() * self.stat_model.prior_volume
+        uncert = density.std() / np.sqrt(self.Nsamples) * self.stat_model.prior_volume
+
+        return (np.array([Z, -uncert, uncert]))
+
+    def get_information(self, seed: int = None) -> [float, float, float]:
+        # -------------------
+        fitting_procedure.get_samples(**locals())
+        seed = self._tempseed
+        # -------------------
+        info_partial = np.random.choice(self.results['log_density'] - self.results['log_prior'], self.Nsamples,
+                                        p=self.results['weights'])
+        info = info_partial.mean() * self.stat_model.prior_volume
+        uncert = info_partial.std() / np.sqrt(self.Nsamples) * self.stat_model.prior_volume
+
+        return (np.array([info, -uncert, uncert]))
 
 
 # ============================================
@@ -499,12 +535,14 @@ class nested_sampling(fitting_procedure):
                                                },
                            termination_kwargs={'live_evidence_frac': self.fitting_params['live_evidence_frac']})
 
-        NS.run(data=(lc_1, lc_2), rng_key=jax.random.PRNGKey(seed))
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+        NS.run(data=data, rng_key=jax.random.PRNGKey(seed))
 
         # Store Results & Necessary Values
         self.results['priorvolume'] = self.stat_model.prior_volume
         self.results['logevidence'] = np.array(
-            [NS._results.log_Z_mean - np.log(self.stat_model.prior_volume), NS._results.log_Z_uncert])
+            [NS._results.log_Z_mean - np.log(self.stat_model.prior_volume), NS._results.log_Z_uncert]
+        )
 
         # Mark good for retrieval
         self.has_run = True
@@ -525,8 +563,6 @@ class nested_sampling(fitting_procedure):
         '''
         Returns the -1, 0 and +1 sigma values for model evidence from nested sampling.
         This represents an estimate of numerical uncertainty
-
-        Todo  redundant results call. Rearrange to call directly from NS sampler (?)
         '''
 
         if seed is None: seed = _utils.randint()
@@ -534,26 +570,64 @@ class nested_sampling(fitting_procedure):
         l, l_e = self.results['logevidence']
 
         out = np.exp([
-            l - l_e,
             l,
+            l - l_e,
             l + l_e
         ])
+
+        out -= np.array([0, out[0], out[0]])
 
         return (out)
 
     def get_information(self, seed: int = None) -> [float, float, float]:
         '''
-        Todo - Fix this /w weighted ln|p| integral from NS samples
+        Use the Nested Sampling shells to estimate the model information relative to prior
         '''
         if seed is None: seed = _utils.randint()
 
+        NS = self.sampler
+        samples, logweights = NS.get_weighted_samples()
+
+        weights = np.exp(logweights)
+        weights /= weights.sum()
+
+        log_density = NS._results.log_posterior_density
+        prior_values = self.stat_model.log_prior(samples)
+
+        info = np.sum((log_density - prior_values) * weights)
+
+        partial_info = np.random.choice((log_density - prior_values), len(log_density), p=weights)
+        uncert = partial_info.std() / np.sqrt(len(log_density))
+
+        return (np.array(info, uncert, uncert))
+
     def get_peaks(self, seed: int = None) -> ({str: [float]}, float):
-        '''
-        :param stat_model:
-        :param seed:
-        :return:
-        '''
         if seed is None: seed = _utils.randint()
+
+        NS = self.sampler
+        samples = self.get_samples()
+        log_densities = NS._results.log_posterior_density
+
+        # Find clusters
+        indices = clustering.clusterfind_1D(samples['lag'])
+
+        # Break samples and log-densities up into clusters
+        sorted_samples = clustering.sort_by_cluster(samples, indices)
+        sort_logdens = clustering.sort_by_cluster(log_densities, indices)
+
+        Nclusters = len(sorted_samples)
+
+        # Make an empty dictionary to store positions in
+        peak_locations = {key: np.zeros([Nclusters]) for key in samples.keys()}
+        peaklikes = np.zeros([Nclusters])
+
+        for i, group, lds in enumerate(sorted_samples, sort_logdens):
+            j = np.argmax(lds)
+            for key in samples.keys():
+                peak_locations[key][i] = group[key][j]
+            peaklikes[i] = lds[j]
+
+        return (peak_locations, peaklikes)
 
 
 # ------------------------------------------------------
@@ -567,8 +641,9 @@ class hessian_scan(fitting_procedure):
         del args_in['fit_params']
 
         self._default_params = {
-            'num_lags': 1024,
+            'Nlags': 1024,
             'opt_tol': 1E-5,
+            'step_size': 0.1,
             'constrained_domain': False,
             'max_opt_eval': 1_000,
             'solvertype': jaxopt.GradientDescent
@@ -586,7 +661,65 @@ class hessian_scan(fitting_procedure):
             'evidence': None,
         }
 
+    def readyup(self):
+        self.lags = np.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags)
+        self.is_ready = True
+
     # --------------
+
+    def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        # -------------------
+        fitting_procedure.fit(**locals())
+        seed = self._tempseed
+        # -------------------
+        # todo - break this into sub-functions so other functions can inherit
+
+        # Generate a random starting point
+        self.msg_run("Starting Hessian Scan")
+
+        start_params = self.stat_model.prior_sample(seed=seed)
+        start_params |= {'lag': self.lags[0]}
+
+        self.msg_run("Beginning scan at:", start_params)
+
+        params_toscan = [key for key in start_params.keys() if key not in ['lag']]
+
+        self.msg_run("Optimizing for parameters:", *params_toscan)
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+
+        # Run over 'self.lags' and scan all positions
+        # todo - Change this to call the vmapped version of stat_model.scan()
+        # todo - Expand functionality to allow for different optimizers
+        scanned_params = []
+
+        for lag in self.lags:
+            self.msg_run("Scanning at lag=%.2f ..." % lag)
+            start_params = self.stat_model.scan(start_params=start_params,
+                                                optim_params=params_toscan,
+                                                stepsize=self.step_size,
+                                                maxiter=self.max_opt_eval,
+                                                tol=self.opt_tol,
+                                                data=data
+                                                )
+            scanned_params.append(start_params.copy())
+        self.scan_peaks = _utils.dict_combine(scanned_params)
+
+        # For each of these peaks, estimate the evidence
+        # todo - add a max LL significance to cut down on evals
+        # todo - vmap and parallelize
+        Zs = []
+        for params in scanned_params:
+            Zs.append(self.stat_model.laplace_log_evidence(params=params, data=data))
+        self.evidences = np.array(Zs)
+
+    def get_evidence(self, seed: int = None) -> [float, float, float]:
+        # -------------------
+        fitting_procedure.get_evidence(**locals())
+        seed = self._tempseed
+        # -------------------
+        dlag = self.lags.ptp / (self.Nlags - 1)
+        Z = self.evidences.sum() * dlag
+        return (np.array(Z, Z, np.inf))
 
 
 if __name__ == "__main__":
@@ -633,7 +766,7 @@ if __name__ == "__main__":
     # Prior Sampling
 
     test_prior_sampler = prior_sampling(stat_model=test_statmodel)
-    test_prior_sampler.fit(lc_1=None, lc_2=None, seed=0)
+    test_prior_sampler.fit(lc_1=mock01, lc_2=mock02, seed=0)
     test_samples = test_prior_sampler.get_samples(512, importance_sampling=True)
 
     plt.figure()

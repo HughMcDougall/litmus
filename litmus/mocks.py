@@ -19,6 +19,8 @@ from copy import deepcopy as copy
 import matplotlib.pyplot as plt
 
 import types
+
+
 # ===================================================
 
 def mock_cadence(maxtime, seed=0, cadence=7, cadence_var=1, season=180, season_var=14, N=1024):
@@ -142,9 +144,9 @@ class mock(object):
         self.generate(seed=seed)
         return
 
-    def __call__(self, seed=0):
+    def __call__(self, seed=0, **kwargs):
         self.generate(seed=seed)
-        return (self)
+        return (copy(self))
 
     def generate_true(self, seed=0):
         '''
@@ -188,12 +190,13 @@ class mock(object):
         if axis is None:
             plt.figure()
             axis = plt.gca()
-        true_args |= {'lw': 1, 'c': 'k', 'alpha': 0.5, 'label': 'True Signal'}
-        series_args |= {'lw': 1, 'c1': 'tab:blue', 'c2': 'tab:orange', 'alpha': 1.0, 'capsize': 2}
+        true_args |= {'lw': 1, 'c': 'k', 'alpha': 0.5, 'label': 'True Signal', 'lw': 1}
+        series_args |= {'lw': 1, 'c1': 'tab:blue', 'c2': 'tab:orange', 'alpha': 1.0, 'capsize': 2, 'lw': 3}
         axis.plot(self.lc.T, self.lc.Y, **true_args)
-        axis.plot(self.lc.T-self.lag, self.lc.Y, **true_args|{'c':'tab:red', 'alpha':0.5})
+        axis.plot(self.lc.T - self.lag, self.lc.Y, **true_args | {'c': 'tab:red', 'alpha': 0.5})
 
-        series_args1, series_args2 = copy(series_args)| {'c':series_args['c1']}, copy(series_args) | {'c':series_args['c2']}
+        series_args1, series_args2 = copy(series_args) | {'c': series_args['c1']}, copy(series_args) | {
+            'c': series_args['c2']}
         series_args1.pop('c1'), series_args2.pop('c1')
         series_args1.pop('c2'), series_args2.pop('c2')
         axis.errorbar(self.lc_1.T, self.lc_1.Y, self.lc_1.E, fmt='none',
@@ -218,6 +221,7 @@ def determ_gen(self, seed=0):
     Y = f(X)
     self.lc = lightcurve(X, Y).trim(Tmin=0, Tmax=self.maxtime)
     return (X, Y)
+
 
 # Change the way mock A generates a time series
 mock_A = mock(season=None, lag=300)
@@ -249,9 +253,7 @@ if __name__ == "__main__":
         plt.figure()
         plt.title("Seasonal GP, lag = %.2f" % x.lag)
 
-        plt.errorbar(x.lc_1.T, x.lc_1.Y, x.lc_1.E, fmt='none', capsize=2, color='tab:blue', label='Main Signal')
-        plt.errorbar(x.lc_2.T, x.lc_2.Y, x.lc_2.E, fmt='none', capsize=2, color='tab:red', label='Second Signal')
-        plt.plot(x.lc.T, x.lc.Y, c='tab:orange', zorder=-1, label='True Signal', lw=1)
+        x.plot(axis=plt.gca())
 
         plt.legend()
         plt.xlabel("Time (Days)")
