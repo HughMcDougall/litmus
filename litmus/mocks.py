@@ -190,10 +190,10 @@ class mock(object):
         if axis is None:
             plt.figure()
             axis = plt.gca()
-        true_args |= {'lw': 1, 'c': 'k', 'alpha': 0.5, 'label': 'True Signal', 'lw': 1}
-        series_args |= {'lw': 1, 'c1': 'tab:blue', 'c2': 'tab:orange', 'alpha': 1.0, 'capsize': 2, 'lw': 3}
+        true_args ={'lw': 1, 'c': 'k', 'alpha': 0.5, 'label': 'True Signal', 'lw': 1} | true_args
+        series_args = {'lw': 1, 'c1': 'tab:blue', 'c2': 'tab:orange', 'alpha': 1.0, 'capsize': 2, 'lw': 3} | series_args
         axis.plot(self.lc.T, self.lc.Y, **true_args)
-        axis.plot(self.lc.T - self.lag, self.lc.Y, **true_args | {'c': 'tab:red', 'alpha': 0.5})
+        axis.plot(self.lc.T - self.lag, self.lc.Y, **true_args | {'c': 'tab:red'})
 
         series_args1, series_args2 = copy(series_args) | {'c': series_args['c1']}, copy(series_args) | {
             'c': series_args['c2']}

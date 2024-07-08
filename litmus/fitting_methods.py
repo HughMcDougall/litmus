@@ -643,7 +643,7 @@ class hessian_scan(fitting_procedure):
         self._default_params = {
             'Nlags': 1024,
             'opt_tol': 1E-5,
-            'step_size': 0.1,
+            'step_size': 0.001,
             'constrained_domain': False,
             'max_opt_eval': 1_000,
             'solvertype': jaxopt.GradientDescent
@@ -653,16 +653,14 @@ class hessian_scan(fitting_procedure):
 
         self.name = "Hessian Scan Fitting Procedure"
         self.results = {
-            'lags': None,
-            'opt_positions': None,
+            'scan_peaks': None,
             'opt_densities': None,
-            'opt_evidence': None,
             'opt_hessians': None,
             'evidence': None,
         }
 
     def readyup(self):
-        self.lags = np.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags)
+        self.lags = np.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags + 1, endpoint=False)[1:]
         self.is_ready = True
 
     # --------------
@@ -674,18 +672,23 @@ class hessian_scan(fitting_procedure):
         # -------------------
         # todo - break this into sub-functions so other functions can inherit
 
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+
         # Generate a random starting point
         self.msg_run("Starting Hessian Scan")
 
         start_params = self.stat_model.prior_sample(seed=seed)
         start_params |= {'lag': self.lags[0]}
 
-        self.msg_run("Beginning scan at:", start_params)
+        self.msg_run("Beginning scan at constrained-space position:", start_params)
+        self.msg_run(
+            "Log-Density for this is: %.2f" % self.stat_model.log_density(self.stat_model.to_uncon(start_params),
+                                                                          data=data))
 
-        params_toscan = [key for key in start_params.keys() if key not in ['lag']]
+        params_toscan = [key for key in start_params.keys() if
+                         key not in ['lag'] and key in self.stat_model.free_params()]
 
         self.msg_run("Optimizing for parameters:", *params_toscan)
-        data = self.stat_model.lc_to_data(lc_1, lc_2)
 
         # Run over 'self.lags' and scan all positions
         # todo - Change this to call the vmapped version of stat_model.scan()
@@ -693,8 +696,9 @@ class hessian_scan(fitting_procedure):
         scanned_params = []
 
         for lag in self.lags:
+            print(":" * 23)
             self.msg_run("Scanning at lag=%.2f ..." % lag)
-            start_params = self.stat_model.scan(start_params=start_params,
+            start_params = self.stat_model.scan(start_params=start_params | {'lag': lag},
                                                 optim_params=params_toscan,
                                                 stepsize=self.step_size,
                                                 maxiter=self.max_opt_eval,
@@ -702,24 +706,37 @@ class hessian_scan(fitting_procedure):
                                                 data=data
                                                 )
             scanned_params.append(start_params.copy())
-        self.scan_peaks = _utils.dict_combine(scanned_params)
+
+        self.results['scan_peaks'] = _utils.dict_combine(scanned_params)
+
+        self.msg_run("Scanning Complete. Calculating laplace integrals...")
 
         # For each of these peaks, estimate the evidence
         # todo - add a max LL significance to cut down on evals
         # todo - vmap and parallelize
         Zs = []
+        integrate_axes = self.stat_model.free_params().copy()
+        integrate_axes.remove('lag')
         for params in scanned_params:
-            Zs.append(self.stat_model.laplace_log_evidence(params=params, data=data))
-        self.evidences = np.array(Zs)
+            Zs.append(self.stat_model.laplace_log_evidence(params=params,
+                                                           data=data,
+                                                           integrate_axes=integrate_axes,
+                                                           constrained=False)
+                      )
+        self.results['log_evidences'] = np.array(Zs)
 
     def get_evidence(self, seed: int = None) -> [float, float, float]:
         # -------------------
         fitting_procedure.get_evidence(**locals())
         seed = self._tempseed
         # -------------------
-        dlag = self.lags.ptp / (self.Nlags - 1)
-        Z = self.evidences.sum() * dlag
-        return (np.array(Z, Z, np.inf))
+        dlag = self.lags.ptp() / (self.Nlags)
+        Z = np.exp(self.results['log_evidences']).sum() * dlag
+
+        # Estimate uncertainty from ~dt^2 error scaling.
+        Z_est = np.exp(self.results['log_evidences'][::2]).sum() * 2 * dlag
+        uncert = abs(Z - Z_est) / 3
+        return (np.array([Z, uncert, uncert]))
 
 
 if __name__ == "__main__":

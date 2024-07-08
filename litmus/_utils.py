@@ -55,7 +55,7 @@ def dict_dim(DICT: dict) -> (int, int):
 
 # -------------
 
-def dict_unpack(DICT: dict, keys=None) -> np.array:
+def dict_pack(DICT: dict, keys=None, recursive=True) -> np.array:
     '''
     Unpacks a dictionary into an array format
     :param DICT: the dict to unpack
@@ -63,22 +63,29 @@ def dict_unpack(DICT: dict, keys=None) -> np.array:
     :return: (nkeys x len_array) np.arrayobject
     '''
 
+    nokeys = True if keys is None else 0
     keys = keys if keys is not None else DICT.keys()
 
-    out = np.array([DICT[key] for key in keys])
+    if recursive and type(list(DICT.values())[0]) == dict:
+        out = np.array([dict_pack(DICT[key], keys=keys if not nokeys else None, recursive=recursive) for key in keys])
+    else:
+        out = np.array([DICT[key] for key in keys])
 
     return (out)
 
 
-def dict_pack(X: np.array, keys: [str]) -> np.array:
+def dict_unpack(X: np.array, keys: [str], recursive=True) -> np.array:
     '''
-    Unpacks a dictionary into an array format
-    :param DICT: the dict to pack
-    :param keys: the order and labels with which to index the keyed elements
-    :return: dict object {key: array} or {key: float}
+    Unpacks an array into a dict
+    :param X: Array to unpack
+    :param keys: keys to unpack with
+    :return:
     '''
 
-    out = {key: X[i] for i, key in enumerate(list(keys))}
+    if recursive and isiter(X[0]):
+        out = {key: dict_unpack(X[i], keys, recursive) for i, key in enumerate(list(keys))}
+    else:
+        out = {key: X[i] for i, key in enumerate(list(keys))}
 
     return (out)
 
@@ -148,7 +155,7 @@ def dict_divide(X: dict) -> [dict]:
 # ============================================
 # FUNCTION UTILITIES
 # ============================================
-def pack_function(func, packed_keys, fixed_values={}):
+def pack_function(func, packed_keys, fixed_values={}, invert=False):
     '''
     Re-arranges a function that takes dict arguments to tak array-like arguments instead, so as to be autograd friendly
     Takes a function f(D:dict, *arg, **kwargs) and returns f(X, D2, *args, **kwargs), D2 is all elements of D not
@@ -159,13 +166,22 @@ def pack_function(func, packed_keys, fixed_values={}):
     :param fixed_values: Elements of 'D' to be fixed
     '''
 
-    def new_func(X, unpacked_params={}, *args, **kwargs):
-        packed_dict = {key: x for key, x in zip(packed_keys, X)}
-        packed_dict |= unpacked_params
-        packed_dict |= fixed_values
+    if invert:
+        def new_func(X, unpacked_params={}, *args, **kwargs):
+            packed_dict = {key: x for key, x in zip(packed_keys, X)}
+            packed_dict |= unpacked_params
+            packed_dict |= fixed_values
 
-        out = func(packed_dict, *args, **kwargs)
-        return (out)
+            out = func(packed_dict, *args, **kwargs)
+            return (-1 * out)
+    else:
+        def new_func(X, unpacked_params={}, *args, **kwargs):
+            packed_dict = {key: x for key, x in zip(packed_keys, X)}
+            packed_dict |= unpacked_params
+            packed_dict |= fixed_values
+
+            out = func(packed_dict, *args, **kwargs)
+            return (out)
 
     return (new_func)
 
@@ -192,10 +208,10 @@ if __name__ == "__main__":
     print(DICT_ITER, "\tItterable?\t", isiter_dict(DICT_ITER))
 
     print("-" * 24)
-    print(DICT_ITER, "\tUnpacks to\t", dict_unpack(DICT_ITER))
+    print(DICT_ITER, "\tUnpacks to\t", dict_pack(DICT_ITER))
 
     print("-" * 24)
-    print(dict_unpack(DICT_ITER), "\tPacks to\t", dict_pack(dict_unpack(DICT_ITER), keys=DICT_ITER.keys()))
+    print(dict_pack(DICT_ITER), "\tPacks to\t", dict_unpack(dict_pack(DICT_ITER), keys=DICT_ITER.keys()))
 
     print("-" * 24)
     print("Extending array", DICT_ITER | {'b': [4, 5, 6]}, "\tGives \t", dict_extend(DICT_NOITER, {'b': [4, 5, 6]}))

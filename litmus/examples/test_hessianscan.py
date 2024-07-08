@@ -8,8 +8,8 @@ import os, sys
 
 import matplotlib.pyplot as plt
 
-sys.path.append("../../")
-import litmus
+# sys.path.append("../../")
+# import litmus
 
 # ============================================
 # IMPORTS
@@ -46,12 +46,14 @@ from mocks import mock, mock_A, mock_B, mock_C
 
 f, a = plt.subplots(4, 1, figsize=(5, 8), sharex=True, sharey=True)
 
-mymock=mock_B(seed=0)
+mymock = mock(cadence=[100, 300], E=[0.1, 0.1], season=None)
+mymock.plot(true_args={'alpha': 0.0})
+plt.show()
 
 # --------------------------------
-if True:
+if False:
     test_model = GP_simple()
-    test_model.set_priors({'logtau': [np.log(mymock.tau*0.1), np.log(mymock.tau*10)],
+    test_model.set_priors({'logtau': [np.log(mymock.tau * 0.1), np.log(mymock.tau * 10)],
                            'logamp': [0, 0],
                            'mean': [0, 0],
                            'rel_amp': [1, 1],
@@ -59,19 +61,40 @@ if True:
                            })
 else:
     test_model = dummy_statmodel()
-    test_model.set_priors({"test_param":[0.5,0.5]})
+    test_model.set_priors({"test_param": [0.5, 0.5]})
 
 test_model.set_priors({'lag': [0, 1000]})
 
 data = test_model.lc_to_data(mymock.lc_1, mymock.lc_2)
-starts = test_model.prior_sample() | {'lag': mymock.lag}
 
+# ---------------------------------------------------------------------
+# Check to make sure scan is working reasonably well
+'''
+starts = test_model.prior_sample() | {'lag': mymock.lag}
 finals = test_model.scan(start_params=starts, optim_params=['logtau'], data=data)
+print("After running a scan at the true lag, parameters are:")
 for key in starts.keys():
     print(key, starts[key], finals[key])
 print(starts, finals)
+'''
 
-print("Doing Fitting")
-#fitting_method = hessian_scan(stat_model=test_model, Nlags=128)
-#fitting_method.fit(lc_1 = mymock.lc_1, lc_2=mymock.lc_2)
+print("Doing Hessian Fitting")
+fitting_method = hessian_scan(stat_model=test_model, Nlags=32)
+fitting_method.fit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
+print("Evidences are:")
+print(fitting_method.get_evidence())
 
+print("Doing Priorscan Fitting")
+prior_scan = prior_sampling(stat_model=test_model, Nsamples=1024)
+prior_scan.fit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
+print("Evidences are:")
+print(prior_scan.get_evidence())
+
+plt.figure()
+plt.scatter(prior_scan.results['samples']['lag'], prior_scan.results['log_density'], label='sampling')
+plt.scatter(fitting_method.results['scan_peaks']['lag'], fitting_method.results['log_evidences'], label='hessian')
+plt.legend()
+#plt.ylim(-20,-7)
+
+print("Log gap approx, %.2f" %(fitting_method.results['log_evidences'].max() - prior_scan.results['log_density'].max()))
+plt.show()

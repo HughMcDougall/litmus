@@ -1,7 +1,7 @@
 '''
 lightcurve.py
 
-End-user friendly classes and methods
+A handy object clas for lightcurves
 
 HM 2024
 '''
@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 # LIGHT CURVE
 # ============================================
 
-class lightcurve(dict):
+class lightcurve(object):
     '''
     A wrapper class for lightcurves. Construct /w array-like inputs for time, signal and error (optional)
     like:   lightcurve(T,Y,E)
@@ -122,6 +122,8 @@ class lightcurve(dict):
     # ----------
 
     def __setattr__(self, key, value):
+        super().__setattr__(key,value)
+        '''
         if key in self.keys() or key in ["_data", "_norm_mean", "_norm_amp", "normalized"]:
             super(lightcurve, self).__setattr__(key, value)
 
@@ -130,6 +132,7 @@ class lightcurve(dict):
                     self._data = np.vstack(self.values()).T
         else:
             raise Warning("Tried to set nonexistant lightcurve attribute %s" % key)
+        '''
 
     def normalize(self):
         '''
@@ -203,11 +206,60 @@ class lightcurve(dict):
                            E=self.E[I]
                            ))
 
+    def bootstrap(self, i):
+        return
+
     def __getattr__(self, item):
         if item == "N":
-            return(self.T.size)
+            return (self.T.size)
         else:
             super().__getattribute__(item)
+
+    def __iter__(self):
+        return (lightcurve_iter(self.T, self.Y, self.E))
+
+    def plot(self, axis=None, **kwargs):
+        '''
+        :return:
+        '''
+        if axis is None:
+            plt.figure()
+            axis = plt.gca()
+        axis.errorbar(self.T, self.Y, self.E, fmt='none', **kwargs)
+        if axis == None:
+            axis.set_xlabel("T")
+            axis.set_Ylabel("Y")
+
+
+class lightcurve_iter(lightcurve):
+    '''
+    An extension of the lightcurve class that support bootstrapping
+    '''
+
+
+    def __init__(self, T, Y, E=None, r=np.exp(-1), Evary=True):
+        super().__init__(T, Y, E)
+        self.r = r
+        self.Evary = Evary
+
+
+        self._N = self.N
+        self._T = self.T
+        self._Y = self.Y
+        self._E = self.E
+
+        self.subsample()
+
+    def __next__(self):
+        self.subsample()
+        return (self)
+
+    def subsample(self):
+        n = int(self._N * self.r)
+        I = np.random.choice(np.arange(self._N), n, replace=False)
+        self.T, self.Y, self.E = self._T[I], self._Y[I], self._E[I]
+        if self.Evary: self.Y += np.random.randn(self.N) * self.E
+
 
 
 # =========================================================
@@ -233,3 +285,5 @@ if __name__ == "__main__":
     a2.plot(T, Y)
     a2.errorbar(lc_calib.T, lc_calib.Y, lc_calib.E, fmt='none', capsize=2)
     plt.show()
+
+    lightcurve_iter(T,Y,E)
