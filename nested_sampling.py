@@ -35,4 +35,16 @@ def loglikelihood(theta):
 
 import jax.numpy as jnp 
 
-samples = run(loglikelihood, nDims, prior=prior)
+# un-comment to generate yourself
+#samples = run(loglikelihood, nDims, prior=prior)
+
+# Load samples from will handley's run
+from anesthetic import read_chains
+samples = read_chains('test.csv')
+
+samples.logZ() #log-evidence
+samples.logZ(1000).std() #error on log-evidence
+
+samples.gui() # replaying of the run
+
+
