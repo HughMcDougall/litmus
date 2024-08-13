@@ -9,10 +9,10 @@ HM Apr 2024
 import numpy as np
 import pylab as pl
 
-from lightcurve import lightcurve
+from litmus.lightcurve import lightcurve
 import tinygp
 from tinygp import GaussianProcess
-from _utils import randint, isiter
+from litmus._utils import randint, isiter
 
 import jax
 from copy import deepcopy as copy

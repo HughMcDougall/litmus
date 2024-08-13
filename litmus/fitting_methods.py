@@ -8,7 +8,7 @@ HM 24
 # IMPORTS
 import sys
 
-import clustering
+import litmus.clustering
 import jaxopt
 import numpyro
 from numpyro import distributions as dist
@@ -23,16 +23,16 @@ import jax.numpy as jnp
 import numpy as np
 from numpy import nan
 
-from models import _default_config
+from litmus.models import _default_config
 
-import _utils
+import litmus._utils
 from functools import partial
 
-from ICCF_working import *
+from litmus.ICCF_working import *
 
-from models import stats_model
+from litmus.models import stats_model
 
-from lightcurve import lightcurve
+from litmus.lightcurve import lightcurve
 
 
 # ============================================

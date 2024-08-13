@@ -20,12 +20,12 @@ from jax.random import PRNGKey
 import jax.numpy as jnp
 import tinygp
 
-import _utils
-from gp_working import *
+import litmus._utils
+from litmus.gp_working import *
 
 import scipy
 
-from _utils import *
+from litmus._utils import *
 import jaxopt
 
 

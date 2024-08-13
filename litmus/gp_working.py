@@ -21,10 +21,10 @@ import jax.numpy as jnp
 from tinygp import GaussianProcess
 import tinygp
 
-from _utils import *
+from litmus._utils import *
 
 from copy import deepcopy as copy
-from lightcurve import lightcurve
+from litmus.lightcurve import lightcurve
 
 
 # ============================================

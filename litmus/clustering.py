@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.cluster import DBSCAN
-from _utils import *
+from litmus._utils import *
 
 
 # ========================
