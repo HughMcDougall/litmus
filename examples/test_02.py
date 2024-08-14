@@ -8,7 +8,7 @@ import os, sys
 
 import matplotlib.pyplot as plt
 
-sys.path.append("../../")
+sys.path.append("../")
 import litmus
 
 # ============================================
@@ -27,20 +27,20 @@ from numpyro import infer
 import jax.numpy as jnp
 import numpy as np
 
-import models
-from models import _default_config
+import litmus.models
+from litmus.models import _default_config
 
 from functools import partial
 
-from ICCF_working import *
+from litmus.ICCF_working import *
 
-import _utils
+import litmus._utils
 
-from models import stats_model, dummy_statmodel, GP_simple
-from fitting_methods import fitting_procedure, nested_sampling, prior_sampling, hessian_scan
+from litmus.models import stats_model, dummy_statmodel, GP_simple
+from litmus.fitting_methods import fitting_procedure, nested_sampling, prior_sampling, hessian_scan
 from chainconsumer import ChainConsumer
 
-from mocks import mock, mock_A, mock_B, mock_C
+from litmus.mocks import mock, mock_A, mock_B, mock_C
 
 # ============================================
 

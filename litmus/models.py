@@ -8,25 +8,24 @@ HM 24
 # IMPORTS
 import sys
 
-import jax.scipy.optimize
 import numpy as np
+import scipy
+
+import jax.scipy.optimize
+from jax.random import PRNGKey
+import jax.numpy as jnp
+import jaxopt
+
 import numpyro
 from numpyro.distributions import MixtureGeneral
 from numpyro import distributions as dist
 from numpyro import handlers
 
-from tinygp import GaussianProcess
-from jax.random import PRNGKey
-import jax.numpy as jnp
 import tinygp
+from tinygp import GaussianProcess
 
-import litmus._utils
 from litmus.gp_working import *
-
-import scipy
-
 from litmus._utils import *
-import jaxopt
 
 
 def quickprior(targ, key):
@@ -45,8 +44,8 @@ _default_config = {
     'logtau': (0, 10),
     'logamp': (0, 10),
     'rel_amp': (0, 10),
-    'mean': (-50, 50),
-    'rel_mean': (0.0, 1.0),
+    'mean': (-50, +50),
+    'rel_mean': (-2.0, +2.0),
     'lag': (0, 1000),
 
     'outlier_spread': 10.0,
@@ -109,7 +108,14 @@ class stats_model(object):
             self.__setattr__(name + "_hess", hessed_func)
 
         ## --------------------------------------
-        #self.uncon_grad = jax.grad(self._uncon_grad, argnums=0)
+        '''
+        Jacobians (DEPRECATED)
+        self.jacobian_ru = jax.jacrev(self.to_uncon, argnums=0)
+        self.jacobian_fu = jax.jacfwd(self.to_uncon, argnums=0)
+        self.jacobian_fc = jax.jacrev(self.to_con, argnums=0)
+        self.jacobian_rc = jax.jacfwd(self.to_con, argnums=0)
+        '''
+
 
     def set_priors(self, prior_ranges: dict):
         '''
@@ -200,6 +206,7 @@ class stats_model(object):
     def uncon_grad(self, params):
         '''
         Returns the log of det(Jac) by evaluating pi(x) and pi'(x').
+        Used for correcting integral elements between constrained and unconstrained space
         '''
         con_dens = numpyro.infer.util.log_density(self.prior, (), {}, params)[0]
 
@@ -208,14 +215,6 @@ class stats_model(object):
         out = con_dens - uncon_dens
         return out
 
-    @jax.jacfwd
-    def jacobian(self, params):
-        '''
-        Converts model parametes back into "real" constrained domain values.
-        Inputs and outputs as keyed dict.
-        '''
-        out = numpyro.infer.util.constrain_fn(self.prior, params=params, model_args=(), model_kwargs={})
-        return (out)
 
     def paramnames(self):
         '''
@@ -244,7 +243,7 @@ class stats_model(object):
         Quick and easy call for the number of model parameters
         :return:
         '''
-        return (len(self.paramnames()))
+        return len(self.free_params())
 
     # --------------------------------
     # Un-Jitted / un-vmapped likelihood calls
@@ -456,7 +455,8 @@ class stats_model(object):
         # Convert to unconstrainedc domain
         start_params_uncon = self.to_uncon(start_params)
 
-        if optim_params is None: optim_params = self.paramnames()
+        if optim_params is None:
+            optim_params = [name for name in self.paramnames() if self.prior_ranges[name][0]!=self.prior_ranges[name][1]]
         if len(optim_params) == 0: return start_params
 
         # Get all split into fixed and free params
@@ -591,7 +591,7 @@ class stats_model(object):
         :return:
         '''
 
-        if seed == None: seed = litmus._utils.randint()
+        if seed == None: seed = randint()
 
         pred = numpyro.infer.Predictive(self.prior,
                                         num_samples=num_samples,
@@ -610,7 +610,7 @@ class stats_model(object):
         :param num_samples: Number of realizations to generate
         :return:
         '''
-        if seed == None: seed = litmus._utils.randint()
+        if seed == None: seed = randint()
 
         pred = numpyro.infer.Predictive(self.model_function,
                                         num_samples=num_samples,

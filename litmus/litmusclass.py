@@ -13,11 +13,13 @@ vA - 13/5
 # IMPORTS
 import sys
 
-import models
-import fitting_methods as fitprocs
+
 import numpy as np
 import jax.numpy as jnp
-from lightcurve import lightcurve
+
+import litmus.models
+import litmus.fitting_methods as fitprocs
+from litmus.lightcurve import lightcurve
 
 
 # =========================================================
@@ -64,15 +66,18 @@ if __name__ == "__main__":
 
     #::::::::::::::::::::
     # Mock Data
-    from mocks import mock_A_01, mock_A_02, lag_true
+    from mocks import mock_A
+
+    lag_true = mock_A.lag
+
 
     #::::::::::::::::::::
     # Make Litmus Object
     test_litmus = litmus(model=None,
                          fitproc=fitprocs.ICCF)
 
-    test_litmus.add_lightcurve(mock_A_01)
-    test_litmus.add_lightcurve(mock_A_02)
+    test_litmus.add_lightcurve(mock_A.lc_1)
+    test_litmus.add_lightcurve(mock_A.lc_2)
 
     print("Fitting Start")
     test_litmus.fit()

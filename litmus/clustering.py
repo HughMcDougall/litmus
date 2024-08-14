@@ -1,6 +1,15 @@
+'''
+Placeholder file for running clustering algorithms
+
+Currently not in use as of 14/8/24
+
+-HM
+'''
+
+# ========================
 import numpy as np
 from sklearn.cluster import DBSCAN
-from litmus._utils import *
+from ._utils import *
 
 
 # ========================

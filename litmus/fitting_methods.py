@@ -7,31 +7,28 @@ HM 24
 # ============================================
 # IMPORTS
 import sys
+from functools import partial
 
-import litmus.clustering
-import jaxopt
-import numpyro
-from numpyro import distributions as dist
-from tinygp import GaussianProcess
-from jax.random import PRNGKey
-
-import jax
-from numpyro.contrib.nested_sampling import NestedSampler
-from numpyro import infer
-
-import jax.numpy as jnp
 import numpy as np
 from numpy import nan
 
+import jax
+import jax.numpy as jnp
+import jaxopt
+from jax.random import PRNGKey
+
+import numpyro
+from numpyro import distributions as dist
+from numpyro.contrib.nested_sampling import NestedSampler
+from numpyro import infer
+
+from tinygp import GaussianProcess
+
+import litmus._utils as _utils
+import litmus.clustering as clustering
 from litmus.models import _default_config
-
-import litmus._utils
-from functools import partial
-
 from litmus.ICCF_working import *
-
 from litmus.models import stats_model
-
 from litmus.lightcurve import lightcurve
 
 
@@ -670,7 +667,7 @@ class hessian_scan(fitting_procedure):
         fitting_procedure.fit(**locals())
         seed = self._tempseed
         # -------------------
-        # todo - break this into sub-functions so other functions can inherit
+        # todo - break this into sub-functions so other fitting methods can inherit
 
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
@@ -718,11 +715,14 @@ class hessian_scan(fitting_procedure):
         integrate_axes = self.stat_model.free_params().copy()
         integrate_axes.remove('lag')
         for params in scanned_params:
-            Zs.append(self.stat_model.laplace_log_evidence(params=params,
+            Z_lap = self.stat_model.laplace_log_evidence(params=params,
                                                            data=data,
                                                            integrate_axes=integrate_axes,
-                                                           constrained=False)
-                      )
+                                                           constrained=self.constrained_domain
+                                                         )
+            if not self.constrained_domain: Z_lap+=self.stat_model.uncon_grad(params)
+            Zs.append(Z_lap)
+
         self.results['log_evidences'] = np.array(Zs)
 
     def get_evidence(self, seed: int = None) -> [float, float, float]:

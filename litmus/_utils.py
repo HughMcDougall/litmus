@@ -1,6 +1,7 @@
 '''
 _utils.py
-Handy internal utilities for brevity and convenience
+Handy internal utilities for brevity and convenience.
+Nothing in here is accesible in the public _init_ file
 '''
 
 # ============================================

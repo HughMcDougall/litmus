@@ -11,6 +11,7 @@ HM 2024
 
 from dataclasses import dataclass
 from copy import deepcopy as copy
+
 import numpy as np
 from scipy import optimize
 import matplotlib.pyplot as plt
@@ -122,7 +123,7 @@ class lightcurve(object):
     # ----------
 
     def __setattr__(self, key, value):
-        super().__setattr__(key,value)
+        super().__setattr__(key, value)
         '''
         if key in self.keys() or key in ["_data", "_norm_mean", "_norm_amp", "normalized"]:
             super(lightcurve, self).__setattr__(key, value)
@@ -193,18 +194,24 @@ class lightcurve(object):
         out.normalized = False
         return (out)
 
-    def trim(self, Tmin=None, Tmax=None):
+    def delayed_copy(self, lag=0.0, Tmin=None, Tmax=None):
         '''
         Returns a copy sub-sampled to only datapoints in the domain T in [Tmin,Tmax]
         '''
         if Tmin is None: Tmin = self.T.min()
         if Tmax is None: Tmax = self.T.max()
-        I = np.where((self.T > Tmin) * (self.T < Tmax))[0]
+        I = np.where((self.T - lag > Tmin) * (self.T - lag < Tmax))[0]
 
-        return (lightcurve(T=self.T[I],
+        return (lightcurve(T=self.T[I] - lag,
                            Y=self.Y[I],
                            E=self.E[I]
                            ))
+
+    def trimmed_copy(self, Tmin=None, Tmax=None):
+        '''
+        Returns a copy sub-sampled to only datapoints in the domain T in [Tmin,Tmax]
+        '''
+        return self.delayed_copy(0, Tmin, Tmax)
 
     def bootstrap(self, i):
         return
@@ -230,18 +237,19 @@ class lightcurve(object):
             axis.set_xlabel("T")
             axis.set_Ylabel("Y")
 
+    def copy(self):
+        return (copy(self))
+
 
 class lightcurve_iter(lightcurve):
     '''
     An extension of the lightcurve class that support bootstrapping
     '''
 
-
     def __init__(self, T, Y, E=None, r=np.exp(-1), Evary=True):
         super().__init__(T, Y, E)
         self.r = r
         self.Evary = Evary
-
 
         self._N = self.N
         self._T = self.T
@@ -259,7 +267,6 @@ class lightcurve_iter(lightcurve):
         I = np.random.choice(np.arange(self._N), n, replace=False)
         self.T, self.Y, self.E = self._T[I], self._Y[I], self._E[I]
         if self.Evary: self.Y += np.random.randn(self.N) * self.E
-
 
 
 # =========================================================
@@ -286,4 +293,4 @@ if __name__ == "__main__":
     a2.errorbar(lc_calib.T, lc_calib.Y, lc_calib.E, fmt='none', capsize=2)
     plt.show()
 
-    lightcurve_iter(T,Y,E)
+    lightcurve_iter(T, Y, E)

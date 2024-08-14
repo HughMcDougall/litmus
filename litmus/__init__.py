@@ -7,8 +7,13 @@ __description__ = "JAX-based lag recovery program for AGN reverberation mapping"
 
 
 
-import litmus.lightcurve
+import litmus._utils
+import litmus.clustering
 import litmus.fitting_methods
+import litmus.gp_working
+import litmus.ICCF_working
+import litmus.lightcurve
+#import litmus.litmusclass
 import litmus.mocks
 import litmus.models
 

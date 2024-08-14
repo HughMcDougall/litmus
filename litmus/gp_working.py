@@ -13,17 +13,17 @@ HM 2024
 
 # ============================================
 # IMPORTS
+from copy import deepcopy as copy
+
 import numpy as np
 
 import jax
 import jax.numpy as jnp
 
-from tinygp import GaussianProcess
 import tinygp
+from tinygp import GaussianProcess
 
 from litmus._utils import *
-
-from copy import deepcopy as copy
 from litmus.lightcurve import lightcurve
 
 
