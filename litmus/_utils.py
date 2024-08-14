@@ -165,6 +165,7 @@ def pack_function(func, packed_keys, fixed_values={}, invert=False):
     :param func: Function to be unpacked
     :param packed_keys: Keys in 'D' to be packed in an array
     :param fixed_values: Elements of 'D' to be fixed
+    :param invert:  If true, will 'flip' the function upside down
     '''
 
     if invert:

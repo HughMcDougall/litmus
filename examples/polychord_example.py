@@ -67,7 +67,6 @@ def loglikelihood(theta):
 print("To confirm, in function that PC relies on...")
 print("ll is %.2e" % loglikelihood(theta))
 
-
 # ---------
 # RUN POLYCHORD
 
@@ -94,7 +93,7 @@ print("Log evidence is %.2f +/- %.2f" % (lZ, lZ_d))
 
 samples.gui()  # replaying of the run
 
-cc_samps = {key: val for key, val in zip(test_model.paramnames(), samples.posterior_points().to_numpy().T) if val.ptp()>0}
+cc_samps = {key: val for key, val in zip(test_model.par1amnames(), samples.posterior_points().to_numpy().T) if val.ptp()>0}
 C = ChainConsumer()
 C.add_chain(cc_samps)
 C.plotter.plot(truth = mymock.params())

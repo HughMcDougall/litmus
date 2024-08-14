@@ -83,6 +83,8 @@ class stats_model(object):
         self.set_priors(self._default_prior_ranges | prior_ranges) if prior_ranges is not None else self.set_priors(
             self._default_prior_ranges)
 
+        self.debug = False
+
         # --------------------------------------
         ## Create jitted, vmapped and grad/hessians of all density functions
 
@@ -115,7 +117,6 @@ class stats_model(object):
         self.jacobian_fc = jax.jacrev(self.to_con, argnums=0)
         self.jacobian_rc = jax.jacfwd(self.to_con, argnums=0)
         '''
-
 
     def set_priors(self, prior_ranges: dict):
         '''
@@ -214,7 +215,6 @@ class stats_model(object):
         uncon_dens = -numpyro.infer.util.potential_energy(self.prior, (), {}, up)
         out = con_dens - uncon_dens
         return out
-
 
     def paramnames(self):
         '''
@@ -447,6 +447,45 @@ class stats_model(object):
 
     # --------------------------------
     # Wrapped evaluation utilities
+
+    def _scanner(self, start_params, data, optim_params=None, use_vmap=False, stepsize=0.1, maxiter=1_000, tol=1E-5):
+
+        # Convert to unconstrainedc domain
+        if optim_params is None:
+            optim_params = [name for name in self.paramnames() if
+                            self.prior_ranges[name][0] != self.prior_ranges[name][1]]
+
+        def converter(start_params):
+            start_params_uncon = self.to_uncon(start_params)
+
+            # Get all split into fixed and free params
+            x0 = jnp.array([start_params_uncon[key] for key in optim_params])
+            y0 = {key: start_params_uncon[key] for key in start_params_uncon.keys() if key not in optim_params}
+
+            return (x0, y0)
+
+        x0, y0 = converter(start_params)
+
+        # Make a jaxopt friendly packed function
+        def val_and_grad(params, data):
+            val = -self._log_density_uncon_jit(params, data)
+            grad = self._log_density_uncon_grad(params, data)
+            grad_packed = jnp.array([-grad[key] for key in optim_params])
+
+            return (val, grad_packed)
+
+        optfunc = pack_function(val_and_grad, packed_keys=optim_params, fixed_values=y0, invert=False)
+
+        # Build and run an optimizer
+        solver = jaxopt.BFGS(fun=optfunc,
+                             stepsize=stepsize,
+                             maxiter=maxiter,
+                             tol=tol,
+                             jit=False,
+                             value_and_grad=True)
+
+        return (converter, solver)
+
     def scan(self, start_params, data, optim_params=None, use_vmap=False, stepsize=0.1, maxiter=1_000, tol=1E-5):
         '''
         Beginning at position 'start_params', optimize parameters in 'optim_params' to find maximum
@@ -456,7 +495,8 @@ class stats_model(object):
         start_params_uncon = self.to_uncon(start_params)
 
         if optim_params is None:
-            optim_params = [name for name in self.paramnames() if self.prior_ranges[name][0]!=self.prior_ranges[name][1]]
+            optim_params = [name for name in self.paramnames() if
+                            self.prior_ranges[name][0] != self.prior_ranges[name][1]]
         if len(optim_params) == 0: return start_params
 
         # Get all split into fixed and free params
@@ -464,19 +504,28 @@ class stats_model(object):
         y0 = {key: start_params_uncon[key] for key in start_params_uncon.keys() if key not in optim_params}
 
         # Make a jaxopt friendly packed function
-        optfunc = pack_function(self._log_density_uncon, packed_keys=optim_params, fixed_values=y0, invert=True)
-        # f = lambda x: optfunc(x, data=data)
-        print("At initial uncon position", x0, "with keys", optim_params, "eval for optfunc is", optfunc(x0, data=data))
+        def val_and_grad(params, data):
+            val = -self._log_density_uncon_jit(params, data)
+            grad = self._log_density_uncon_grad(params, data)
+            grad_packed = jnp.array([-grad[key] for key in optim_params])
+
+            return (val, grad_packed)
+
+        optfunc = pack_function(val_and_grad, packed_keys=optim_params, fixed_values=y0, invert=False)
+        if self.debug: print("At initial uncon position", x0, "with keys", optim_params, "eval for optfunc is",
+                             optfunc(x0, data=data))
 
         # Build and run an optimizer
         solver = jaxopt.BFGS(fun=optfunc,
                              stepsize=stepsize,
                              maxiter=maxiter,
                              tol=tol,
-                             jit=True)
+                             jit=False,
+                             value_and_grad=True)
         out, state = solver.run(init_params=x0, data=data)
 
-        print("At final uncon position", out, "with keys", optim_params, "eval for optfunc is", optfunc(out, data=data))
+        if self.debug: print("At final uncon position", out, "with keys", optim_params, "eval for optfunc is",
+                             optfunc(out, data=data))
 
         # Unpack the results to a dict
         out = {key: out[i] for i, key in enumerate(optim_params)}
@@ -491,26 +540,29 @@ class stats_model(object):
         '''
         At some point 'params' in parameter space, gets the hessian in unconstrained space and uses to estimate the
         model evidence
-        :param data:
-        :param params:
-        :param use_vmap:
+        :param params: Keyed dict with params in constrained / unconstrained parameter space
+        :param data: data for model.
+        :param integrate_axes: Which axes to perform laplace approx for. If none, use all
+        :param use_vmap: Placeholder. If true, perform in parallel for many sources
+        :param constrained: If true, perform laplace approx in constrained domain. Default to false
         :return:
         '''
 
-        print("-------------")
-        print("Laplace Evidence eval")
+        if self.debug: print("-------------")
+        if self.debug: print("Laplace Evidence eval")
 
-        print("Constrained params are:")
-        print(params)
+        if self.debug: print("Constrained params are:")
+        if self.debug: print(params)
 
         if integrate_axes is None:
             integrate_axes = self.paramnames()
 
+        # Get 'height' and curvature of Gaussian
         if not constrained:
             uncon_params = self.to_uncon(params)
 
-            print("Un-Constrained params are:")
-            print(uncon_params)
+            if self.debug: print("Un-Constrained params are:")
+            if self.debug: print(uncon_params)
 
             log_height = self.log_density_uncon(uncon_params, data)
             hess = self.log_density_uncon_hess(uncon_params, data)
@@ -518,32 +570,27 @@ class stats_model(object):
             log_height = self.log_density(params, data)
             hess = self.log_density_hess(params, data)
 
+        # Extract relevant entries of hessian matrix
         I = np.where([key in integrate_axes for key in self.paramnames()])[0]
-
-        hess = hess[I, :][:, I]
-
-        print("For hessian:")
-        print(np.around(hess, 1))
-
         if len(I) > 1:
+            hess = hess[I, :][:, I]
             dethess = np.linalg.det(hess)
         elif len(I) == 1:
+            hess = hess[I, :][:, I]
             dethess = hess[0][0]
         else:
-            dethess = -1
+            dethess = 1
+        dethess = abs(dethess)
 
-        print("With determinant:")
-        print(dethess)
+        if self.debug: print("With determinant:")
+        if self.debug: print(dethess)
 
-        print("And log height: %.2f..." % log_height)
+        if self.debug: print("And log height: %.2f..." % log_height)
 
         D = len(integrate_axes)
-        out = np.log(2 * np.pi) * (D / 2) - np.log(-dethess) / 2 + log_height
+        out = np.log(2 * np.pi) * (D / 2) - np.log(dethess) / 2 + log_height
 
-        print("HERE!")
-        print(np.log(2 * np.pi) * (D / 2), - np.log(-dethess) / 2, log_height)
-
-        print("log-evidence is ~%.2f" % out)
+        if self.debug: print("log-evidence is ~%.2f" % out)
         return out
 
     def laplace_log_info(self, params, data, integrate_axes=None, use_vmap=False, constrained=False):
@@ -794,7 +841,7 @@ if __name__ == '__main__':
     plt.scatter(test_params['lag'], np.exp(log_likes - Z1), s=1, label="Laplace norm from unconstrained domain")
     plt.scatter(test_params['lag'], np.exp(log_likes - Z2), s=1, label="Laplace norm from constrained domain")
 
-    #plt.yscale('log')
+    # plt.yscale('log')
 
     plt.legend()
 

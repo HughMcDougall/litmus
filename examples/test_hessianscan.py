@@ -4,8 +4,6 @@ A test script for the hessian scan fitting method
 HM 24
 '''
 
-
-
 # ============================================
 # IMPORTS
 import os, sys
@@ -24,7 +22,6 @@ import jax
 from jax.random import PRNGKey
 import jax.numpy as jnp
 
-
 from litmus import models
 from litmus.models import _default_config
 from litmus.ICCF_working import *
@@ -38,7 +35,7 @@ from chainconsumer import ChainConsumer
 # ============================================
 # Generate a mock fit
 
-mymock = mock(cadence=[100, 300], E=[0.1, 0.1], season=None)
+mymock = mock(cadence=[7, 30], E=[0.05, 0.2], season=180, lag=180, tau = 200.0)
 mymock.plot(true_args={'alpha': 0.0})
 plt.show()
 
@@ -47,6 +44,7 @@ plt.show()
 # Switch for GP simple or dummy model
 if True:
     test_model = GP_simple()
+    test_model.set_priors({'lag': [0, 500]})
     '''
     test_model.set_priors({'logtau': [np.log(mymock.tau * 0.1), np.log(mymock.tau * 10)],
                            'logamp': [0, 0],
@@ -55,27 +53,31 @@ if True:
                            'rel_mean': [0, 0]
                            })
     '''
+    test_model.set_priors({'logtau': [np.log(mymock.tau / 10), np.log(mymock.tau * 10)],
+                           'logamp': [np.log(0.1), np.log(10.0)],
+                           'mean': [-5, 5],
+                           'rel_amp': [0.1, 10],
+                           'rel_mean': [-5, 5]
+                           })
 else:
     test_model = dummy_statmodel()
     test_model.set_priors({"test_param": [0.5, 0.5]})
 
-test_model.set_priors({'lag': [0, 1000]})
+test_model.set_priors({'lag': [0, 800]})
 
 data = test_model.lc_to_data(mymock.lc_1, mymock.lc_2)
 
 # ---------------------------------------------------------------------
-# Check to make sure scan is working reasonably well
-'''
-starts = test_model.prior_sample() | {'lag': mymock.lag}
-finals = test_model.scan(start_params=starts, optim_params=['logtau'], data=data)
-print("After running a scan at the true lag, parameters are:")
-for key in starts.keys():
-    print(key, starts[key], finals[key])
-print(starts, finals)
-'''
 
-print("Doing Hessian Fitting")
-fitting_method = hessian_scan(stat_model=test_model, Nlags=16, constrained_domain = False)
+Nlags = (mymock.maxtime / np.array(mymock.cadence) ).astype(int).max() * 2
+print("Doing Hessian Fitting with grid of %i lags" % Nlags)
+fitting_method = hessian_scan(stat_model=test_model, Nlags=Nlags,
+                              constrained_domain=False,
+                              step_size=2e-4,
+                              max_opt_eval=int(128),
+                              opt_tol=0.1,
+                              )
+
 fitting_method.fit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
 print("Evidences are:")
 print(fitting_method.get_evidence())
@@ -86,11 +88,24 @@ prior_scan.fit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
 print("Evidences are:")
 print(prior_scan.get_evidence())
 
-plt.figure()
-plt.scatter(prior_scan.results['samples']['lag'], prior_scan.results['log_density'], label='sampling')
-plt.scatter(fitting_method.results['scan_peaks']['lag'], fitting_method.results['log_evidences'], label='hessian')
-plt.legend()
-#plt.ylim(-20,-7)
+f, (a1, a2) = plt.subplots(2, 1, sharex=True)
 
-print("Log gap approx, %.2f" %(fitting_method.results['log_evidences'].max() - prior_scan.results['log_density'].max()))
+a1.scatter(prior_scan.results['samples']['lag'], np.exp(prior_scan.results['log_density']), label='sampling')
+a1.scatter(fitting_method.results['scan_peaks']['lag'], np.exp(fitting_method.results['log_evidences']),
+           label='hessian')
+a1.plot(fitting_method.results['scan_peaks']['lag'], np.exp(fitting_method.results['log_evidences']),
+           label='hessian')
+
+a2.scatter(prior_scan.results['samples']['lag'], prior_scan.results['log_density'], label='sampling', s=4)
+a2.scatter(fitting_method.results['scan_peaks']['lag'], fitting_method.results['log_evidences'], label='hessian', s = 4)
+a2.legend()
+a2.set_ylim(fitting_method.results['log_evidences'].min() + 100, fitting_method.results['log_evidences'].max()+10)
+
+f.supylabel("Marginal Likelihood")
+f.supxlabel("Lag (Days)")
+
+for a in (a1, a2):
+    a.axvline(mymock.lag, c='k', ls='--')
+    a.grid()
+
 plt.show()

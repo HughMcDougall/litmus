@@ -643,6 +643,8 @@ class hessian_scan(fitting_procedure):
             'step_size': 0.001,
             'constrained_domain': False,
             'max_opt_eval': 1_000,
+            'LL_threshold': 10.0,
+            'init_samples': 5_000,
             'solvertype': jaxopt.GradientDescent
         }
 
@@ -658,6 +660,8 @@ class hessian_scan(fitting_procedure):
 
     def readyup(self):
         self.lags = np.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags + 1, endpoint=False)[1:]
+        self.converged = np.zeros_like(self.lags, dtype=bool)
+
         self.is_ready = True
 
     # --------------
@@ -671,19 +675,35 @@ class hessian_scan(fitting_procedure):
 
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
-        # Generate a random starting point
+
         self.msg_run("Starting Hessian Scan")
 
-        start_params = self.stat_model.prior_sample(seed=seed)
-        start_params |= {'lag': self.lags[0]}
+        # Use blind sampling to find a good start location
+        start_params = self.stat_model.prior_sample(seed=seed,
+                                                    num_samples=self.init_samples)
+        ll_test = self.stat_model.log_density(start_params, data=data)
+        i = ll_test.argmax()
+        start_params = {key: start_params[key][i] for key in start_params.keys()}
 
         self.msg_run("Beginning scan at constrained-space position:", start_params)
-        self.msg_run(
-            "Log-Density for this is: %.2f" % self.stat_model.log_density(self.stat_model.to_uncon(start_params),
-                                                                          data=data))
 
         params_toscan = [key for key in start_params.keys() if
                          key not in ['lag'] and key in self.stat_model.free_params()]
+
+        start_params = self.stat_model.scan(start_params=start_params,
+                                              optim_params=params_toscan,
+                                              stepsize=self.step_size,
+                                              maxiter=self.max_opt_eval,
+                                              tol=self.opt_tol,
+                                              data=data
+                                              )
+
+        self.msg_run("Found best position at new fit:", start_params)
+
+        self.msg_run(
+            "Log-Density for this is: %.2f" % self.stat_model.log_density(start_params,
+                                                                          data=data))
+
 
         self.msg_run("Optimizing for parameters:", *params_toscan)
 
@@ -692,21 +712,36 @@ class hessian_scan(fitting_procedure):
         # todo - Expand functionality to allow for different optimizers
         scanned_params = []
 
-        for lag in self.lags:
+        best_params = start_params.copy()
+        for i, lag in enumerate(self.lags):
             print(":" * 23)
             self.msg_run("Scanning at lag=%.2f ..." % lag)
-            start_params = self.stat_model.scan(start_params=start_params | {'lag': lag},
-                                                optim_params=params_toscan,
-                                                stepsize=self.step_size,
-                                                maxiter=self.max_opt_eval,
-                                                tol=self.opt_tol,
-                                                data=data
-                                                )
-            scanned_params.append(start_params.copy())
 
-        self.results['scan_peaks'] = _utils.dict_combine(scanned_params)
+            opt_params = self.stat_model.scan(start_params=best_params | {'lag': lag},
+                                              optim_params=params_toscan,
+                                              stepsize=self.step_size,
+                                              maxiter=self.max_opt_eval,
+                                              tol=self.opt_tol,
+                                              data=data
+                                              )
+
+            l_1 = self.stat_model.log_density(best_params | {'lag': lag}, data)
+            l_2 = self.stat_model.log_density(opt_params | {'lag': lag}, data)
+            diverged = np.any(np.isinf(np.array([x for x in self.stat_model.to_uncon(opt_params).values()])))
+
+            print("Change of %.2f against %.2f" % (l_2 - l_1, self.LL_threshold))
+
+            if l_2 - l_1 > -self.LL_threshold and not diverged:
+                print("Seems to have converged at itteration %i / %i" % (i, self.Nlags))
+                self.converged[i] = True
+                scanned_params.append(opt_params.copy())
+                best_params = opt_params
+            else:
+                print("Unable to converge at itteration %i / %i" % (i, self.Nlags))
 
         self.msg_run("Scanning Complete. Calculating laplace integrals...")
+
+        self.results['scan_peaks'] = _utils.dict_combine(scanned_params)
 
         # For each of these peaks, estimate the evidence
         # todo - add a max LL significance to cut down on evals
@@ -716,11 +751,11 @@ class hessian_scan(fitting_procedure):
         integrate_axes.remove('lag')
         for params in scanned_params:
             Z_lap = self.stat_model.laplace_log_evidence(params=params,
-                                                           data=data,
-                                                           integrate_axes=integrate_axes,
-                                                           constrained=self.constrained_domain
+                                                         data=data,
+                                                         integrate_axes=integrate_axes,
+                                                         constrained=self.constrained_domain
                                                          )
-            if not self.constrained_domain: Z_lap+=self.stat_model.uncon_grad(params)
+            if not self.constrained_domain: Z_lap += self.stat_model.uncon_grad(params)
             Zs.append(Z_lap)
 
         self.results['log_evidences'] = np.array(Zs)
@@ -730,11 +765,14 @@ class hessian_scan(fitting_procedure):
         fitting_procedure.get_evidence(**locals())
         seed = self._tempseed
         # -------------------
-        dlag = self.lags.ptp() / (self.Nlags)
-        Z = np.exp(self.results['log_evidences']).sum() * dlag
+        dlag = np.diff(self.lags[np.where(self.converged)[0]])
+
+        dZ = np.exp(self.results['log_evidences'])
+        dZ = (dZ[1:] + dZ[:-1]) / 2
+        Z = (dZ*dlag).sum()
 
         # Estimate uncertainty from ~dt^2 error scaling.
-        Z_est = np.exp(self.results['log_evidences'][::2]).sum() * 2 * dlag
+        Z_est = (dZ*dlag)[::2].sum() * 2
         uncert = abs(Z - Z_est) / 3
         return (np.array([Z, uncert, uncert]))
 
