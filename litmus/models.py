@@ -87,29 +87,28 @@ class stats_model(object):
         # --------------------------------------
         ## Create jitted, vmapped and grad/hessians of all density functions
 
-        #for func in [self._log_density, self._log_density_uncon, self._log_prior]:
-        #    name = func.__name__
-        #    # unpacked_func = _utils.pack_function(func, packed_keys=self.paramnames())
+        for func in [self._log_density, self._log_density_uncon, self._log_prior]:
+            name = func.__name__
+            # unpacked_func = _utils.pack_function(func, packed_keys=self.paramnames())
 
-        #    # Take grad, hessian and jit
-        #    jitted_func = jax.jit(func)
-        #    graded_func = jax.jit(jax.grad(func, argnums=0))
-        #    hessed_func = jax.jit(jax.hessian(func, argnums=0))
+            # Take grad, hessian and jit
+            jitted_func = jax.jit(func)
+            graded_func = jax.jit(jax.grad(func, argnums=0))
+            hessed_func = jax.jit(jax.hessian(func, argnums=0))
 
-        #    jitted_func.__doc__ = func.__doc__ + ", jitted version"
-        #    graded_func.__doc__ = func.__doc__ + ", grad'd and jitted version"
-        #    hessed_func.__doc__ = func.__doc__ + ", hessian'd and jitted version"
+            jitted_func.__doc__ = func.__doc__ + ", jitted version"
+            graded_func.__doc__ = func.__doc__ + ", grad'd and jitted version"
+            hessed_func.__doc__ = func.__doc__ + ", hessian'd and jitted version"
 
-        #    # todo - add vmapped versions to these as well, and possibly leave raw un-jitted calls for better performance down the track
-        #    # todo - Maybe have packed fuction calls for easier math-ing on the hessian? Probably not. We can unpack the interesting ones later
+            # todo - add vmapped versions to these as well, and possibly leave raw un-jitted calls for better performance down the track
+            # todo - Maybe have packed fuction calls for easier math-ing on the hessian? Probably not. We can unpack the interesting ones later
 
-        #    # Set attributes
-        #    self.__setattr__(name + "_jit", jitted_func)
-        #    self.__setattr__(name + "_grad", graded_func)
-        #    self.__setattr__(name + "_hess", hessed_func)
+            # Set attributes
+            self.__setattr__(name + "_jit", jitted_func)
+            self.__setattr__(name + "_grad", graded_func)
+            self.__setattr__(name + "_hess", hessed_func)
 
         ## --------------------------------------
-        ##
         #self.uncon_grad = jax.grad(self._uncon_grad, argnums=0)
 
     def set_priors(self, prior_ranges: dict):
