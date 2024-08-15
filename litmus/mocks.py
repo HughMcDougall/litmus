@@ -272,6 +272,7 @@ class mock(object):
                 series_args_1[key] = series_args[key]
                 series_args_2[key] = series_args[key]
 
+
         axis.errorbar(self.lc_1.T, self.lc_1.Y, self.lc_1.E, fmt='none',
                       label="Time Series 1",
                       **series_args_1
@@ -283,10 +284,10 @@ class mock(object):
 
         series_args_1.pop('capsize'), series_args_2.pop('capsize')
         axis.scatter(self.lc_1.T, self.lc_1.Y,
-                      **series_args_1
+                      **(series_args_1 | {'s':3})
                       )
         axis.scatter(self.lc_2.T, self.lc_2.Y,
-                      **series_args_2
+                      **(series_args_2 | {'s':3})
                       )
         return axis
 

@@ -484,7 +484,7 @@ class stats_model(object):
                              jit=False,
                              value_and_grad=True)
 
-        return (converter, solver)
+        return (converter, solver, optfunc)
 
     def scan(self, start_params, data, optim_params=None, use_vmap=False, stepsize=0.1, maxiter=1_000, tol=1E-5):
         '''

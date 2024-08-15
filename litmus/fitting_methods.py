@@ -713,17 +713,39 @@ class hessian_scan(fitting_procedure):
         scanned_params = []
 
         best_params = start_params.copy()
-        for i, lag in enumerate(self.lags):
-            print(":" * 23)
-            self.msg_run("Scanning at lag=%.2f ..." % lag)
 
-            opt_params = self.stat_model.scan(start_params=best_params | {'lag': lag},
+        converter, solver, optfunc = self.stat_model._scanner(start_params=best_params,
                                               optim_params=params_toscan,
                                               stepsize=self.step_size,
                                               maxiter=self.max_opt_eval,
                                               tol=self.opt_tol,
-                                              data=data
-                                              )
+                                              data=data)
+
+        x0, y0 = converter(best_params)
+
+        for i, lag in enumerate(self.lags):
+            print(":" * 23)
+            self.msg_run("Scanning at lag=%.2f ..." % lag)
+
+            # Test switch to see if moving the creation of the solver outside of the loop saves runtime
+            # NOT CURRENTLY WORKING
+            if False:
+
+                x0, y0 = converter(best_params| {'lag': lag})
+                xopt, state = solver.run(init_params=x0, data=data)
+
+                xopt = {key: xopt[i] for i, key in enumerate(params_toscan)}
+                xopt = xopt | y0  # Adjoin the fixed values
+                opt_params = self.stat_model.to_con(xopt)
+
+            else:
+                opt_params = self.stat_model.scan(start_params=best_params | {'lag': lag},
+                                                  optim_params=params_toscan,
+                                                  stepsize=self.step_size,
+                                                  maxiter=self.max_opt_eval,
+                                                  tol=self.opt_tol,
+                                                  data=data
+                                                  )
 
             l_1 = self.stat_model.log_density(best_params | {'lag': lag}, data)
             l_2 = self.stat_model.log_density(opt_params | {'lag': lag}, data)
