@@ -104,12 +104,13 @@ def dict_sortby(A: dict, B: dict, match_only=True) -> dict:
 
 def dict_extend(A: dict, B: dict = None) -> dict:
     '''
-    :param A:
-    :param B:
+    Extends all single-length entries of a dict to match the length of a non-singular element
+    :param A: Dictionary whose elements are to be extended
+    :param B: (optional) the array to extend by, equivalent to dict_extend(A|B)
     :return:
     '''
 
-    out = {} | A
+    out = A.copy()
     if B is not None: out |= B
 
     to_extend = [key for key in out if not isiter(out[key])]

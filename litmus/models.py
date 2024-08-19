@@ -474,7 +474,7 @@ class stats_model(object):
 
             return (val, grad_packed)
 
-        optfunc = pack_function(val_and_grad, packed_keys=optim_params, fixed_values=y0, invert=False)
+        optfunc = pack_function(val_and_grad, packed_keys=optim_params, fixed_values={}, invert=False)
 
         # Build and run an optimizer
         solver = jaxopt.BFGS(fun=optfunc,
@@ -667,6 +667,19 @@ class stats_model(object):
         params = pred(rng_key=jax.random.PRNGKey(seed), data=data)
         return (params)
 
+    def find_seed(self, data, guesses=None):
+        '''
+        Find a good initial seed. Unless otherwise over-written, while blindly sample the prior and return the best fit.
+        '''
+
+        if guesses == None: guesses = 50 * 2 ** len(self.free_params())
+
+        samples = self.prior_sample()
+        ll = self.log_density(samples, data)
+        i = ll.argmax()
+        out = dict_unpack(samples)[i]
+        return (out, ll.max())
+
 
 # ============================================
 # Custom statmodel example
@@ -770,83 +783,128 @@ class GP_simple(stats_model):
 
     # -----------------------
 
+    def find_seed(self, data, guesses=None):
 
-# ============================================
-# ============================================
-# Testing
+        T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
+        T1, Y1, E1 = T[bands == 0], Y[bands == 0], E[bands == 0]
+        T2, Y2, E2 = T[bands == 1], Y[bands == 1], E[bands == 1]
 
-    # Build a test stats model and adjust priors
-    test_statmodel = dummy_statmodel()
-    test_statmodel.set_priors({
-        'lag': [0, 500],
-        'test_param': [0.0, 0.0]
-    })
+        if guesses is None: guesses = int(np.array(self.prior_ranges['lag']).ptp() / np.median(np.diff(T1)))
 
-    # Generate prior samples and evaluate likelihoods
-    test_data = jnp.array([100., 0.25])
-    test_params = test_statmodel.prior_sample(num_samples=1_000)
-    log_likes = test_statmodel.log_density(data=test_data, params=test_params)
-    log_grads = test_statmodel.log_density_grad(data=test_data, params=test_params)['lag']
-    log_hess = test_statmodel.log_density_hess(data=test_data, params=test_params)[:, 0, 0]
+        from litmus.ICCF_working import correlfunc_jax_vmapped
 
-    # ------------------------------
-    fig, (a1, a2) = plt.subplots(2, 1, sharex=True)
-    a1.scatter(test_params['lag'], log_likes)
-    a2.scatter(test_params['lag'], np.exp(log_likes))
+        approx_season = np.diff(T1).max()
+        autolags = jnp.linspace(-approx_season, approx_season, 1024)
+        autocorrel = correlfunc_jax_vmapped(autolags, T1, Y1, T1, Y1, 1024)
 
-    for a in (a1, a2): a.grid()
-    fig.supxlabel("Lag (days)")
-    a1.set_ylabel("Log-Density")
-    a2.set_ylabel("Density")
-    fig.tight_layout()
+        autolags, autocorrel = np.array(autolags), np.array(autocorrel)
+        # Trim
+        if True:
+            autolags = autolags[autocorrel > 0]
+            autocorrel = autocorrel[autocorrel > 0]
+            autocorrel[autolags < 0]*=-1
+            autocorrel-=1
+            tau = (autolags*autolags).sum() / (autolags*autocorrel).sum()
+        else:
+            autocorrel = autocorrel[autocorrel > 0]
+            tau = np.average(autolags ** 2, weights=autocorrel) * 2 / 2
 
-    plt.show()
+        Y1bar, Y2bar = np.average(Y1, weights=E1 ** -2), np.average(Y2, weights=E2 ** -2)
+        Y1var, Y2var = np.average((Y1 - Y1bar) ** 2, weights=E1 ** -2), np.average((Y2 - Y2bar) ** 2, weights=E2 ** -2)
 
-    # ------------------------------
-    fig, (a1, a2) = plt.subplots(2, 1, sharex=True)
-    a1.scatter(test_params['lag'], log_grads)
-    a2.scatter(test_params['lag'], log_hess)
+        out = {
+            'lag': 0.0,
+            'logtau': np.log(tau),
+            'logamp': np.log(Y1var) / 2,
+            'rel_amp': np.sqrt(Y2var / Y1var),
+            'mean': Y1bar,
+            'rel_mean': Y2bar - Y1bar,
+        }
 
-    for a in (a1, a2): a.grid()
-    fig.supxlabel("Lag (days)")
-    a1.set_ylabel("Log-Density Gradient")
-    a2.set_ylabel("Log-Density Curvature")
-    fig.tight_layout()
+        lag_fits = np.linspace(*self.prior_ranges['lag'], guesses)
+        lls = self.log_density(params=dict_extend(out, {'lag': lag_fits}), data=data)
 
-    plt.show()
+        out |= {'lag': lag_fits[lls.argmax()]}
+        return (out, lls.max())
 
-    # ===============================
-    # Try a scan
-    opt_lag = test_statmodel.scan(start_params={'lag': 10.1, 'test_param': 0.0}, data=test_data,
-                                  optim_params=['lag', 'test_param'],
-                                  use_vmap=False,
-                                  stepsize=0.1,
-                                  maxiter=500)['lag']
-    print("best lag is", opt_lag)
+        # ============================================
+        # ============================================
+        # Testing
 
-    Z1 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data,
-                                             integrate_axes=['lag'])
-    Z2 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data,
-                                             integrate_axes=['lag'], constrained=True)
-    print("Estimate for evidence is %.2f" % np.exp(Z1))
-    print("Estimate for evidence is %.2f" % np.exp(Z2))
+        if __name__ == '__main__':
+            import matplotlib.pyplot as plt
 
-    # ------------------------------
-    fig = plt.figure()
-    plt.title("Normalization Demonstration")
-    plt.scatter(test_params['lag'], np.exp(log_likes) / np.exp(log_likes).mean() / 500, s=1, label="Monte Carlo Approx")
-    plt.scatter(test_params['lag'], np.exp(log_likes - Z1), s=1, label="Laplace norm from unconstrained domain")
-    plt.scatter(test_params['lag'], np.exp(log_likes - Z2), s=1, label="Laplace norm from constrained domain")
+        # Build a test stats model and adjust priors
+        test_statmodel = dummy_statmodel()
+        test_statmodel.set_priors({
+            'lag': [0, 500],
+            'test_param': [0.0, 0.0]
+        })
 
-    # plt.yscale('log')
+        # Generate prior samples and evaluate likelihoods
+        test_data = jnp.array([100., 0.25])
+        test_params = test_statmodel.prior_sample(num_samples=1_000)
+        log_likes = test_statmodel.log_density(data=test_data, params=test_params)
+        log_grads = test_statmodel.log_density_grad(data=test_data, params=test_params)['lag']
+        log_hess = test_statmodel.log_density_hess(data=test_data, params=test_params)[:, 0, 0]
 
-    plt.legend()
+        # ------------------------------
+        fig, (a1, a2) = plt.subplots(2, 1, sharex=True)
+        a1.scatter(test_params['lag'], log_likes)
+        a2.scatter(test_params['lag'], np.exp(log_likes))
 
-    plt.ylabel("Posterior Probability")
-    fig.tight_layout()
-    plt.grid()
+        for a in (a1, a2): a.grid()
+        fig.supxlabel("Lag (days)")
+        a1.set_ylabel("Log-Density")
+        a2.set_ylabel("Density")
+        fig.tight_layout()
 
-    plt.show()
+        plt.show()
+
+        # ------------------------------
+        fig, (a1, a2) = plt.subplots(2, 1, sharex=True)
+        a1.scatter(test_params['lag'], log_grads)
+        a2.scatter(test_params['lag'], log_hess)
+
+        for a in (a1, a2): a.grid()
+        fig.supxlabel("Lag (days)")
+        a1.set_ylabel("Log-Density Gradient")
+        a2.set_ylabel("Log-Density Curvature")
+        fig.tight_layout()
+
+        plt.show()
+
+        # ===============================
+        # Try a scan
+        opt_lag = test_statmodel.scan(start_params={'lag': 10.1, 'test_param': 0.0}, data=test_data,
+                                      optim_params=['lag', 'test_param'],
+                                      use_vmap=False,
+                                      stepsize=0.1,
+                                      maxiter=500)['lag']
+        print("best lag is", opt_lag)
+
+        Z1 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data,
+                                                 integrate_axes=['lag'])
+        Z2 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data,
+                                                 integrate_axes=['lag'], constrained=True)
+        print("Estimate for evidence is %.2f" % np.exp(Z1))
+        print("Estimate for evidence is %.2f" % np.exp(Z2))
+
+        # ------------------------------
+        fig = plt.figure()
+        plt.title("Normalization Demonstration")
+        plt.scatter(test_params['lag'], np.exp(log_likes) / np.exp(log_likes).mean() / 500, s=1,
+                    label="Monte Carlo Approx")
+        plt.scatter(test_params['lag'], np.exp(log_likes - Z1), s=1, label="Laplace norm from unconstrained domain")
+        plt.scatter(test_params['lag'], np.exp(log_likes - Z2), s=1, label="Laplace norm from constrained domain")
+
+        # plt.yscale('log')
+
+        plt.legend()
+
+        plt.ylabel("Posterior Probability")
+        fig.tight_layout()
+        plt.grid()
+
+        plt.show()
