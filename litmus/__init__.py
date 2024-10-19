@@ -13,8 +13,8 @@ import litmus.fitting_methods
 import litmus.gp_working
 import litmus.ICCF_working
 import litmus.lightcurve
-#import litmus.litmusclass
 import litmus.mocks
 import litmus.models
 
 from litmus.lightcurve import *
+#from litmus.litmusclass import LITMUS

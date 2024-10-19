@@ -6,6 +6,11 @@ HM 24
 
 # ============================================
 # IMPORTS
+
+import warnings
+
+warnings.filterwarnings("ignore")
+
 import sys
 
 import numpy as np
@@ -27,6 +32,10 @@ from tinygp import GaussianProcess
 from litmus.gp_working import *
 from litmus._utils import *
 
+import contextlib
+
+import os
+
 
 def quickprior(targ, key):
     p = targ.prior_ranges[key]
@@ -42,7 +51,7 @@ def quickprior(targ, key):
 # Default prior ranges. Kept in one place as a convenient storage area
 _default_config = {
     'logtau': (0, 10),
-    'logamp': (0, 10),
+    'logamp': (-3, 3),
     'rel_amp': (0, 10),
     'mean': (-50, +50),
     'rel_mean': (-2.0, +2.0),
@@ -448,13 +457,17 @@ class stats_model(object):
     # --------------------------------
     # Wrapped evaluation utilities
 
-    def _scanner(self, start_params, data, optim_params=None, use_vmap=False, stepsize=0.1, maxiter=1_000, tol=1E-5):
+    def _scanner(self, data, optim_params=None, use_vmap=False, optim_kwargs={}, return_aux=False):
+        '''
+        Creates a black-box jitted optimizer for when we want to perform many scans in a row
+        '''
 
         # Convert to unconstrainedc domain
         if optim_params is None:
             optim_params = [name for name in self.paramnames() if
                             self.prior_ranges[name][0] != self.prior_ranges[name][1]]
 
+        # ---------------------------
         def converter(start_params):
             start_params_uncon = self.to_uncon(start_params)
 
@@ -464,39 +477,120 @@ class stats_model(object):
 
             return (x0, y0)
 
-        x0, y0 = converter(start_params)
+        def deconverter(x, y):
+            x = {key: x[i] for i, key in enumerate(optim_params)}
+            x = x | y  # Adjoin the fixed values
+            opt_params = self.to_con(x)
+
+            return (opt_params)
+
+        def runsolver(solver, start_params, aux: bool = False):
+            # todo - change this to a .update loop to allow us to pass the state
+            x0, y0 = converter(start_params)
+            with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
+                xopt, state = solver.run(x0, y0, data)
+            out_params = deconverter(xopt, y0)
+
+            if aux == False:
+                return (out_params)
+            else:
+                aux_data = {
+                    'H': state.H,
+                    'err': state.error,
+                    'grad': state.grad,
+                    'val': state.value,
+                    'stepsize': state.stepsize,
+                }
+                return (out_params, aux_data)
+
+
+        def runsolver_jit(solver, start_params, state):
+            x0, y0 = converter(start_params)
+            outstate = copy(state)
+
+            i=0
+
+            while i==0 or (outstate.error>solver.tol and i<solver.maxiter):
+                if self.debug: print(i)
+                with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
+                    x0, outstate = solver.update(x0, outstate, y0, data)
+                i+=1
+            out_params = deconverter(x0, y0)
+
+            aux_data = {
+                'H': state.H,
+                'err': state.error,
+                'grad': state.grad,
+                'val': state.value,
+                'stepsize': state.stepsize,
+            }
+            return (out_params, aux_data, outstate)
+
+        # ---------------------------
+
+        optimizer_args = {
+            'stepsize': 0.0,
+            'min_stepsize': 1E-5,
+            'increase_factor': 1.5,
+            'maxiter': 256,
+            'linesearch': 'backtracking',
+            'verbose': False,
+        }
+
+        optimizer_args |= optim_kwargs
 
         # Make a jaxopt friendly packed function
-        def val_and_grad(params, data):
-            val = -self._log_density_uncon_jit(params, data)
-            grad = self._log_density_uncon_grad(params, data)
-            grad_packed = jnp.array([-grad[key] for key in optim_params])
-
-            return (val, grad_packed)
-
-        optfunc = pack_function(val_and_grad, packed_keys=optim_params, fixed_values={}, invert=False)
+        optfunc = pack_function(self._log_density_uncon, packed_keys=optim_params, fixed_values={}, invert=True)
 
         # Build and run an optimizer
         solver = jaxopt.BFGS(fun=optfunc,
-                             stepsize=stepsize,
-                             maxiter=maxiter,
-                             tol=tol,
-                             jit=False,
-                             value_and_grad=True)
+                             value_and_grad=False,
+                             jit=True,
+                             **optimizer_args
+                             )
 
-        return (converter, solver, optfunc)
+        if self.debug:
+            try:
+                print("Creating and testing solver...")
 
-    def scan(self, start_params, data, optim_params=None, use_vmap=False, stepsize=0.1, maxiter=1_000, tol=1E-5):
+                x0, y0 = converter(self.prior_sample())
+                init_state = solver.init_state(x0, y0, data)
+                with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
+                    solver.update(params=x0, state=init_state, y0=y0, data=data)
+                print("Jaxopt solver created and running fine")
+            except:
+                print("Something wrong in creation of jaxopt solver")
+
+        # Return
+
+        if return_aux:
+            return (solver, runsolver, [converter, deconverter, optfunc, runsolver_jit])
+        else:
+            return (solver, runsolver)
+
+    def scan(self, start_params, data, optim_params=None, use_vmap=False, optim_kwargs={}):
         '''
         Beginning at position 'start_params', optimize parameters in 'optim_params' to find maximum
         '''
+
+        optimizer_args = {
+            'stepsize': 0.0,
+            'min_stepsize': 1E-5,
+            'increase_factor': 1.5,
+            'maxiter': 1024,
+            'linesearch': 'backtracking',
+            'verbose': False,
+        }
+
+        optimizer_args |= optim_kwargs
 
         # Convert to unconstrainedc domain
         start_params_uncon = self.to_uncon(start_params)
 
         if optim_params is None:
             optim_params = [name for name in self.paramnames() if
-                            self.prior_ranges[name][0] != self.prior_ranges[name][1]]
+                            self.prior_ranges[name][0] != self.prior_ranges[name][1]
+                            ]
         if len(optim_params) == 0: return start_params
 
         # Get all split into fixed and free params
@@ -508,22 +602,42 @@ class stats_model(object):
             val = -self._log_density_uncon_jit(params, data)
             grad = self._log_density_uncon_grad(params, data)
             grad_packed = jnp.array([-grad[key] for key in optim_params])
-
             return (val, grad_packed)
 
-        optfunc = pack_function(val_and_grad, packed_keys=optim_params, fixed_values=y0, invert=False)
+        optfunc = pack_function(val_and_grad, packed_keys=optim_params, fixed_values=y0, invert=False, jit=False)
+
+        # optfunc = pack_function(self._log_density_uncon, packed_keys=optim_params, fixed_values=y0, invert=True)
+
         if self.debug: print("At initial uncon position", x0, "with keys", optim_params, "eval for optfunc is",
                              optfunc(x0, data=data))
 
-        # Build and run an optimizer
-        solver = jaxopt.BFGS(fun=optfunc,
-                             stepsize=stepsize,
-                             maxiter=maxiter,
-                             tol=tol,
-                             jit=False,
-                             value_and_grad=True)
-        out, state = solver.run(init_params=x0, data=data)
+        # =====================
+        # Jaxopt Work
 
+        # Build the optimizer
+        solver = jaxopt.BFGS(fun=optfunc,
+                             value_and_grad=True,
+                             jit=True,
+                             **optimizer_args
+                             )
+
+        # Debug safety check to see if somethings breaking
+        if self.debug:
+            print("Creating and testing solver...")
+            try:
+                init_state = solver.init_state(x0, y0, data)
+                with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
+                    solver.update(params=x0, state=init_state, data=data)
+                print("Jaxopt solver created and running fine")
+            except:
+                print("Something went wrong in when making the jaxopt optimizer. Double check your inputs.")
+
+        # Run
+        with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
+            out, state = solver.run(init_params=x0, data=data)
+
+        # =====================
+        # Cleanup and return
         if self.debug: print("At final uncon position", out, "with keys", optim_params, "eval for optfunc is",
                              optfunc(out, data=data))
 
@@ -667,7 +781,7 @@ class stats_model(object):
         params = pred(rng_key=jax.random.PRNGKey(seed), data=data)
         return (params)
 
-    def find_seed(self, data, guesses=None):
+    def find_seed(self, data, guesses=None, fixed={}):
         '''
         Find a good initial seed. Unless otherwise over-written, while blindly sample the prior and return the best fit.
         '''
@@ -675,6 +789,9 @@ class stats_model(object):
         if guesses == None: guesses = 50 * 2 ** len(self.free_params())
 
         samples = self.prior_sample()
+
+        if fixed!={}: samples = dict_extend(samples|fixed)
+
         ll = self.log_density(samples, data)
         i = ll.argmax()
         out = dict_unpack(samples)[i]
@@ -783,7 +900,7 @@ class GP_simple(stats_model):
 
     # -----------------------
 
-    def find_seed(self, data, guesses=None):
+    def find_seed(self, data, guesses=None, fixed = {}):
 
         T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
 
@@ -803,9 +920,9 @@ class GP_simple(stats_model):
         if True:
             autolags = autolags[autocorrel > 0]
             autocorrel = autocorrel[autocorrel > 0]
-            autocorrel[autolags < 0]*=-1
-            autocorrel-=1
-            tau = (autolags*autolags).sum() / (autolags*autocorrel).sum()
+            autocorrel[autolags < 0] *= -1
+            autocorrel -= 1
+            tau = (autolags * autolags).sum() / (autolags * autocorrel).sum()
         else:
             autocorrel = autocorrel[autocorrel > 0]
             tau = np.average(autolags ** 2, weights=autocorrel) * 2 / 2
@@ -821,6 +938,8 @@ class GP_simple(stats_model):
             'mean': Y1bar,
             'rel_mean': Y2bar - Y1bar,
         }
+
+        out|=fixed
 
         lag_fits = np.linspace(*self.prior_ranges['lag'], guesses)
         lls = self.log_density(params=dict_extend(out, {'lag': lag_fits}), data=data)

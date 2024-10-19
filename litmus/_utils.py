@@ -12,6 +12,23 @@ import numpy as np
 import jax
 
 
+
+from contextlib import contextmanager
+import sys, os
+
+# ============================================
+# PRINTING UTILITIES
+# ============================================
+@contextmanager
+def suppress_stdout():
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+
 # ============================================
 # DICTIONARY UTILITIES
 # ============================================
@@ -58,7 +75,7 @@ def dict_dim(DICT: dict) -> (int, int):
 
 def dict_pack(DICT: dict, keys=None, recursive=True) -> np.array:
     '''
-    Unpacks a dictionary into an array format
+    Packs a dictionary into an array format
     :param DICT: the dict to unpack
     :param keys: the order in which to index the keyed elements. If none, will use DICT.keys(). Can be partial
     :return: (nkeys x len_array) np.arrayobject
@@ -157,7 +174,7 @@ def dict_divide(X: dict) -> [dict]:
 # ============================================
 # FUNCTION UTILITIES
 # ============================================
-def pack_function(func, packed_keys, fixed_values={}, invert=False):
+def pack_function(func, packed_keys, fixed_values={}, invert=False, jit=False):
     '''
     Re-arranges a function that takes dict arguments to tak array-like arguments instead, so as to be autograd friendly
     Takes a function f(D:dict, *arg, **kwargs) and returns f(X, D2, *args, **kwargs), D2 is all elements of D not
@@ -186,6 +203,8 @@ def pack_function(func, packed_keys, fixed_values={}, invert=False):
             out = func(packed_dict, *args, **kwargs)
             return (out)
 
+    if jit: new_func = jax.jit(new_func)
+
     return (new_func)
 
 
@@ -194,6 +213,7 @@ def pack_function(func, packed_keys, fixed_values={}, invert=False):
 # ============================================
 def randint():
     return (np.random.randint(0, sys.maxsize // 1024))
+
 
 
 # ===================================

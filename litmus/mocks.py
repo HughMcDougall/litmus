@@ -149,6 +149,7 @@ class mock(object):
                          'E_var': [0.0, 0.0]
                          }
 
+        self.seed = seed
         self.lc, self.lc_1, self.lc_2 = None, None, None
         self.lag = 0.0
         kwargs = defaultkwargs | kwargs
@@ -165,7 +166,7 @@ class mock(object):
 
     def __call__(self, seed=0, **kwargs):
         self.generate(seed=seed)
-        return (copy(self))
+        return (self.copy(seed))
 
     def generate_true(self, seed: int = 0):
         '''
@@ -206,14 +207,17 @@ class mock(object):
 
         return (self.lc_1, self.lc_2)
 
-    def copy(self, seed=0, **kwargs):
+    def copy(self, seed=None, **kwargs):
         '''
         Returns a copy of the mock while over-writing certain params.
         :param seed:
         :param kwargs:
         :return:
         '''
-        out = mock(seed=seed, **self.args | kwargs)
+        if seed is None:
+            out = copy(self)
+        else:
+            out = mock(seed=seed, **self.args | kwargs)
         return (out)
 
     # ------------------------------
@@ -272,7 +276,6 @@ class mock(object):
                 series_args_1[key] = series_args[key]
                 series_args_2[key] = series_args[key]
 
-
         axis.errorbar(self.lc_1.T, self.lc_1.Y, self.lc_1.E, fmt='none',
                       label="Time Series 1",
                       **series_args_1
@@ -284,12 +287,30 @@ class mock(object):
 
         series_args_1.pop('capsize'), series_args_2.pop('capsize')
         axis.scatter(self.lc_1.T, self.lc_1.Y,
-                      **(series_args_1 | {'s':3})
-                      )
+                     **(series_args_1 | {'s': 3})
+                     )
         axis.scatter(self.lc_2.T, self.lc_2.Y,
-                      **(series_args_2 | {'s':3})
-                      )
+                     **(series_args_2 | {'s': 3})
+                     )
         return axis
+
+    def corrected_plot(self, params={}, axis=None, true_args={}, series_args={}):
+        params = self.params() | params
+        corrected = self.copy()
+
+        corrected.lc_2.T += params['lag']
+        corrected.lc_2 += params['rel_mean']
+        corrected.lc_2 *= params['rel_amp']
+
+        if 'alpha' in true_args.keys():
+            if isiter(true_args['alpha']):
+                true_args['alpha'][1] = 0.0
+            else:
+                true_args['alpha'] = [true_args['alpha'], 0.0]
+        else:
+            true_args |= {'alpha': [0.3, 0.0]}
+
+        corrected.plot(axis=axis, true_args=true_args, series_args=series_args)
 
     def params(self):
         out = {
@@ -356,6 +377,13 @@ if __name__ == "__main__":
         plt.axhline(1.0, ls=':', c='k', zorder=-10)
         plt.axhline(-1.0, ls=':', c='k', zorder=-10)
 
+        plt.grid()
+        plt.show()
+
+        #------------------
+        plt.figure()
+        x.corrected_plot(x.params(), axis = plt.gca(), true_args={'alpha':[0.15, 0.0]})
+        plt.title("Corrected_plot for lag = %.2f" %x.lag)
         plt.grid()
 
         plt.show()
