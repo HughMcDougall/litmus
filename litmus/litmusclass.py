@@ -61,18 +61,17 @@ class LITMUS(object):
         self.lightcurves = []
         self.data = None
 
-        self.Nsamples = 10_000
-        self.samples={}
+        self.Nsamples = 50_000
+        self.samples = {}
         self.C = ChainConsumer()
 
-        self.C.configure(smooth=1, summary=True, linewidths=2, cloud=True, shade_alpha=0.5)
-
+        self.C.configure(smooth=0, summary=True, linewidths=2, cloud=True, shade_alpha=0.5)
 
         return
 
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
-        if key=="Nsamples" and hasattr(self, "samples") and self.samples!={}:
+        if key == "Nsamples" and hasattr(self, "samples") and self.samples != {}:
             super().__setattr__("samples", self.fitproc.get_samples(value))
 
     def add_lightcurve(self, lc: lightcurve):
@@ -105,9 +104,8 @@ class LITMUS(object):
 
         self.fitproc.fit(lc_1, lc_2)
 
-        self.samples=self.fitproc.get_samples(self.Nsamples)
-        self.C.add_chain(self.samples, name = "Lightcurves %i-%i" %(i,j))
-
+        self.samples = self.fitproc.get_samples(self.Nsamples)
+        self.C.add_chain(self.samples, name="Lightcurves %i-%i" % (i, j))
 
     # ----------------------
     # Plotting
@@ -121,22 +119,22 @@ class LITMUS(object):
         Creates a nicely formatted chainconsumer plot of the parameters
         Returns the chainconsumer plot figure
         '''
-        if Nsamples is not None and Nsamples!=self.Nsamples:
+        if Nsamples is not None and Nsamples != self.Nsamples:
             C = ChainConsumer()
             samps = self.fitproc.get_samples(Nsamples, **CC_kwargs)
             C.add_chain(samps)
         else:
             C = self.C
 
-        fig = C.plotter.plot( parameters=self.model.free_params(),
-            extents=self.model.prior_ranges if prior_extents else None,
+        fig = C.plotter.plot(parameters=self.model.free_params(),
+                             extents=self.model.prior_ranges if prior_extents else None,
                              **CC_kwargs)
         fig.tight_layout()
         if show: fig.show()
 
         return fig
 
-    def lag_plot(self, Nsamples: int = None, show=True):
+    def lag_plot(self, Nsamples: int = None, show=True, extras=True):
         '''
         Creates a nicely formatted chainconsumer plot of the parameters
         Returns the ChainConsumer object
@@ -144,7 +142,7 @@ class LITMUS(object):
         if 'lag' not in self.model.free_params():
             return
 
-        if Nsamples is not None and Nsamples!=self.Nsamples:
+        if Nsamples is not None and Nsamples != self.Nsamples:
             C = ChainConsumer()
             samps = self.fitproc.get_samples(Nsamples)
             C.add_chain(samps)
@@ -156,16 +154,17 @@ class LITMUS(object):
 
         fig.axes[0].grid()
 
-        if isinstance(self.fitproc, fitting_methods.hessian_scan):
-            X, Y = self.fitproc.scan_peaks['lag'], self.fitproc.log_evidences
-            Y -= Y.max()
-            Y = np.exp(Y)
-            Y /= Y.sum()
-            fig.axes[0].plot(X,Y)
+        if extras:
 
-            plt.scatter(self.fitproc.lags,np.zeros_like(self.fitproc.lags), c='red', s=20)
-            plt.scatter(X,np.zeros_like(X), c='black', s=20)
+            if isinstance(self.fitproc, fitting_methods.hessian_scan):
+                X, Y = self.fitproc.scan_peaks['lag'], self.fitproc.log_evidences
+                Y -= Y.max()
+                Y = np.exp(Y)
+                Y /= Y.sum()
+                fig.axes[0].plot(X, Y)
 
+                plt.scatter(self.fitproc.lags, np.zeros_like(self.fitproc.lags), c='red', s=20)
+                plt.scatter(X, np.zeros_like(X), c='black', s=20)
 
         if show: fig.show()
         return (fig)
@@ -222,8 +221,8 @@ if __name__ == "__main__":
     from mocks import *
 
     # mymock = mymock.copy(E=[0.05,0.1], lag=300)
-    # mymock = mock(cadence=[7, 30], E=[0.15, 0.5], season=180, lag=256, tau=200.0)
-    mymock=mock_B
+    mymock = mock(cadence=[7, 30], E=[0.15, 0.5], season=180, lag=256, tau=200.0)
+    # mymock=mock_B
     mymock.plot()
     mymock(10)
     plt.show()
@@ -231,23 +230,26 @@ if __name__ == "__main__":
     lag_true = mymock.lag
 
     test_model = models.GP_simple()
+    test_model.set_priors({'mean': [0.0, 0.0]})
 
     seed_params = mymock.params()
 
     #::::::::::::::::::::
     # Make Litmus Object
-    fitting_method = fitting_methods.hessian_scan(stat_model=test_model,
-                                                  Nlags=128,
-                                                  init_samples=5_000,
-                                                  grid_bunching=0.8,
-                                                  optimizer_args={'tol': 1E-5,
-                                                                  'maxiter': 512,
-                                                                  'increase_factor': 1.2},
-                                                  reverse=False,
+    fitting_method = fitting_methods.SVI_scan(stat_model=test_model,
+                                              Nlags=128,
+                                              init_samples=5_000,
+                                              grid_bunching=0.6,
+                                              optimizer_args={'tol': 1E-3,
+                                                              'maxiter': 512,
+                                                              'increase_factor': 1.2,
+                                                              },
+                                              reverse=False,
 
-                                                  seed_params = seed_params
+                                              seed_params=seed_params,
+                                              debug=True
 
-                                                  )
+                                              )
 
     test_litmus = LITMUS(fitting_method
                          )
@@ -261,3 +263,4 @@ if __name__ == "__main__":
 
     test_litmus.plot_parameters()
     test_litmus.lag_plot()
+    test_litmus.diagnostic_plots()

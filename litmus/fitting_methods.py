@@ -165,7 +165,7 @@ class fitting_procedure(object):
         print(end, end='')
         return
 
-    def msg_verbose(self, *x: str, end='\n', delim=' '):
+    def msg_debug(self, *x: str, end='\n', delim=' '):
         '''
         Explicit messages to help debug when things are behaving strangely
         '''
@@ -293,11 +293,12 @@ class ICCF(fitting_procedure):
         del args_in['__class__']
         del args_in['fit_params']
 
-        self._default_params = {
-            'Nboot': 512,
-            'Nterp': 2014,
-            'Nlags': 512,
-        }
+        if not hasattr(self, '_default_params'):
+            self._default_params = {
+                'Nboot': 512,
+                'Nterp': 2014,
+                'Nlags': 512,
+            }
 
         super().__init__(**args_in)
 
@@ -397,9 +398,10 @@ class prior_sampling(fitting_procedure):
         del args_in['__class__']
         del args_in['fit_params']
 
-        self._default_params = {
-            'Nsamples': 4096
-        }
+        if not hasattr(self, '_default_params'):
+            self._default_params = {
+                'Nsamples': 4096
+            }
 
         super().__init__(**args_in)
         # ------------------------------------
@@ -500,13 +502,14 @@ class nested_sampling(fitting_procedure):
         del args_in['__class__']
         del args_in['fit_params']
 
-        self._default_params = {
-            'num_live_points': 5000,
-            'max_samples': 50000,
-            'num_parallel_samplers': 1,
-            'uncert_improvement_patience': 2,
-            'live_evidence_frac': 0.01,
-        }
+        if not hasattr(self, '_default_params'):
+            self._default_params = {
+                'num_live_points': 5000,
+                'max_samples': 50000,
+                'num_parallel_samplers': 1,
+                'uncert_improvement_patience': 2,
+                'live_evidence_frac': 0.01,
+            }
 
         super().__init__(**args_in)
 
@@ -635,29 +638,29 @@ class hessian_scan(fitting_procedure):
         del args_in['__class__']
         del args_in['fit_params']
 
-        self._default_params = {
-            'Nlags': 1024,
-            'opt_tol': 1E-3,
-            'opt_tol_init': 1E-5,
-            'step_size': 0.001,
-            'constrained_domain': False,
-            'max_opt_eval': 1_000,
-            'max_opt_eval_init': 5_000,
-            'LL_threshold': 10.0,
-            'init_samples': 5_000,
-            'grid_bunching': 0.5,
-            'grid_relaxation': 0.5,
-            'grid_depth': None,
-            'grid_Nterp': None,
-            'reverse': True,
-            'optimizer_args': {},
-            'seed_params': {}
-        }
-
-        self.valid_seed_methods = ['random_seed', 'stationary_opt']
-        self.seed_params = {}
+        if not hasattr(self, '_default_params'):
+            self._default_params = {
+                'Nlags': 1024,
+                'opt_tol': 1E-3,
+                'opt_tol_init': 1E-5,
+                'step_size': 0.001,
+                'constrained_domain': False,
+                'max_opt_eval': 1_000,
+                'max_opt_eval_init': 5_000,
+                'LL_threshold': 10.0,
+                'init_samples': 5_000,
+                'grid_bunching': 0.5,
+                'grid_relaxation': 0.5,
+                'grid_depth': None,
+                'grid_Nterp': None,
+                'reverse': True,
+                'optimizer_args': {},
+                'seed_params': {}
+            }
 
         super().__init__(**args_in)
+
+        # -----------------------------------
 
         self.name = "Hessian Scan Fitting Procedure"
 
@@ -670,8 +673,10 @@ class hessian_scan(fitting_procedure):
 
         self.solver = None
 
-        self.params_toscan = self.stat_model.paramnames()
+        self.params_toscan = self.stat_model.free_params()
         self.params_toscan.remove('lag')
+
+        self.estmap_params = {}
 
     def readyup(self):
 
@@ -766,38 +771,32 @@ class hessian_scan(fitting_procedure):
 
     # --------------
 
-    def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
-        # -------------------
-        fitting_procedure.fit(**locals())
-        seed = self._tempseed
-        # -------------------
+    def estimate_MAP(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
 
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
-        self.msg_run("Starting Hessian Scan")
-
         # ----------------------------------
         # Find seed for optimization
-        seed_params, llstart = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=self.seed_params)
+        if self.stat_model.free_params() != self.seed_params.keys():
+            seed_params, llstart = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=self.seed_params)
 
-        self.msg_run("Beginning scan at constrained-space position:")
-        for it in seed_params.items():
-            print('\t %s: \t %.2f' % (it[0], it[1]))
-        self.msg_run(
-            "Log-Density for this is: %.2f" % llstart)
+            self.msg_run("Beginning scan at constrained-space position:")
+            for it in seed_params.items():
+                print('\t %s: \t %.2f' % (it[0], it[1]))
+            self.msg_run(
+                "Log-Density for this is: %.2f" % llstart)
+        else:
+            seed_params = self.seed_params
 
         params_toscan = self.params_toscan
-
-
-
         # ----------------------------------
 
         print("Moving to new location...")
-        seed_params = self.stat_model.scan(start_params=seed_params,
-                                           optim_params=params_toscan,
-                                           data=data,
-                                           optim_kwargs=self.optimizer_args,
-                                           )
+        estmap_params = self.stat_model.scan(start_params=seed_params,
+                                             optim_params=params_toscan,
+                                             data=data,
+                                             optim_kwargs=self.optimizer_args,
+                                             )
 
         # ----------------------------------
 
@@ -809,19 +808,37 @@ class hessian_scan(fitting_procedure):
             "Log-Density for this is: %.2f" % self.stat_model.log_density(seed_params,
                                                                           data=data))
 
+        self.estmap_params = estmap_params
+
+    def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        # -------------------
+        fitting_procedure.fit(**locals())
+        seed = self._tempseed
+        # -------------------
+
+        self.msg_run("Starting Hessian Scan")
+
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+
+        # ----------------------------------
+        # Estimate the MAP
+
+        self.estimate_MAP(lc_1, lc_2, seed)
+
         # ----------------------------------
 
         # Make a grid
-        lags = self.make_grid(data, seed_params=seed_params)
+
+        lags = self.make_grid(data, seed_params=self.estmap_params)
         self.lags = lags
 
         # ----------------------------------
         # Run over 'self.lags' and scan all positions
-        scanned_params = []
+        scanned_optima = []
 
-        best_params = seed_params.copy()
+        best_params = self.estmap_params.copy()
+        params_toscan = self.params_toscan
 
-        # todo - rearrange this to take optim_kwargs at the fitting method level
         solver, runsolver, [converter, deconverter, optfunc, runsolver_jit] = self.stat_model._scanner(data,
                                                                                                        optim_params=params_toscan,
                                                                                                        optim_kwargs=self.optimizer_args,
@@ -839,10 +856,6 @@ class hessian_scan(fitting_procedure):
             self.msg_run("Scanning at lag=%.2f ..." % lag)
 
             # Get current param site in packed-function friendly terms
-            '''
-            opt_params, aux_data = runsolver(solver, best_params | {'lag': lag},
-                                             aux=True)
-            '''
             opt_params, aux_data, state = runsolver_jit(solver, best_params | {'lag': lag}, state)
 
             # --------------
@@ -860,7 +873,7 @@ class hessian_scan(fitting_procedure):
 
                 self.converged[i] = True
 
-                scanned_params.append(opt_params.copy())
+                scanned_optima.append(opt_params.copy())
 
                 self.diagnostic_grads.append(aux_data['grad'])
                 # self.diagnostic_hessians.append(aux_data['H'])
@@ -879,7 +892,7 @@ class hessian_scan(fitting_procedure):
 
         self.msg_run("Scanning Complete. Calculating laplace integrals...")
 
-        self.scan_peaks = _utils.dict_combine(scanned_params)
+        self.scan_peaks = _utils.dict_combine(scanned_optima)
 
         # For each of these peaks, estimate the evidence
         # todo - add a max LL significance to cut down on evals
@@ -888,7 +901,9 @@ class hessian_scan(fitting_procedure):
         integrate_axes = self.stat_model.free_params().copy()
 
         if 'lag' in integrate_axes: integrate_axes.remove('lag')
-        for params in scanned_params:
+        for params in scanned_optima:
+
+            # todo - this is partially redundant as we already have the hessians from above
 
             Z_lap = self.stat_model.laplace_log_evidence(params=params,
                                                          data=data,
@@ -906,10 +921,10 @@ class hessian_scan(fitting_procedure):
 
     def get_evidence(self, seed: int = None) -> [float, float, float]:
         # -------------------
-        print(print("Lag sep", np.diff(self.lags).std()))
         fitting_procedure.get_evidence(**locals())
         seed = self._tempseed
         # -------------------
+
         lags_forint = self.scan_peaks['lag']
         minlag, maxlag = self.stat_model.prior_ranges['lag']
         dlag = [*np.diff(lags_forint) / 2, 0]
@@ -944,11 +959,11 @@ class hessian_scan(fitting_procedure):
         dlag[0] += lags_forint.min() - minlag
         dlag[-1] += maxlag - lags_forint.max()
 
-        if sum(dlag)==0: dlag = 1.0
+        if sum(dlag) == 0: dlag = 1.0
 
-        weights = np.exp(self.log_evidences-self.log_evidences.max())
+        weights = np.exp(self.log_evidences - self.log_evidences.max())
         weights = weights * dlag
-        weights/=weights.sum()
+        weights /= weights.sum()
 
         # Get hessians and peak locations
         covars = np.array([np.linalg.inv(H) for H in self.diagnostic_hessians])
@@ -977,7 +992,7 @@ class hessian_scan(fitting_procedure):
 
                 # Add linear interpolation 'smudging' to lags
 
-                if Npeaks>1:
+                if Npeaks > 1:
 
                     # Get nodes
                     tnow, ynow = peaks[i]['lag'], weights[i]
@@ -990,8 +1005,7 @@ class hessian_scan(fitting_procedure):
                     elif i == Npeaks - 1:
                         yprev, ynext = weights[i - 1], ynow
                         tprev, tnext = peaks[i - 1]['lag'], max(self.stat_model.prior_ranges['lag'])
-                    #--
-
+                    # --
 
                     # Perform CDF shift
                     dx = np.array([tprev - tnow, tnext - tnow])
@@ -1003,18 +1017,262 @@ class hessian_scan(fitting_procedure):
                     R = np.random.rand(to_choose[i])
 
                     DX, DY = dx[leftright], dy[leftright]
-                    DY*=np.sign(DY)
+                    DY *= np.sign(DY)
                     YBAR = ynow + DY / 2
                     c1, c2 = YBAR / DY, ynow / DY
 
-                    tshift = np.sqrt(np.random.rand(to_choose[i]) * c1 * 2 + (c2)**2) - c2
-                    tshift = tshift*DX
+                    tshift = np.sqrt(np.random.rand(to_choose[i]) * c1 * 2 + (c2) ** 2) - c2
+                    tshift = tshift * DX
 
-                    samps['lag']+=tshift
+                    samps['lag'] += tshift
 
                 outs.append(samps)
         outs = {key: np.concatenate([out[key] for out in outs]) for key in self.stat_model.paramnames()}
         return (outs)
+
+
+# -----------------------------------
+class svi_scan(hessian_scan):
+    '''
+    An alternative to hessian_scan that fits each slice with stochastic variational
+    inference instead of the laplace approximation. May be slower.
+    '''
+
+    def __init__(self, stat_model: stats_model,
+                 out_stream=sys.stdout, err_stream=sys.stderr,
+                 verbose=True, debug=False, **fit_params):
+        args_in = {**locals(), **fit_params}
+        del args_in['self']
+        del args_in['__class__']
+        del args_in['fit_params']
+
+        if not hasattr(self, '_default_params'):
+            self._default_params = {
+                'Nlags': 1024,
+                'opt_tol': 1E-3,
+                'opt_tol_init': 1E-5,
+                'step_size': 0.001,
+                'constrained_domain': False,
+                'max_opt_eval': 1_000,
+                'max_opt_eval_init': 5_000,
+                'ELBO_threshold': 100.0,
+                'init_samples': 5_000,
+                'grid_bunching': 0.5,
+                'grid_relaxation': 0.5,
+                'grid_depth': None,
+                'grid_Nterp': None,
+                'reverse': True,
+                'optimizer_args': {},
+                'seed_params': {},
+                'ELBO_optimstep': 5E-3,
+                'ELBO_particles': 128,
+                'ELBO_Nsteps': 100,
+                'ELBO_Nsteps_init': 1_000,
+            }
+
+        super().__init__(**args_in)
+
+        # -----------------------------
+
+        self.name = "SVI Scan Fitting Procedure"
+
+        self.ELBOS = []
+        self.diagnostic_losses = []
+        self.diagnostic_loss_init = []
+
+    def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        # -------------------
+        fitting_procedure.fit(**locals())
+        seed = self._tempseed
+        # -------------------
+
+        self.msg_run("Starting SVI Scan")
+
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+
+        # ----------------------------------
+        # Estimate the MAP and its hessian
+
+        self.estimate_MAP(lc_1, lc_2, seed)
+
+        estmap_uncon = self.stat_model.to_uncon(self.estmap_params)
+
+        fix_param_dict_con = {key: self.estmap_params[key] for key in self.stat_model.fixed_params()}
+        fix_param_dict_uncon = {key: estmap_uncon[key] for key in self.stat_model.fixed_params()}
+
+        I = np.where([key in self.params_toscan for key in self.stat_model.paramnames()])[0]
+
+        init_hess = -1 * self.stat_model.log_density_uncon_hess(estmap_uncon, data=data)
+        if len(I) >= 1:
+            init_hess = init_hess[I, :][:, I]
+        else:
+            init_hess = jnp.array([1.0])
+
+        print("Aquired hessian is...")
+        print(init_hess)
+
+        # ----------------------------------
+        # Convert these into SVI friendly objects and fit an SVI at the map
+        self.msg_run("Performing SVI slice at the MAP estimate")
+        init_loc = _utils.dict_pack(estmap_uncon, keys=self.params_toscan)
+        init_tril = jnp.linalg.cholesky(jnp.linalg.inv(init_hess))
+
+        print("In uncon, starting params are...")
+        print(estmap_uncon)
+        print("From this, starting loc is...")
+        print(init_loc)
+
+        print("Initial tril is...")
+        print(init_tril)
+
+        self.msg_debug("\t Constructing slice model")
+
+        from models import quickprior
+        def funky_model(data, lag):
+
+            params = {}
+            for key in self.stat_model.free_params():
+                if key != 'lag':
+                    val = quickprior(self.stat_model, key)
+                    params |= {key: val}
+            params |= {'lag': lag}
+            params |= fix_param_dict_con
+
+            with numpyro.handlers.block(hide = self.stat_model.paramnames()):
+                LL = self.stat_model._log_likelihood(params, data)
+            numpyro.factor('log_likelihood', LL)
+
+        slice_function = numpyro.handlers.condition(self.stat_model.model_function,
+                                                    data=fix_param_dict_con | {'lag': estmap_uncon['lag']}
+                                                    )
+        slice_function = funky_model
+
+        # SVI settup
+        self.msg_debug("\t Constructing and running optimizer and SVI guides")
+        optimizer = numpyro.optim.Adam(step_size=self.ELBO_optimstep)
+        autoguide = numpyro.infer.autoguide.AutoMultivariateNormal(slice_function)
+        autosvi = numpyro.infer.SVI(slice_function, autoguide, optim=optimizer,
+                                    loss=numpyro.infer.Trace_ELBO(self.ELBO_particles),
+                                    )
+
+        self.msg_debug("\t Running SVI")
+        MAP_SVI_results = autosvi.run(jax.random.PRNGKey(seed), self.ELBO_Nsteps_init,
+                                      data=data, lag=self.estmap_params['lag'],
+                                      init_params={'auto_loc': init_loc,
+                                                   'auto_scale_tril': init_tril
+                                                   }
+                                      )
+
+        self.msg_debug("\t Success. Extracting solution")
+        BEST_loc, BEST_tril = MAP_SVI_results.params['auto_loc'], MAP_SVI_results.params['auto_scale_tril']
+
+        self.diagnostic_loss_init = MAP_SVI_results.losses
+
+        # ----------------------------------
+
+        # Make a grid
+
+        lags = self.make_grid(data, seed_params=self.estmap_params)
+        self.lags = lags
+
+        # ----------------------------------
+
+        # Make a model that can be scanned with SVI
+
+        lags_forscan = self.lags
+        if self.reverse: lags_forscan = lags_forscan[::-1]
+        l_old = np.inf
+        scanned_optima = []
+
+        for i, lag in enumerate(lags_forscan):
+            print(":" * 23)
+            self.msg_run("Scanning at lag=%.2f ..." % lag)
+
+            svi_loop_result = autosvi.run(jax.random.PRNGKey(seed),
+                                         self.ELBO_Nsteps,
+                                         data=data, lag=lag,
+                                         init_params={'auto_loc': BEST_loc,
+                                                      'auto_scale_tril': BEST_tril
+                                                      }
+                                         )
+
+            NEW_loc, NEW_tril = svi_loop_result.params['auto_loc'], svi_loop_result.params['auto_scale_tril']
+
+            # --------------
+            # Check if the optimization has suceeded or broken
+
+            l_old = l_old
+            l_new = svi_loop_result.losses[-1]
+            diverged = bool(np.isinf(NEW_loc).any() + np.isinf(NEW_tril).any())
+
+            self.msg_run("From %.2f to %.2f, change of %.2f against %.2f" % (l_old, l_new, l_new - l_old, self.ELBO_threshold))
+
+            if l_new - l_old < self.ELBO_threshold and not diverged:
+                self.msg_run("Seems to have converged at itteration %i / %i" % (i, self.Nlags))
+
+                self.converged[i] = True
+                l_old = l_new
+                BEST_loc, BEST_tril = NEW_loc, NEW_tril
+
+                uncon_params = self.stat_model.to_uncon(self.estmap_params | {'lag': lag}) | _utils.dict_unpack(NEW_loc,
+                                                                                                                self.params_toscan)
+                con_params = self.stat_model.to_con(uncon_params)
+                scanned_optima.append(con_params)
+
+                H = np.dot(NEW_tril, NEW_tril.T)
+                H = (H + H.T) / 2
+                H = jnp.linalg.inv(H)
+                self.diagnostic_hessians.append(H)
+
+                self.diagnostic_losses.append(svi_loop_result.losses)
+                self.ELBOS.append(-1 * svi_loop_result.losses[-1])  # todo - use some averaging here
+
+
+
+            else:
+                self.msg_run("Unable to converge at itteration %i / %i" % (i, self.Nlags))
+                self.msg_debug("Reason for failure: \n large ELBO drop: \t %r \n diverged: \t %r" %(l_new - l_old < self.ELBO_threshold, diverged))
+
+        self.msg_run("Scanning Complete. Calculating ELBO integrals...")
+
+        self.scan_peaks = _utils.dict_combine(scanned_optima)
+
+        # ---------------------------------------------------------------------------------
+        # For each of these peaks, estimate the evidence
+        # todo - add a max LL significance to cut down on evals
+        # todo - vmap and parallelize
+        Zs = []
+
+        for j, params in enumerate(scanned_optima):
+
+            Z_ELBO = self.ELBOS[j]
+            if not self.constrained_domain: Z_ELBO += self.stat_model.uncon_grad(params)
+            Zs.append(Z_ELBO)
+
+        self.log_evidences = np.array(Zs)
+        self.has_run = True
+
+        print("Fitting complete.")
+
+    def diagnostics(self, plot=True):
+        f, (a1, a2) = plt.subplots(2, 1, sharey=True)
+        for x in self.diagnostic_losses:
+            a1.plot(x)
+        a2.plot(self.diagnostic_loss_init)
+
+        a1.set_yscale('log')
+
+        a1.grid(), a2.grid()
+
+        a1.set_title("Initial MAP SVI")
+        a2.set_title("Scan SVIs")
+
+        f.supylabel("Loss")
+        f.supxlabel("Itteration Number")
+
+        f.tight_layout()
+
+        if plot: plt.show()
 
 
 # =====================================================
