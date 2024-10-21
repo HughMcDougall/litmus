@@ -1032,7 +1032,7 @@ class hessian_scan(fitting_procedure):
 
 
 # -----------------------------------
-class svi_scan(hessian_scan):
+class SVI_scan(hessian_scan):
     '''
     An alternative to hessian_scan that fits each slice with stochastic variational
     inference instead of the laplace approximation. May be slower.
@@ -1068,6 +1068,7 @@ class svi_scan(hessian_scan):
                 'ELBO_particles': 128,
                 'ELBO_Nsteps': 100,
                 'ELBO_Nsteps_init': 1_000,
+                'ELBO_fraction': 0.1,
             }
 
         super().__init__(**args_in)
@@ -1117,18 +1118,10 @@ class svi_scan(hessian_scan):
         init_loc = _utils.dict_pack(estmap_uncon, keys=self.params_toscan)
         init_tril = jnp.linalg.cholesky(jnp.linalg.inv(init_hess))
 
-        print("In uncon, starting params are...")
-        print(estmap_uncon)
-        print("From this, starting loc is...")
-        print(init_loc)
-
-        print("Initial tril is...")
-        print(init_tril)
-
         self.msg_debug("\t Constructing slice model")
 
         from models import quickprior
-        def funky_model(data, lag):
+        def slice_function(data, lag):
 
             params = {}
             for key in self.stat_model.free_params():
@@ -1138,14 +1131,9 @@ class svi_scan(hessian_scan):
             params |= {'lag': lag}
             params |= fix_param_dict_con
 
-            with numpyro.handlers.block(hide = self.stat_model.paramnames()):
+            with numpyro.handlers.block(hide=self.stat_model.paramnames()):
                 LL = self.stat_model._log_likelihood(params, data)
             numpyro.factor('log_likelihood', LL)
-
-        slice_function = numpyro.handlers.condition(self.stat_model.model_function,
-                                                    data=fix_param_dict_con | {'lag': estmap_uncon['lag']}
-                                                    )
-        slice_function = funky_model
 
         # SVI settup
         self.msg_debug("\t Constructing and running optimizer and SVI guides")
@@ -1177,8 +1165,6 @@ class svi_scan(hessian_scan):
 
         # ----------------------------------
 
-        # Make a model that can be scanned with SVI
-
         lags_forscan = self.lags
         if self.reverse: lags_forscan = lags_forscan[::-1]
         l_old = np.inf
@@ -1189,12 +1175,13 @@ class svi_scan(hessian_scan):
             self.msg_run("Scanning at lag=%.2f ..." % lag)
 
             svi_loop_result = autosvi.run(jax.random.PRNGKey(seed),
-                                         self.ELBO_Nsteps,
-                                         data=data, lag=lag,
-                                         init_params={'auto_loc': BEST_loc,
-                                                      'auto_scale_tril': BEST_tril
-                                                      }
-                                         )
+                                          self.ELBO_Nsteps,
+                                          data=data, lag=lag,
+                                          init_params={'auto_loc': BEST_loc,
+                                                       'auto_scale_tril': BEST_tril
+                                                       },
+                                          progress_bar=False
+                                          )
 
             NEW_loc, NEW_tril = svi_loop_result.params['auto_loc'], svi_loop_result.params['auto_scale_tril']
 
@@ -1205,7 +1192,8 @@ class svi_scan(hessian_scan):
             l_new = svi_loop_result.losses[-1]
             diverged = bool(np.isinf(NEW_loc).any() + np.isinf(NEW_tril).any())
 
-            self.msg_run("From %.2f to %.2f, change of %.2f against %.2f" % (l_old, l_new, l_new - l_old, self.ELBO_threshold))
+            self.msg_run(
+                "From %.2f to %.2f, change of %.2f against %.2f" % (l_old, l_new, l_new - l_old, self.ELBO_threshold))
 
             if l_new - l_old < self.ELBO_threshold and not diverged:
                 self.msg_run("Seems to have converged at itteration %i / %i" % (i, self.Nlags))
@@ -1225,13 +1213,15 @@ class svi_scan(hessian_scan):
                 self.diagnostic_hessians.append(H)
 
                 self.diagnostic_losses.append(svi_loop_result.losses)
-                self.ELBOS.append(-1 * svi_loop_result.losses[-1])  # todo - use some averaging here
-
+                self.ELBOS.append(-1 * svi_loop_result.losses[-int(self.ELBO_Nsteps * self.ELBO_fraction):].mean())
 
 
             else:
                 self.msg_run("Unable to converge at itteration %i / %i" % (i, self.Nlags))
-                self.msg_debug("Reason for failure: \n large ELBO drop: \t %r \n diverged: \t %r" %(l_new - l_old < self.ELBO_threshold, diverged))
+                self.msg_debug("Reason for failure: \n large ELBO drop: \t %r \n diverged: \t %r" % (
+                l_new - l_old < self.ELBO_threshold, diverged))
+
+        self.ELBOS = np.array(self.ELBOS)
 
         self.msg_run("Scanning Complete. Calculating ELBO integrals...")
 
@@ -1246,7 +1236,7 @@ class svi_scan(hessian_scan):
         for j, params in enumerate(scanned_optima):
 
             Z_ELBO = self.ELBOS[j]
-            if not self.constrained_domain: Z_ELBO += self.stat_model.uncon_grad(params)
+            #if not self.constrained_domain: Z_ELBO += self.stat_model.uncon_grad(params)
             Zs.append(Z_ELBO)
 
         self.log_evidences = np.array(Zs)
@@ -1255,19 +1245,24 @@ class svi_scan(hessian_scan):
         print("Fitting complete.")
 
     def diagnostics(self, plot=True):
-        f, (a1, a2) = plt.subplots(2, 1, sharey=True)
-        for x in self.diagnostic_losses:
-            a1.plot(x)
-        a2.plot(self.diagnostic_loss_init)
+        f, (a1, a2) = plt.subplots(2, 1)
+        for i, x in enumerate(self.diagnostic_losses):
+            a1.plot(x - (-self.ELBOS[i]), c='k', alpha=0.25)
+        a2.plot(self.diagnostic_loss_init, c='k')
 
-        a1.set_yscale('log')
+        a1.axvline(int((1-self.ELBO_fraction) * self.ELBO_Nsteps), c='k', ls='--')
 
+        a1.set_yscale('symlog')
+        a2.set_yscale('symlog')
         a1.grid(), a2.grid()
 
-        a1.set_title("Initial MAP SVI")
-        a2.set_title("Scan SVIs")
+        a1.set_xlim(0, self.ELBO_Nsteps)
+        a2.set_xlim(0, self.ELBO_Nsteps_init)
 
-        f.supylabel("Loss")
+        a1.set_title("Scan SVIs")
+        a2.set_title("Initial MAP SVI")
+
+        f.supylabel("Loss - loss_final (log scale)")
         f.supxlabel("Itteration Number")
 
         f.tight_layout()
