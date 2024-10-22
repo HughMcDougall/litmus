@@ -13,7 +13,7 @@ dependencies = [
   'jaxlib',
   'jaxopt',
   'numpyro',
-  'tinygp'
+  'tinygp',
   'matplotlib',
   'numpy',
   'etils',
