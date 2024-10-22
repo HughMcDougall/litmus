@@ -498,18 +498,17 @@ class stats_model(object):
                 }
                 return (out_params, aux_data)
 
-
         def runsolver_jit(solver, start_params, state):
             x0, y0 = converter(start_params)
             outstate = copy(state)
 
-            i=0
+            i = 0
 
-            while i==0 or (outstate.error>solver.tol and i<solver.maxiter):
+            while i == 0 or (outstate.error > solver.tol and i < solver.maxiter):
                 if self.debug: print(i)
                 with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
                     x0, outstate = solver.update(x0, outstate, y0, data)
-                i+=1
+                i += 1
             out_params = deconverter(x0, y0)
 
             aux_data = {
@@ -785,7 +784,7 @@ class stats_model(object):
 
         samples = self.prior_sample()
 
-        if fixed!={}: samples = dict_extend(samples|fixed)
+        if fixed != {}: samples = dict_extend(samples | fixed)
 
         ll = self.log_density(samples, data)
         i = ll.argmax()
@@ -895,7 +894,7 @@ class GP_simple(stats_model):
 
     # -----------------------
 
-    def find_seed(self, data, guesses=None, fixed = {}):
+    def find_seed(self, data, guesses=None, fixed={}):
 
         T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
 
@@ -934,7 +933,7 @@ class GP_simple(stats_model):
             'rel_mean': Y2bar - Y1bar,
         }
 
-        out|=fixed
+        out |= fixed
 
         lag_fits = np.linspace(*self.prior_ranges['lag'], guesses)
         lls = self.log_density(params=dict_extend(out, {'lag': lag_fits}), data=data)

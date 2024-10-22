@@ -8,6 +8,7 @@ HM 24
 # IMPORTS
 import sys
 from functools import partial
+import importlib.util
 
 import numpy as np
 from numpy import nan
@@ -19,13 +20,24 @@ import jax.numpy as jnp
 import jaxopt
 from jax.random import PRNGKey
 
-import numpyro
-from numpyro import distributions as dist
-from numpyro.contrib.nested_sampling import NestedSampler
-from numpyro import infer
+# ------
+# Samplers, stats etc
 
 from tinygp import GaussianProcess
 
+import numpyro
+from numpyro import distributions as dist
+from numpyro import infer
+
+has_jaxns = importlib.util.find_spec('jaxns') is not None
+has_polychord = importlib.util.find_spec('pypolychord') is not None
+if has_jaxns:
+    from numpyro.contrib.nested_sampling import NestedSampler
+if has_polychord:
+    import pypolychord
+
+# ------
+# Internal
 import litmus._utils as _utils
 import litmus.clustering as clustering
 from litmus.ICCF_working import *
@@ -35,8 +47,6 @@ from litmus.models import _default_config
 from litmus.models import stats_model
 from litmus.lightcurve import lightcurve
 from litmus.lin_scatter import linscatter
-
-
 
 
 # ============================================
@@ -491,7 +501,8 @@ class prior_sampling(fitting_procedure):
 # Nested Sampling
 class nested_sampling(fitting_procedure):
     '''
-    Simple direct nested sampling. Not ideal.
+    Access to nested sampling. NOT FULLY IMPLEMENTED
+    In version 1.0.0 this will use either jaxns or pypolychord to perform direct nested sampling.
     '''
 
     def __init__(self, stat_model: stats_model,
@@ -1290,10 +1301,9 @@ class SVI_scan(hessian_scan):
         txt = "Trace plots of ELBO convergence. All lines should be flat by the right hand side.\n" \
               "Top panel is for initial guess and need only be flat. Bottom panel should be flat within" \
               "averaging range, i.e. to the right of dotted line."
-        f.supxlabel(r'$\begin{center}X-axis\\*\textit{\small{%s}}\end{center}$' %txt)
+        f.supxlabel(r'$\begin{center}X-axis\\*\textit{\small{%s}}\end{center}$' % txt)
 
         f.tight_layout()
-
 
         if plot: plt.show()
 

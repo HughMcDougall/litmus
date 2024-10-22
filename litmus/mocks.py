@@ -382,10 +382,10 @@ if __name__ == "__main__":
         plt.grid()
         plt.show()
 
-        #------------------
+        # ------------------
         plt.figure()
-        x.corrected_plot(x.params(), axis = plt.gca(), true_args={'alpha':[0.15, 0.0]})
-        plt.title("Corrected_plot for lag = %.2f" %x.lag)
+        x.corrected_plot(x.params(), axis=plt.gca(), true_args={'alpha': [0.15, 0.0]})
+        plt.title("Corrected_plot for lag = %.2f" % x.lag)
         plt.grid()
 
         plt.show()
