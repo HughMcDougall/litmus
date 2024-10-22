@@ -29,13 +29,14 @@ import numpyro
 from numpyro import distributions as dist
 from numpyro import infer
 
+'''
 has_jaxns = importlib.util.find_spec('jaxns') is not None
 has_polychord = importlib.util.find_spec('pypolychord') is not None
 if has_jaxns:
     from numpyro.contrib.nested_sampling import NestedSampler
 if has_polychord:
     import pypolychord
-
+'''
 # ------
 # Internal
 import litmus._utils as _utils
