@@ -4,10 +4,10 @@
 1. Build LITMUS interface class
    - Fitting []
    - Plotting lightcurve
-   - Chainconsumer plots
-   - Results summary
-   - Call through to diagnostics
-2. Add SVI and/or importance sampling to the hessian scan
+   - Chainconsumer plots []
+   - Results summary 
+   - Call through to diagnostics []
+2. Add SVI and/or importance sampling to the hessian scan []
 3. Implement the stoch-opt
 4. Add a scan + HMC method for simplicity
 5. Implement nested sampling

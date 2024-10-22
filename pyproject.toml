@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "LITMUS"
-version = "0.0.1"
+version = "0.1.0"
 authors = [
   { name="Hugh McDougall", email="hughmcdougallemail@gmail.com" },
 ]
@@ -13,10 +13,14 @@ dependencies = [
   'jaxlib',
   'jaxopt',
   'numpyro',
+  'tinygp'
   'matplotlib',
   'numpy',
   'etils',
   'tensorflow_probability',
+  'jaxns==2.0.1',
+  'chainconsumer==0.34.0',
+  'scipy'
 ]
 
 description = "JAX-based lag recovery for AGN reverberation mapping"
