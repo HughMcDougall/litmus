@@ -16,9 +16,9 @@ dependencies = [
   'tinygp',
   'matplotlib',
   'numpy',
-  'etils',
-  'tensorflow_probability',
-  'jaxns',
+  # 'etils',
+  # 'tensorflow_probability',
+  # 'jaxns',
   'chainconsumer==0.34.0',
   'scipy'
 ]
