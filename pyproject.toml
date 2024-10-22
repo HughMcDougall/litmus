@@ -18,7 +18,7 @@ dependencies = [
   'numpy',
   'etils',
   'tensorflow_probability',
-  'jaxns==2.0.1',
+  'jaxns',
   'chainconsumer==0.34.0',
   'scipy'
 ]
