@@ -222,7 +222,7 @@ class mock(object):
 
     # ------------------------------
     # TEST UTILS
-    def plot(self, axis=None, true_args={}, series_args={}):
+    def plot(self, axis=None, true_args={}, series_args={}, show=True):
         '''
         Plots the lightcurves and subsamples
         :param axis: matplotlib axis to plot to. If none will create new
@@ -234,7 +234,7 @@ class mock(object):
         # -----------------
         # Make / get axis
         if axis is None:
-            plt.figure()
+            f = plt.figure()
             axis = plt.gca()
             axis.grid()
             axis.set_xlabel("Time (days)")
@@ -292,7 +292,9 @@ class mock(object):
         axis.scatter(self.lc_2.T, self.lc_2.Y,
                      **(series_args_2 | {'s': 3})
                      )
-        return axis
+
+        if show: plt.show()
+        return f
 
     def corrected_plot(self, params={}, axis=None, true_args={}, series_args={}):
         params = self.params() | params

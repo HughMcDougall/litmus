@@ -94,6 +94,8 @@ class stats_model(object):
 
         self.debug = False
 
+        self.name = type(self).__name__
+
         # --------------------------------------
         ## Create jitted, vmapped and grad/hessians of all density functions
 
@@ -119,13 +121,6 @@ class stats_model(object):
             self.__setattr__(name + "_hess", hessed_func)
 
         ## --------------------------------------
-        '''
-        Jacobians (DEPRECATED)
-        self.jacobian_ru = jax.jacrev(self.to_uncon, argnums=0)
-        self.jacobian_fu = jax.jacfwd(self.to_uncon, argnums=0)
-        self.jacobian_fc = jax.jacrev(self.to_con, argnums=0)
-        self.jacobian_rc = jax.jacfwd(self.to_con, argnums=0)
-        '''
 
     def set_priors(self, prior_ranges: dict):
         '''

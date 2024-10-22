@@ -28,10 +28,15 @@ from tinygp import GaussianProcess
 
 import litmus._utils as _utils
 import litmus.clustering as clustering
-from litmus.models import _default_config
 from litmus.ICCF_working import *
+
+from litmus.models import quickprior
+from litmus.models import _default_config
 from litmus.models import stats_model
 from litmus.lightcurve import lightcurve
+from litmus.lin_scatter import linscatter
+
+
 
 
 # ============================================
@@ -91,7 +96,6 @@ class fitting_procedure(object):
             self.fitting_params[key] = value
             if self.has_run: self.msg_err(
                 "Warning! Fitting parameter changed after a run. Can lead to unusual behaviour.")
-            self.is_ready = False
         else:
             super().__setattr__(key, value)
 
@@ -129,10 +133,7 @@ class fitting_procedure(object):
             if self.debug: print("\t set attr", key, file=self.out_stream)
 
         if len(badkeys) > 0:
-            print("Tried to configure bad keys:", end="\t", file=self.err_stream)
-            for key in badkeys: print(key, end=', ', file=self.err_stream)
-            print()
-
+            self.msg_err("Tried to configure bad keys:", *badkeys, delim='\t')
         return
 
     def readyup(self):
@@ -151,7 +152,7 @@ class fitting_procedure(object):
             for a in x:
                 print(a, file=self.err_stream, end=delim)
 
-        print(end, end='')
+        print('', end=end, file=self.err_stream)
         return
 
     def msg_run(self, *x: str, end='\n', delim=' '):
@@ -162,7 +163,7 @@ class fitting_procedure(object):
             for a in x:
                 print(a, file=self.out_stream, end=delim)
 
-        print(end, end='')
+        print('', end=end, file=self.out_stream)
         return
 
     def msg_debug(self, *x: str, end='\n', delim=' '):
@@ -173,7 +174,7 @@ class fitting_procedure(object):
             for a in x:
                 print(a, file=self.out_stream, end=delim)
 
-        print(end, end='')
+        print('', end=end, file=self.out_stream, )
         return
 
     # ----------------------
@@ -667,6 +668,9 @@ class hessian_scan(fitting_procedure):
         self.scan_peaks = None
         self.evidence = None
 
+        self.lags = np.zeros(self.Nlags)
+        self.converged = np.zeros_like(self.lags, dtype=bool)
+
         self.diagnostic_hessians = None
         self.diagnostic_grads = None
         self.diagnostic_tols = None
@@ -703,28 +707,86 @@ class hessian_scan(fitting_procedure):
         self.is_ready = True
 
     # --------------
+
+    def estimate_MAP(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        '''
+        :param lc_1:
+        :param lc_2:
+        :param seed:
+        :return:
+        '''
+        # todo - reformat this and the make_grid for better consistency in drawing from estmap and seed params
+
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+
+        # ----------------------------------
+        # Find seed for optimization
+        if self.stat_model.free_params() != self.seed_params.keys():
+            seed_params, ll_start = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=self.seed_params)
+
+            self.msg_run("Beginning scan at constrained-space position:")
+            for it in seed_params.items():
+                self.msg_run('\t %s: \t %.2f' % (it[0], it[1]))
+            self.msg_run(
+                "Log-Density for this is: %.2f" % ll_start)
+        else:
+            seed_params = self.seed_params
+            ll_start = self.stat_model.log_density(seed_params,
+                                                   data=data
+                                                   )
+
+        # ----------------------------------
+
+        self.msg_run("Moving to new location...")
+        estmap_params = self.stat_model.scan(start_params=seed_params,
+                                             optim_params=self.params_toscan,
+                                             data=data,
+                                             optim_kwargs=self.optimizer_args,
+                                             )
+        ll_end = self.stat_model.log_density(estmap_params,
+                                             data=data
+                                             )
+
+        # ----------------------------------
+
+        self.msg_run("Optimizer settled at new fit:")
+        for it in estmap_params.items():
+            self.msg_run('\t %s: \t %.2f' % (it[0], it[1]))
+
+        self.msg_run(
+            "Log-Density for this is: %.2f" % ll_end
+        )
+
+        if ll_end < ll_start:
+            self.msg_err("Warning! Optimization seems to have diverged. Defaulting to seed params. \n"
+                         "Please consider running with different optim_init inputs")
+            estmap_params = seed_params
+        self.estmap_params = estmap_params
+
     def make_grid(self, data, seed_params=None):
         '''
         :param data:
         :param seed_params:
         :return:
         '''
+        # todo - reformat this and the make_grid for better consistency in drawing from estmap and seed params
 
         if not self.is_ready: self.readyup()
 
+        # If no seed parameters specified, use stored
         if seed_params is None:
-            if self.seed_params is None:
-                seed_params, llstart = self.stat_model.find_seed(data, guesses=self.init_samples)
-                self.seed_params = seed_params
-            else:
-                seed_params = self.seed_params
+            seed_params = self.estmap_params
+
+        # If these params are incomplete, use find_seed to complete them
+        if seed_params.keys() != self.stat_model.paramnames():
+            seed_params, llstart = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=seed_params)
 
         lags = np.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags + 1, endpoint=False)[1:]
         lag_terp = np.linspace(*self.stat_model.prior_ranges['lag'], self.grid_Nterp)
 
         percentiles_old = np.linspace(0, 1, self.grid_Nterp)
         for i in range(self.grid_depth):
-            params = _utils.dict_extend(self.seed_params, {'lag': lags})
+            params = _utils.dict_extend(seed_params, {'lag': lags})
             density = np.exp(self.stat_model.log_density(params, data))
             density /= density.sum()
 
@@ -740,75 +802,7 @@ class hessian_scan(fitting_procedure):
 
         return (lags)
 
-    def diagnostics(self, plot=True):
-        '''
-        Runs some diagnostics for convergence
-        :return:
-        '''
-
-        Hinvs = [np.linalg.inv(H) for H, c in zip(self.diagnostic_hessians, self.converged)]
-        grads = self.diagnostic_grads
-        loss = [np.dot(grad,
-                       np.dot(
-                           Hinv, grad
-                       )
-                       ) for grad, Hinv in zip(grads, Hinvs)]
-
-        loss = np.sqrt(abs(np.array(loss)))
-
-        self.diagnostic_tols = loss
-
-        lagplot = self.scan_peaks['lag']
-
-        # ---------
-        plt.figure()
-        plt.ylabel("Loss Norm, $ \\vert \Delta x / \sigma_x \\vert$")
-        plt.plot(lagplot, loss, 'o-', c='k')
-        plt.axhline(self.opt_tol, ls='--', c='k')
-        plt.yscale('log')
-        plt.grid()
-        plt.show()
-
     # --------------
-
-    def estimate_MAP(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
-
-        data = self.stat_model.lc_to_data(lc_1, lc_2)
-
-        # ----------------------------------
-        # Find seed for optimization
-        if self.stat_model.free_params() != self.seed_params.keys():
-            seed_params, llstart = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=self.seed_params)
-
-            self.msg_run("Beginning scan at constrained-space position:")
-            for it in seed_params.items():
-                print('\t %s: \t %.2f' % (it[0], it[1]))
-            self.msg_run(
-                "Log-Density for this is: %.2f" % llstart)
-        else:
-            seed_params = self.seed_params
-
-        params_toscan = self.params_toscan
-        # ----------------------------------
-
-        print("Moving to new location...")
-        estmap_params = self.stat_model.scan(start_params=seed_params,
-                                             optim_params=params_toscan,
-                                             data=data,
-                                             optim_kwargs=self.optimizer_args,
-                                             )
-
-        # ----------------------------------
-
-        self.msg_run("Found best position at new fit:")
-        for it in seed_params.items():
-            print('\t %s: \t %.2f' % (it[0], it[1]))
-
-        self.msg_run(
-            "Log-Density for this is: %.2f" % self.stat_model.log_density(seed_params,
-                                                                          data=data))
-
-        self.estmap_params = estmap_params
 
     def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
         # -------------------
@@ -852,7 +846,7 @@ class hessian_scan(fitting_procedure):
         if self.reverse: lags_forscan = lags_forscan[::-1]
 
         for i, lag in enumerate(lags_forscan):
-            print(":" * 23)
+            self.msg_run(":" * 23)
             self.msg_run("Scanning at lag=%.2f ..." % lag)
 
             # Get current param site in packed-function friendly terms
@@ -917,7 +911,42 @@ class hessian_scan(fitting_procedure):
 
         self.has_run = True
 
-        print("Fitting complete.")
+    print("Fitting complete.")
+
+    # ---------------------------------------
+    # Plotting etc
+
+    def diagnostics(self, plot=True):
+        '''
+        Runs some diagnostics for convergence
+        :return:
+        '''
+
+        Hinvs = [np.linalg.inv(H) for H, c in zip(self.diagnostic_hessians, self.converged)]
+        grads = self.diagnostic_grads
+        loss = [np.dot(grad,
+                       np.dot(
+                           Hinv, grad
+                       )
+                       ) for grad, Hinv in zip(grads, Hinvs)]
+
+        loss = np.sqrt(abs(np.array(loss)))
+
+        self.diagnostic_tols = loss
+
+        lagplot = self.scan_peaks['lag']
+
+        # ---------
+        fig = plt.figure()
+        plt.ylabel("Loss Norm, $ \\vert \Delta x / \sigma_x \\vert$")
+        plt.xlabel("Scan Iteration No.")
+        plt.plot(lagplot, loss, 'o-', c='k')
+        plt.axhline(self.opt_tol, ls='--', c='k')
+
+        fig.text(.5, .05, "How far each optimization slice is from its peak. Lower is good.", ha='center')
+        plt.yscale('log')
+        plt.grid()
+        plt.show()
 
     def get_evidence(self, seed: int = None) -> [float, float, float]:
         # -------------------
@@ -961,8 +990,8 @@ class hessian_scan(fitting_procedure):
 
         if sum(dlag) == 0: dlag = 1.0
 
-        weights = np.exp(self.log_evidences - self.log_evidences.max())
-        weights = weights * dlag
+        Y = np.exp(self.log_evidences - self.log_evidences.max())
+        weights = Y * dlag
         weights /= weights.sum()
 
         # Get hessians and peak locations
@@ -990,43 +1019,37 @@ class hessian_scan(fitting_procedure):
                 # Reconvert to constrained space
                 samps = self.stat_model.to_con(samps)
 
+                # -------------
                 # Add linear interpolation 'smudging' to lags
-
                 if Npeaks > 1:
 
                     # Get nodes
-                    tnow, ynow = peaks[i]['lag'], weights[i]
-                    if i != 0 and i != Npeaks - 1:
-                        yprev, ynext = weights[i - 1], weights[i + 1]
-                        tprev, tnext = peaks[i - 1]['lag'], peaks[i + 1]['lag']
-                    elif i == 0:
-                        yprev, ynext = ynow, weights[i + 1]
-                        tprev, tnext = 0, peaks[i + 1]['lag']
+                    tnow, ynow = lags_forint[i], Y[i]
+                    if i == 0:
+                        yprev, ynext = ynow, Y[i + 1]
+                        tprev, tnext = min(self.stat_model.prior_ranges['lag']), lags_forint[i + 1]
                     elif i == Npeaks - 1:
-                        yprev, ynext = weights[i - 1], ynow
-                        tprev, tnext = peaks[i - 1]['lag'], max(self.stat_model.prior_ranges['lag'])
+                        yprev, ynext = Y[i - 1], ynow
+                        tprev, tnext = lags_forint[i - 1], max(self.stat_model.prior_ranges['lag'])
+                    else:
+                        yprev, ynext = Y[i - 1], Y[i + 1]
+                        tprev, tnext = lags_forint[i - 1], lags_forint[i + 1]
                     # --
 
                     # Perform CDF shift
-                    dx = np.array([tprev - tnow, tnext - tnow])
-                    dy = np.array([yprev - ynow, ynext - ynow])
-                    weight_leftright = abs(dy * dx)
-                    weight_leftright /= weight_leftright.sum()
+                    Ti, Yi = [tprev, tnow, tnext], [yprev, ynow, ynext]
+                    tshift = linscatter(Ti, Yi, N=to_choose[i])
 
-                    leftright = np.random.choice([0, 1], replace=True, size=to_choose[i], p=weight_leftright)
-                    R = np.random.rand(to_choose[i])
+                    if np.isnan(tshift).any():
+                        self.msg_err("Something wrong with the lag shift at node %i in sample generation" % i)
+                    else:
+                        samps['lag'] += tshift
+                # -------------
 
-                    DX, DY = dx[leftright], dy[leftright]
-                    DY *= np.sign(DY)
-                    YBAR = ynow + DY / 2
-                    c1, c2 = YBAR / DY, ynow / DY
-
-                    tshift = np.sqrt(np.random.rand(to_choose[i]) * c1 * 2 + (c2) ** 2) - c2
-                    tshift = tshift * DX
-
-                    samps['lag'] += tshift
-
-                outs.append(samps)
+                if np.isnan(samps['lag']).any():
+                    self.msg_err("Something wrong with the lags at node %i in sample generation" % i)
+                else:
+                    outs.append(samps)
         outs = {key: np.concatenate([out[key] for out in outs]) for key in self.stat_model.paramnames()}
         return (outs)
 
@@ -1120,7 +1143,6 @@ class SVI_scan(hessian_scan):
 
         self.msg_debug("\t Constructing slice model")
 
-        from models import quickprior
         def slice_function(data, lag):
 
             params = {}
@@ -1219,7 +1241,7 @@ class SVI_scan(hessian_scan):
             else:
                 self.msg_run("Unable to converge at itteration %i / %i" % (i, self.Nlags))
                 self.msg_debug("Reason for failure: \n large ELBO drop: \t %r \n diverged: \t %r" % (
-                l_new - l_old < self.ELBO_threshold, diverged))
+                    l_new - l_old < self.ELBO_threshold, diverged))
 
         self.ELBOS = np.array(self.ELBOS)
 
@@ -1229,14 +1251,12 @@ class SVI_scan(hessian_scan):
 
         # ---------------------------------------------------------------------------------
         # For each of these peaks, estimate the evidence
-        # todo - add a max LL significance to cut down on evals
         # todo - vmap and parallelize
         Zs = []
 
         for j, params in enumerate(scanned_optima):
-
             Z_ELBO = self.ELBOS[j]
-            #if not self.constrained_domain: Z_ELBO += self.stat_model.uncon_grad(params)
+            # if not self.constrained_domain: Z_ELBO += self.stat_model.uncon_grad(params)
             Zs.append(Z_ELBO)
 
         self.log_evidences = np.array(Zs)
@@ -1245,12 +1265,14 @@ class SVI_scan(hessian_scan):
         print("Fitting complete.")
 
     def diagnostics(self, plot=True):
-        f, (a1, a2) = plt.subplots(2, 1)
+
+        f, (a2, a1) = plt.subplots(2, 1)
+
         for i, x in enumerate(self.diagnostic_losses):
             a1.plot(x - (-self.ELBOS[i]), c='k', alpha=0.25)
         a2.plot(self.diagnostic_loss_init, c='k')
 
-        a1.axvline(int((1-self.ELBO_fraction) * self.ELBO_Nsteps), c='k', ls='--')
+        a1.axvline(int((1 - self.ELBO_fraction) * self.ELBO_Nsteps), c='k', ls='--')
 
         a1.set_yscale('symlog')
         a2.set_yscale('symlog')
@@ -1263,9 +1285,15 @@ class SVI_scan(hessian_scan):
         a2.set_title("Initial MAP SVI")
 
         f.supylabel("Loss - loss_final (log scale)")
-        f.supxlabel("Itteration Number")
+        a1.set_xlabel("Itteration Number"), a2.set_xlabel("Itteration Number")
+
+        txt = "Trace plots of ELBO convergence. All lines should be flat by the right hand side.\n" \
+              "Top panel is for initial guess and need only be flat. Bottom panel should be flat within" \
+              "averaging range, i.e. to the right of dotted line."
+        f.supxlabel(r'$\begin{center}X-axis\\*\textit{\small{%s}}\end{center}$' %txt)
 
         f.tight_layout()
+
 
         if plot: plt.show()
 

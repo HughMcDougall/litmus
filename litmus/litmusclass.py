@@ -12,6 +12,7 @@ vA - 13/5
 # ============================================
 # IMPORTS
 import sys
+import csv
 
 import numpy as np
 import jax.numpy as jnp
@@ -19,11 +20,11 @@ import jax.numpy as jnp
 from chainconsumer import ChainConsumer
 import matplotlib.pyplot as plt
 
-import models
-from models import stats_model
-import fitting_methods
-from fitting_methods import fitting_procedure
-from lightcurve import lightcurve
+import litmus.models as models
+from litmus.models import stats_model
+import litmus.fitting_methods as fitting_methods
+from litmus.fitting_methods import fitting_procedure
+from litmus.lightcurve import lightcurve
 
 
 # =========================================================
@@ -107,7 +108,27 @@ class LITMUS(object):
         self.samples = self.fitproc.get_samples(self.Nsamples)
         self.C.add_chain(self.samples, name="Lightcurves %i-%i" % (i, j))
 
-    # ----------------------
+    def save_chain(self, dir=None, method="numpy", headings=True):
+
+        '''
+        methods = ["numpy"]
+
+        if method not in methods:
+            err_msg = "Tried to use save_chain() with bad methd %s. Allowable methods are:" %method
+            for method in methods: err_msg +="%s, " %x
+            self.msg_err(err_msg)
+        '''
+
+        if dir is None:
+            dir = "./%s_%s.csv" % (self.model.name, self.fitproc.name)
+
+        with open(dir, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=self.model.paramnames())
+            writer.writeheader()
+            writer.writerows(self.samples)
+
+            # ----------------------
+
     # Plotting
 
     def plot_lightcurves(self):
@@ -160,7 +181,7 @@ class LITMUS(object):
                 X, Y = self.fitproc.scan_peaks['lag'], self.fitproc.log_evidences
                 Y -= Y.max()
                 Y = np.exp(Y)
-                Y /= Y.sum()
+                Y/=np.trapz(Y,X)
                 fig.axes[0].plot(X, Y)
 
                 plt.scatter(self.fitproc.lags, np.zeros_like(self.fitproc.lags), c='red', s=20)
@@ -170,7 +191,7 @@ class LITMUS(object):
         return (fig)
 
     def diagnostic_plots(self):
-        if hasattr(self.fitproc,"diagnostics"):
+        if hasattr(self.fitproc, "diagnostics"):
             self.fitproc.diagnostics()
         else:
             self.msg_err("diagnostic_plots() not yet implemented for fitting method %s" % (self.fitproc.name))
@@ -221,7 +242,7 @@ if __name__ == "__main__":
     from mocks import *
 
     # mymock = mymock.copy(E=[0.05,0.1], lag=300)
-    mymock = mock(cadence=[7, 30], E=[0.15, 1.0], season=180, lag=180*3, tau=200.0)
+    mymock = mock(cadence=[7, 30], E=[0.15, 1.0], season=180, lag=180 * 3, tau=200.0)
     # mymock=mock_B
     mymock.plot()
     mymock(10)
@@ -231,29 +252,28 @@ if __name__ == "__main__":
 
     test_model = models.GP_simple()
 
-    seed_params = mymock.params()
+    seed_params = {}
 
     #::::::::::::::::::::
     # Make Litmus Object
     fitting_method = fitting_methods.hessian_scan(stat_model=test_model,
-                                              Nlags=24,
-                                              init_samples=5_000,
-                                              grid_bunching=0.8,
-                                              optimizer_args={'tol': 1E-3,
-                                                              'maxiter': 512,
-                                                              'increase_factor': 1.2,
-                                                              },
-                                              reverse=False,
-                                              ELBO_Nsteps = 300,
-                                              ELBO_Nsteps_init=200,
-                                              ELBO_particles = 24,
-                                              ELBO_optimstep = 0.014,
-                                              seed_params=seed_params,
-                                              debug=True
-                                              )
+                                                  Nlags=24,
+                                                  init_samples=5_000,
+                                                  grid_bunching=0.8,
+                                                  optimizer_args={'tol': 1E-3,
+                                                                  'maxiter': 512,
+                                                                  'increase_factor': 1.2,
+                                                                  },
+                                                  reverse=False,
+                                                  ELBO_Nsteps=300,
+                                                  ELBO_Nsteps_init=200,
+                                                  ELBO_particles=24,
+                                                  ELBO_optimstep=0.014,
+                                                  seed_params=seed_params,
+                                                  debug=True
+                                                  )
 
-    test_litmus = LITMUS(fitting_method
-                         )
+    test_litmus = LITMUS(fitting_method)
 
     test_litmus.add_lightcurve(mymock.lc_1)
     test_litmus.add_lightcurve(mymock.lc_2)
