@@ -20,6 +20,8 @@ dependencies = [
   # 'tensorflow_probability',
   # 'jaxns',
   'scikit-learn',
+  'scipy==1.11.4',
+  'chainconsumer==0.34.0',
 ]
 
 description = "JAX-based lag recovery for AGN reverberation mapping"
