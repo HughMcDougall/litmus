@@ -10,5 +10,23 @@ LITMUS is an in-progress program that uses modern statistical techniques, like n
 This project is still very much in the early stages. If you have any questions, contact the author directly at hughmcdougallemail@gmail.com
 
 
+## I
+
+```
+pip install numpy matplotlib
+```
+
+```
+pip install jax jaxlib jaxopt
+pip install numpyro tinygp
+pip install scikit-learn
+pip install scipy==1.11.4
+pip install chainconsumer==0.34.0
+```
+
+```
+pip install etils tensorflow_probability
+pip install jaxns
+```
 --------------
 _Last Update 22/10_

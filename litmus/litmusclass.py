@@ -17,7 +17,12 @@ import csv
 import numpy as np
 import jax.numpy as jnp
 
-from chainconsumer import ChainConsumer
+try:
+    from chainconsumer import ChainConsumer
+    has_chainconsumer = True
+except:
+    has_chainconsumer = False
+
 import matplotlib.pyplot as plt
 
 import litmus.models as models
@@ -140,6 +145,9 @@ class LITMUS(object):
         Creates a nicely formatted chainconsumer plot of the parameters
         Returns the chainconsumer plot figure
         '''
+        if not has_chainconsumer:
+            self.msg_err("ChainConsumer not installed or has incompatible verison")
+            return
         if Nsamples is not None and Nsamples != self.Nsamples:
             C = ChainConsumer()
             samps = self.fitproc.get_samples(Nsamples, **CC_kwargs)
@@ -161,6 +169,11 @@ class LITMUS(object):
         Returns the ChainConsumer object
         '''
         if 'lag' not in self.model.free_params():
+            self.msg_err("Can't plot lags for a model without lags.")
+            return
+
+        if not has_chainconsumer:
+            self.msg_err("ChainConsumer not installed or has incompatible verison")
             return
 
         if Nsamples is not None and Nsamples != self.Nsamples:
