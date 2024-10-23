@@ -2,11 +2,7 @@
 litmus.py
 
 Contains the main litmus object class, which acts as a user-friendly interface with the models statistical models
-and fitting procedure.
-
-Currently only a placeholder. To be filled out later
-
-vA - 13/5
+and fitting procedure. In future versions, this will also give access to the GUI.
 
 '''
 # ============================================
@@ -14,16 +10,23 @@ vA - 13/5
 import sys
 import csv
 
+import chainconsumer
 import numpy as np
 import jax.numpy as jnp
 
 try:
     from chainconsumer import ChainConsumer
+
     has_chainconsumer = True
+    new_chainconsumer = 'Chain' in dir(chainconsumer)
 except:
     has_chainconsumer = False
 
 import matplotlib.pyplot as plt
+
+import matplotlib
+
+matplotlib.use('TkAgg')
 
 import litmus.models as models
 from litmus.models import stats_model
@@ -194,7 +197,7 @@ class LITMUS(object):
                 X, Y = self.fitproc.scan_peaks['lag'], self.fitproc.log_evidences
                 Y -= Y.max()
                 Y = np.exp(Y)
-                Y/=np.trapz(Y,X)
+                Y /= np.trapz(Y, X)
                 fig.axes[0].plot(X, Y)
 
                 plt.scatter(self.fitproc.lags, np.zeros_like(self.fitproc.lags), c='red', s=20)

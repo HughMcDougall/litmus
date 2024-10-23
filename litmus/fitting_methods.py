@@ -500,145 +500,146 @@ class prior_sampling(fitting_procedure):
 
 # ============================================
 # Nested Sampling
-class nested_sampling(fitting_procedure):
-    '''
-    Access to nested sampling. NOT FULLY IMPLEMENTED
-    In version 1.0.0 this will use either jaxns or pypolychord to perform direct nested sampling.
-    '''
-
-    def __init__(self, stat_model: stats_model,
-                 out_stream=sys.stdout, err_stream=sys.stderr,
-                 verbose=True, debug=False, **fit_params):
-
-        args_in = {**locals(), **fit_params}
-        del args_in['self']
-        del args_in['__class__']
-        del args_in['fit_params']
-
-        if not hasattr(self, '_default_params'):
-            self._default_params = {
-                'num_live_points': 5000,
-                'max_samples': 50000,
-                'num_parallel_samplers': 1,
-                'uncert_improvement_patience': 2,
-                'live_evidence_frac': 0.01,
-            }
-
-        super().__init__(**args_in)
-
-        self.name = "Prior Sampling Fitting Procedure"
-
-        self.sampler = None
-
-        self.logevidence = jnp.zeros(3)
-        self.priorvolume = 0.0
-
-    # --------------
-    def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
-        if seed is None: seed = _utils.randint()
-
-        NS = NestedSampler(self.stat_model,
-                           constructor_kwargs={key: self.fitting_params[key]
-                                               for key in ['num_live_points',
-                                                           'max_samples',
-                                                           'num_parallel_samplers',
-                                                           'uncert_improvement_patience']
-                                               },
-                           termination_kwargs={'live_evidence_frac': self.fitting_params['live_evidence_frac']})
-
-        data = self.stat_model.lc_to_data(lc_1, lc_2)
-        NS.run(data=data, rng_key=jax.random.PRNGKey(seed))
-
-        # Store Results & Necessary Values
-        self.priorvolume = self.stat_model.prior_volume
-        self.logevidence = np.array(
-            [NS._results.log_Z_mean - np.log(self.stat_model.prior_volume), NS._results.log_Z_uncert]
-        )
-
-        # Mark good for retrieval
-        self.has_run = True
-
-    def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
-        if seed is None: seed = _utils.randint()
-
-        NS = self.sampler
-
-        if not importance_sampling:
-            samples, weights = NS.get_weighted_samples()
-        else:
-            samples = NS.get_samples(jax.random.PRNGKey(seed), N)
-
-        return (samples)
-
-    def get_evidence(self, seed: int = None) -> [float, float, float]:
-        '''
-        Returns the -1, 0 and +1 sigma values for model evidence from nested sampling.
-        This represents an estimate of numerical uncertainty
-        '''
-
-        if seed is None: seed = _utils.randint()
-
-        l, l_e = self.logevidence
-
-        out = np.exp([
-            l,
-            l - l_e,
-            l + l_e
-        ])
-
-        out -= np.array([0, out[0], out[0]])
-
-        return (out)
-
-    def get_information(self, seed: int = None) -> [float, float, float]:
-        '''
-        Use the Nested Sampling shells to estimate the model information relative to prior
-        '''
-        if seed is None: seed = _utils.randint()
-
-        NS = self.sampler
-        samples, logweights = NS.get_weighted_samples()
-
-        weights = np.exp(logweights)
-        weights /= weights.sum()
-
-        log_density = NS._results.log_posterior_density
-        prior_values = self.stat_model.log_prior(samples)
-
-        info = np.sum((log_density - prior_values) * weights)
-
-        partial_info = np.random.choice((log_density - prior_values), len(log_density), p=weights)
-        uncert = partial_info.std() / np.sqrt(len(log_density))
-
-        return (np.array(info, uncert, uncert))
-
-    def get_peaks(self, seed: int = None) -> ({str: [float]}, float):
-        if seed is None: seed = _utils.randint()
-
-        NS = self.sampler
-        samples = self.get_samples()
-        log_densities = NS._results.log_posterior_density
-
-        # Find clusters
-        indices = clustering.clusterfind_1D(samples['lag'])
-
-        # Break samples and log-densities up into clusters
-        sorted_samples = clustering.sort_by_cluster(samples, indices)
-        sort_logdens = clustering.sort_by_cluster(log_densities, indices)
-
-        Nclusters = len(sorted_samples)
-
-        # Make an empty dictionary to store positions in
-        peak_locations = {key: np.zeros([Nclusters]) for key in samples.keys()}
-        peaklikes = np.zeros([Nclusters])
-
-        for i, group, lds in enumerate(sorted_samples, sort_logdens):
-            j = np.argmax(lds)
-            for key in samples.keys():
-                peak_locations[key][i] = group[key][j]
-            peaklikes[i] = lds[j]
-
-        return (peak_locations, peaklikes)
+#
+# class nested_sampling(fitting_procedure):
+#     '''
+#     Access to nested sampling. NOT FULLY IMPLEMENTED
+#     In version 1.0.0 this will use either jaxns or pypolychord to perform direct nested sampling.
+#     '''
+#
+#     def __init__(self, stat_model: stats_model,
+#                  out_stream=sys.stdout, err_stream=sys.stderr,
+#                  verbose=True, debug=False, **fit_params):
+#
+#         args_in = {**locals(), **fit_params}
+#         del args_in['self']
+#         del args_in['__class__']
+#         del args_in['fit_params']
+#
+#         if not hasattr(self, '_default_params'):
+#             self._default_params = {
+#                 'num_live_points': 5000,
+#                 'max_samples': 50000,
+#                 'num_parallel_samplers': 1,
+#                 'uncert_improvement_patience': 2,
+#                 'live_evidence_frac': 0.01,
+#             }
+#
+#         super().__init__(**args_in)
+#
+#         self.name = "Prior Sampling Fitting Procedure"
+#
+#         self.sampler = None
+#
+#         self.logevidence = jnp.zeros(3)
+#         self.priorvolume = 0.0
+#
+#     # --------------
+#     def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+#         if seed is None: seed = _utils.randint()
+#
+#         NS = NestedSampler(self.stat_model,
+#                            constructor_kwargs={key: self.fitting_params[key]
+#                                                for key in ['num_live_points',
+#                                                            'max_samples',
+#                                                            'num_parallel_samplers',
+#                                                            'uncert_improvement_patience']
+#                                                },
+#                            termination_kwargs={'live_evidence_frac': self.fitting_params['live_evidence_frac']})
+#
+#         data = self.stat_model.lc_to_data(lc_1, lc_2)
+#         NS.run(data=data, rng_key=jax.random.PRNGKey(seed))
+#
+#         # Store Results & Necessary Values
+#         self.priorvolume = self.stat_model.prior_volume
+#         self.logevidence = np.array(
+#             [NS._results.log_Z_mean - np.log(self.stat_model.prior_volume), NS._results.log_Z_uncert]
+#         )
+#
+#         # Mark good for retrieval
+#         self.has_run = True
+#
+#     def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
+#         if seed is None: seed = _utils.randint()
+#
+#         NS = self.sampler
+#
+#         if not importance_sampling:
+#             samples, weights = NS.get_weighted_samples()
+#         else:
+#             samples = NS.get_samples(jax.random.PRNGKey(seed), N)
+#
+#         return (samples)
+#
+#     def get_evidence(self, seed: int = None) -> [float, float, float]:
+#         '''
+#         Returns the -1, 0 and +1 sigma values for model evidence from nested sampling.
+#         This represents an estimate of numerical uncertainty
+#         '''
+#
+#         if seed is None: seed = _utils.randint()
+#
+#         l, l_e = self.logevidence
+#
+#         out = np.exp([
+#             l,
+#             l - l_e,
+#             l + l_e
+#         ])
+#
+#         out -= np.array([0, out[0], out[0]])
+#
+#         return (out)
+#
+#     def get_information(self, seed: int = None) -> [float, float, float]:
+#         '''
+#         Use the Nested Sampling shells to estimate the model information relative to prior
+#         '''
+#         if seed is None: seed = _utils.randint()
+#
+#         NS = self.sampler
+#         samples, logweights = NS.get_weighted_samples()
+#
+#         weights = np.exp(logweights)
+#         weights /= weights.sum()
+#
+#         log_density = NS._results.log_posterior_density
+#         prior_values = self.stat_model.log_prior(samples)
+#
+#         info = np.sum((log_density - prior_values) * weights)
+#
+#         partial_info = np.random.choice((log_density - prior_values), len(log_density), p=weights)
+#         uncert = partial_info.std() / np.sqrt(len(log_density))
+#
+#         return (np.array(info, uncert, uncert))
+#
+#     def get_peaks(self, seed: int = None) -> ({str: [float]}, float):
+#         if seed is None: seed = _utils.randint()
+#
+#         NS = self.sampler
+#         samples = self.get_samples()
+#         log_densities = NS._results.log_posterior_density
+#
+#         # Find clusters
+#         indices = clustering.clusterfind_1D(samples['lag'])
+#
+#         # Break samples and log-densities up into clusters
+#         sorted_samples = clustering.sort_by_cluster(samples, indices)
+#         sort_logdens = clustering.sort_by_cluster(log_densities, indices)
+#
+#         Nclusters = len(sorted_samples)
+#
+#         # Make an empty dictionary to store positions in
+#         peak_locations = {key: np.zeros([Nclusters]) for key in samples.keys()}
+#         peaklikes = np.zeros([Nclusters])
+#
+#         for i, group, lds in enumerate(sorted_samples, sort_logdens):
+#             j = np.argmax(lds)
+#             for key in samples.keys():
+#                 peak_locations[key][i] = group[key][j]
+#             peaklikes[i] = lds[j]
+#
+#         return (peak_locations, peaklikes)
 
 
 # ------------------------------------------------------
