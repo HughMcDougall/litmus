@@ -1,10 +1,13 @@
-<p style="text-align:center;">
+_HUGH MCDOUGALL 2024_
 
+-----
+
+-----
 # LITMUS
 
 <u>**L**ag **I**nference **T**hrough the **M**ixed **U**se of **S**amplers</u>
 
-</p>
+
 
 LITMUS is an in-progress program that uses modern statistical techniques, like
 nested sampling and stochastic variational inference, in combination with
@@ -16,6 +19,8 @@ recovery in AGN reverberation mapping.
 
 This project is still very much in the early stages. If you have any 
 questions, contact the author directly at hughmcdougallemail@gmail.com
+
+-----
 
 ## Installation
 
@@ -89,5 +94,85 @@ make
 pip install .
 ```
 
---------------
+-----
+
+## Usage
+
+### First Timers
+
+```
+import numpy as np
+import matplotlib.pyplot as plt
+
+import litmus
+```
+
+```
+mymock = litmus.mocks.mock(3)
+lc_1, lc_2 = mymock.lc_1, mymock.lc_2
+mymock.plot()
+```
+
+Now, choose a model and set its priors(at time of writing only `GP_simple`, 
+which models both lightcurves as scaled and shifted damped random walks, is 
+implemented). For example suppose we know want to narrow our lag search 
+range to `[0,100] days`, and know that the lightcurves are normalized to 
+have zero mean:
+
+```
+my_model = litmus.models.GP_simple()
+my_model.set_priors(
+    {
+    'lag': [0,100]
+    'mean': [0,0]
+    'rel_mean': [0,0]
+    }
+)
+```
+
+Now we choose a fitting method and tune it accordingly. 
+```
+fitting_method = litmus.fitting_methods.hessian_scan(stat_model=my_model,
+                                                  Nlags=32,
+                                                  init_samples=5_000,
+                                                  grid_bunching=0.8,
+                                                  optimizer_args={'tol': 1E-3,
+                                                                  'maxiter': 256,
+                                                                  'increase_factor': 1.1,
+                                                                  },
+                                                  optimizer_args_init={'tol': 1E-4,
+                                                                  'maxiter': 1024,
+                                                                  'increase_factor': 1.01,
+                                                                  },
+                                                  reverse=False,
+                                                  debug=False
+                                                  )
+```
+
+Finally, wrap this in a `LITMUS` object, adding the lightcurves to it, which 
+makes running and getting results out as simple as a single line of code:
+
+```
+litmus_handler = litmus.LITMUS(fitting_method)
+
+litmus_handler.add_lightcurve(lc_1)
+litmus_handler.add_lightcurve(lc_2)
+```
+
+Now, fire off the fitting procedure:
+```
+litmus_handler.fit()
+```
+
+And finally plot the model parameters to see how we did:
+```
+litmus_handler.lag_plot()
+litmus_handler.plot_parameters()
+litmus_handler.plot_diagnostics()
+```
+-----
+
+-----
+
+
 _Last Update 23/10_

@@ -906,20 +906,23 @@ class GP_simple(stats_model):
         from litmus.ICCF_working import correlfunc_jax_vmapped
 
         approx_season = np.diff(T1).max()
-        autolags = jnp.linspace(-approx_season, approx_season, 1024)
+
+        if approx_season > np.median(np.diff(T1))*5:
+            span = approx_season
+        else:
+            span = np.ptp(T1) * 0.25
+        
+        autolags = jnp.linspace(-span, span, 1024)
         autocorrel = correlfunc_jax_vmapped(autolags, T1, Y1, T1, Y1, 1024)
 
         autolags, autocorrel = np.array(autolags), np.array(autocorrel)
-        # Trim
-        if True:
-            autolags = autolags[autocorrel > 0]
-            autocorrel = autocorrel[autocorrel > 0]
-            autocorrel[autolags < 0] *= -1
-            autocorrel -= 1
-            tau = (autolags * autolags).sum() / (autolags * autocorrel).sum()
-        else:
-            autocorrel = autocorrel[autocorrel > 0]
-            tau = np.average(autolags ** 2, weights=autocorrel) * 2 / 2
+
+        # Trim to positive values and take a linear regression
+        autolags = autolags[autocorrel > 0]
+        autocorrel = autocorrel[autocorrel > 0]
+        autocorrel[autolags < 0] *= -1
+        autocorrel -= 1
+        tau = (autolags * autolags).sum() / (autolags * autocorrel).sum()
 
         Y1bar, Y2bar = np.average(Y1, weights=E1 ** -2), np.average(Y2, weights=E2 ** -2)
         Y1var, Y2var = np.average((Y1 - Y1bar) ** 2, weights=E1 ** -2), np.average((Y2 - Y2bar) ** 2, weights=E2 ** -2)
@@ -935,10 +938,11 @@ class GP_simple(stats_model):
 
         out |= fixed
 
-        lag_fits = np.linspace(*self.prior_ranges['lag'], guesses)
-        lls = self.log_density(params=dict_extend(out, {'lag': lag_fits}), data=data)
+        if 'lag' not in fixed.keys():
+            lag_fits = np.linspace(*self.prior_ranges['lag'], guesses)
+            lls = self.log_density(params=dict_extend(out, {'lag': lag_fits}), data=data)
 
-        out |= {'lag': lag_fits[lls.argmax()]}
+            out |= {'lag': lag_fits[lls.argmax()]}
         return (out, lls.max())
 
         # ============================================
