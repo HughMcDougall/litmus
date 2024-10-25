@@ -736,7 +736,6 @@ class hessian_scan(fitting_procedure):
         # Find seed for optimization
         if self.stat_model.free_params() != self.seed_params.keys():
             seed_params, ll_start = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=self.seed_params)
-            seed_params |= self.seed_params
 
             self.msg_run("Beginning scan at constrained-space position:")
             for it in seed_params.items():
