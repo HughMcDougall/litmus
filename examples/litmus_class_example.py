@@ -7,20 +7,17 @@ mymock.plot()
 
 my_model = litmus.models.GP_simple()
 
-fitting_method = litmus.fitting_methods.SVI_scan(stat_model=my_model,
+fitting_method = litmus.fitting_methods.hessian_scan(stat_model=my_model,
                                                   Nlags=32,
                                                   init_samples=5_000,
                                                   grid_bunching=0.8,
                                                   optimizer_args={'tol': 1E-3,
-                                                                  'maxiter': 1024,
-                                                                  'increase_factor': 1.1,
+                                                                  'maxiter': 2048,
+                                                                  'increase_factor': 1.2,
                                                                   },
+                                                  LL_threshold = 100,
                                                   reverse=False,
-                                                  ELBO_Nsteps=256,
-                                                  ELBO_Nsteps_init=200,
-                                                  ELBO_particles=32,
-                                                  ELBO_optimstep=0.005,
-                                                  ELBO_threshold =1000.0,
+
                                                   debug=True
                                                   )
 

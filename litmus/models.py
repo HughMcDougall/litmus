@@ -943,7 +943,12 @@ class GP_simple(stats_model):
             lls = self.log_density(params=dict_extend(out, {'lag': lag_fits}), data=data)
 
             out |= {'lag': lag_fits[lls.argmax()]}
-        return (out, lls.max())
+
+            ll_out = lls.max()
+        else:
+            ll_out = self.log_density(params=out, data=data)
+
+        return (out, ll_out)
 
         # ============================================
         # ============================================

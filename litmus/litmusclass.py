@@ -68,8 +68,8 @@ class LITMUS(object):
 
         if self.fitproc.has_run:
             self.samples = self.fitproc.get_samples(self.Nsamples)
-            self.C.add_chain(self.samples, name="Lightcurves %i-%i" % (i, j)) 
-            self.msg_err("Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour".)
+            self.C.add_chain(self.samples, name="Lightcurves %i-%i")
+            self.msg_err("Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour.")
 
         # ----------------------------
         self.lightcurves = []

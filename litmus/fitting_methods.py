@@ -733,7 +733,7 @@ class hessian_scan(fitting_procedure):
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
         # ----------------------------------
-        # Find seed for optimization
+        # Find seed for optimization if not supplies
         if self.stat_model.free_params() != self.seed_params.keys():
             seed_params, ll_start = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=self.seed_params)
 
