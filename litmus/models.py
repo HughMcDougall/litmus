@@ -573,6 +573,14 @@ class stats_model(object):
     def scan(self, start_params, data, optim_params=None, use_vmap=False, optim_kwargs={}):
         '''
         Beginning at position 'start_params', optimize parameters in 'optim_params' to find maximum
+
+        Currently using jaxopt with optim_kwargs:
+            'stepsize': 0.0,
+            'min_stepsize': 1E-5,
+            'increase_factor': 1.1,
+            'maxiter': 1024,
+            'linesearch': 'backtracking',
+            'verbose': False,
         '''
 
         optimizer_args = {
@@ -637,7 +645,6 @@ class stats_model(object):
             except:
                 print("Something went wrong in when making the jaxopt optimizer. Double check your inputs.")
 
-
         with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
             out, state = solver.run(init_params=x0, data=data)
 
@@ -654,6 +661,8 @@ class stats_model(object):
 
         # Convert back to constrained domain
         out = self.to_con(out)
+
+        out = {key: float(val) for key, val in zip(out.keys(), out.values())}
 
         return out
 
@@ -749,6 +758,34 @@ class stats_model(object):
         D = len(integrate_axes)
         out = -(np.log(2 * np.pi) + 1) * (D / 2) - np.log(-dethess) / 2 + np.log(self.prior_volume)
         return out
+
+    def opt_tol(self, params, data, integrate_axes=None, use_vmap=False, constrained=False):
+        if integrate_axes is None:
+            integrate_axes = self.paramnames()
+
+        if not constrained:
+            uncon_params = self.to_uncon(params)
+
+            log_height = self.log_density_uncon(uncon_params, data)
+            hess = self.log_density_uncon_hess(uncon_params, data)
+            grad = self.log_density_uncon_grad(uncon_params, data)
+        else:
+            log_height = self.log_density(params, data)
+            hess = self.log_density_hess(params, data)
+            grad = self.log_density_grad(params, data)
+
+        I = np.where([key in integrate_axes for key in self.paramnames()])[0]
+
+        hess = hess[I, :][:, I]
+        grad = np.array([float(x) for x in grad.values()])[I]
+
+        Hinv = np.linalg.inv(hess)
+        loss = np.dot(grad,
+                      np.dot(
+                          Hinv, grad
+                      )
+                      )
+        return (abs(loss))
 
     # --------------------------------
     # Sampling Utils
@@ -955,7 +992,7 @@ class GP_simple(stats_model):
             if approx_season > np.median(np.diff(T1)) * 5:
                 span = approx_season
             else:
-                span = np.ptp(T1) * 0.25
+                span = np.ptp(T1) * 0.1
 
             autolags = jnp.linspace(-span, span, 1024)
             autocorrel = correlfunc_jax_vmapped(autolags, T1, Y1, T1, Y1, 1024)
@@ -965,9 +1002,15 @@ class GP_simple(stats_model):
             # Trim to positive values and take a linear regression
             autolags = autolags[autocorrel > 0]
             autocorrel = autocorrel[autocorrel > 0]
+            autocorrel = np.log(autocorrel)
             autocorrel[autolags < 0] *= -1
-            autocorrel -= 1
+
+            autolags -= autolags.mean(),
+            autocorrel -= autocorrel.mean()
+
             tau = (autolags * autolags).sum() / (autolags * autocorrel).sum()
+            tau = abs(tau)
+            # tau *= np.exp(1)
         else:
             tau = 1
 
@@ -992,13 +1035,14 @@ class GP_simple(stats_model):
         # -------------------------
         # Where estimates are outside prior range, round down
         isgood = self.params_inprior(out)
+        r = 0.01
         isgood['lag'] = True
         for key in out.keys():
             if not isgood[key]:
                 if out[key] < self.prior_ranges[key][0]:
-                    out[key] = self.prior_ranges[key][0]
+                    out[key] = self.prior_ranges[key][0] + r * np.ptp(self.prior_ranges[key])
                 else:
-                    out[key] = self.prior_ranges[key][1]
+                    out[key] = self.prior_ranges[key][1] - r * np.ptp(self.prior_ranges[key])
 
         # -------------------------
         # Estimate lag with a sweep if not in fixed
@@ -1038,7 +1082,7 @@ if __name__ == "__main__":
     matplotlib.use('module://backend_interagg')
 
     print("Creating mocks...")
-    mymock = mock()
+    mymock = mock(cadence=[7, 7])
     true_params = mymock.params()
     mymock.plot()
 
@@ -1048,22 +1092,43 @@ if __name__ == "__main__":
     lc_1, lc_2 = mymock.lc_1, mymock.lc_2
     data = my_model.lc_to_data(lc_1, lc_2)
 
-    my_model.set_priors(true_params | {'lag': [0, 1_000]})
-
     print("Testing sampling and density...")
-    prior_samps = my_model.prior_sample(num_samples=1_000)
-    prior_LL = my_model.log_density(prior_samps, data=data)
+    prior_samps = my_model.prior_sample(num_samples=50_000)
 
-    plt.scatter(prior_samps['lag'], prior_LL - prior_LL.max())
+    lag_samps = dict_extend(mymock.params(), {'lag': prior_samps['lag']})
+    prior_LL = my_model.log_density(lag_samps, data=data)
+
+    plt.scatter(lag_samps['lag'], prior_LL - prior_LL.max(), s=1, c='k')
     plt.axvline(true_params['lag'], ls='--', c='k')
+    plt.grid()
+    plt.xlabel("Lag")
+    plt.ylabel("Log Posterior (Arb Units)")
+    plt.gcf().axes[0].set_yticklabels([])
+
     plt.show()
 
     # ----------------------------
 
     print("Testing find_seed...")
-    seed_params = my_model.find_seed(data=data, )
+    seed_params = my_model.find_seed(data=data)
 
     print("Testing Scan...")
-    scanned_params = my_model.scan(seed_params[0], data, optim_kwargs={})
+    scanned_params = my_model.scan(seed_params[0],
+                                   data,
+                                   optim_kwargs={'increase_factor': 1.1,
+                                                 'max_stepsize': 0.2
+                                                 }
+                                   )
+
+    val = my_model.log_density(scanned_params, data)
+    tol = my_model.opt_tol(scanned_params, data)
+    print("Scan settled at %.2e sigma from optimum & log density %.2f" % (tol, val))
+
+    maxlen = max([len(key) for key in my_model.paramnames()])
+    S = "%s \t Truth \t Seed \t MAP \n" % ("Param".ljust(maxlen))
+    for key in my_model.paramnames():
+        S += "%s \t %.2f \t %.2f \t %.2f \n" % (
+            key.ljust(maxlen), mymock.params()[key], seed_params[0][key], scanned_params[key])
+    print(S)
 
     print("All checks okay.")
