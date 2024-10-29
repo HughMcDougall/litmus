@@ -109,6 +109,15 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Work\litmus\examples\polychord_tests" />
+      <recent name="C:\Work\litmus\examples" />
+      <recent name="C:\Work\litmus\examples\clusters" />
+      <recent name="C:\Work\litmus\examples\chains\clusters" />
+      <recent name="C:\Work\litmus\examples\_SS" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="Litmus" />
