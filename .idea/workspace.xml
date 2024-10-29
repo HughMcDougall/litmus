@@ -4,7 +4,65 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm" />
+    <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
+      <change beforePath="$PROJECT_DIR$/examples/.ipynb_checkpoints/example_01-checkpoint.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/.ipynb_checkpoints/litmus_class_example-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/_scannertest.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/_scannertest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_1.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_10_temp.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_1_equal_weights.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_2.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_2_equal_weights.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_3.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_3_equal_weights.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_3_temp.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_4.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_4_equal_weights.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_4_temp.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_5.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_5_equal_weights.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_6.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_6_equal_weights.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_7.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_7_equal_weights.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_7_temp.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_8.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_8_equal_weights.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_9_temp.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_phys_live_1.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_phys_live_2.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_phys_live_3.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/clusters/test_phys_live_4.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/high_SNR_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/high_SNR_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/no_season_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/no_season_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test.paramnames" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test.prior_info" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test.resume" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test.stats" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test_dead-birth.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test_dead.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test_equal_weights.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test_phys_live-birth.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test_phys_live.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/chains/test_prior.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/example_01.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/example_01.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/example_02.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/example_02.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/import_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/import_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/polychord_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/polychord_tests/polychord_example.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/polychord_runtest.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/polychord_tests/polychord_runtest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/polychord_test_0.csv" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/polychord_test_0.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/polychord_test_1.csv" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/polychord_test_1.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/polychord_test_2.csv" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/polychord_test_2.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/polychord_test_3.csv" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/polychord_test_3.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/profiling_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/profiling_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/run_samples.csv" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/run_samples.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/test_02.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/test_02.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/test_pack_function.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/test_pack_function.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/testing.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/_SS/testing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runtest.py" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -112,7 +170,7 @@
       <workItem from="1730105274913" duration="315000" />
       <workItem from="1730105740779" duration="3425000" />
       <workItem from="1730109531316" duration="6120000" />
-      <workItem from="1730179815649" duration="7104000" />
+      <workItem from="1730179815649" duration="7926000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />
