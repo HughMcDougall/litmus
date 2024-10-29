@@ -10,12 +10,15 @@ import os, sys
 from functools import partial
 
 import matplotlib.pyplot as plt
+import matplotlib
+# matplotlib.use('module://backend_interagg')
+import matplotlib
 import numpy as np
 
 import numpyro
 from numpyro import distributions as dist
 from tinygp import GaussianProcess
-from numpyro.contrib.nested_sampling import NestedSampler
+# from numpyro.contrib.nested_sampling import NestedSampler
 from numpyro import infer
 
 import jax
@@ -27,7 +30,7 @@ from litmus.models import _default_config
 from litmus.ICCF_working import *
 from litmus import _utils
 from litmus.models import stats_model, dummy_statmodel, GP_simple
-from litmus.fitting_methods import fitting_procedure, nested_sampling, prior_sampling, hessian_scan
+from litmus.fitting_methods import hessian_scan
 from litmus.mocks import mock, mock_A, mock_B, mock_C
 
 from chainconsumer import ChainConsumer
@@ -36,11 +39,11 @@ from chainconsumer import ChainConsumer
 # Generate a mock fit
 
 mymock = mock(cadence=[7, 30], E=[0.05, 0.2], season=180, lag=180, tau=200.0)
-#mymock = mock(cadence=[7, 30], E=[0.1, 0.4], season=180, lag=180, tau=200.0)
+# mymock = mock(cadence=[7, 30], E=[0.1, 0.4], season=180, lag=180, tau=200.0)
 
 mymock(12)
-mymock.plot(true_args={'alpha': 0.0})
-plt.title("True lag = %.2f" % mymock.lag)
+f = mymock.plot(true_args={'alpha': 0.0}, show=False)
+f.suptitle("True lag = %.2f" % mymock.lag)
 plt.show()
 
 # --------------------------------
@@ -48,7 +51,6 @@ plt.show()
 # Switch for GP simple or dummy model
 
 test_model = GP_simple()
-
 
 '''
 test_model.set_priors({'logtau': [np.log(mymock.tau / 10), np.log(mymock.tau * 10)],
@@ -67,19 +69,23 @@ data = test_model.lc_to_data(mymock.lc_1, mymock.lc_2)
 
 Nlags = (mymock.maxtime / np.array(mymock.cadence)).max() * 2
 Nlags = int(Nlags)
+Nlags = 128
 Nlags = 32
 
 print("Doing Hessian Fitting with grid of %i lags" % Nlags)
 fitting_method = hessian_scan(stat_model=test_model,
                               Nlags=Nlags,
                               init_samples=1_000,
-                              grid_bunching=0.5,
-                              optimizer_args = {'tol': 1E-5,
-                                                'maxiter':256,
-                                                'increase_factor': 1.2},
-                              reverse = False
+                              grid_bunching=0.8,
+                              optimizer_args={'tol': 1E-2,
+                                              'maxiter': 256,
+                                              'increase_factor': 1.8},
+                              reverse=False
                               )
 
+print("Doing prefit in main")
+fitting_method.prefit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
+print("Doing fit in main")
 fitting_method.fit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
 print("Evidences are:")
 print(fitting_method.get_evidence())
@@ -95,7 +101,6 @@ a1.scatter(fitting_method.scan_peaks['lag'], np.exp(fitting_method.log_evidences
            label='hessian')
 a1.plot(fitting_method.scan_peaks['lag'], np.exp(fitting_method.log_evidences),
         label='hessian')
-
 
 a2.scatter(fitting_method.scan_peaks['lag'], fitting_method.log_evidences, label='hessian', s=4)
 a2.legend()

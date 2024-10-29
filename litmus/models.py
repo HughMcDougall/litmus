@@ -9,6 +9,8 @@ HM 24
 
 import warnings
 
+import matplotlib.pyplot as plt
+
 warnings.filterwarnings("ignore")
 
 import sys
@@ -134,8 +136,15 @@ class stats_model(object):
         for key, val in zip(prior_ranges.keys(), prior_ranges.values()):
             if key in badkeys:
                 continue
-            assert (isiter(val)), "Bad input shape in set_priors for key %s" % key  # todo - make this go to std.err
-            a, b = val
+
+            if isiter(val):
+                a, b = val
+            else:
+                try:
+                    a, b = val, val
+                except:
+                    raise "Bad input shape in set_priors for key %s" % key  # todo - make this go to std.err
+
             self.prior_ranges[key] = [float(a), float(b)]
 
         # Calc and set prior volume
@@ -544,9 +553,8 @@ class stats_model(object):
                              )
 
         if self.debug:
+            print("Creating and testing solver...")
             try:
-                print("Creating and testing solver...")
-
                 x0, y0 = converter(self.prior_sample())
                 init_state = solver.init_state(x0, y0, data)
                 with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
@@ -570,7 +578,7 @@ class stats_model(object):
         optimizer_args = {
             'stepsize': 0.0,
             'min_stepsize': 1E-5,
-            'increase_factor': 1.5,
+            'increase_factor': 1.1,
             'maxiter': 1024,
             'linesearch': 'backtracking',
             'verbose': False,
@@ -600,10 +608,12 @@ class stats_model(object):
 
         optfunc = pack_function(val_and_grad, packed_keys=optim_params, fixed_values=y0, invert=False, jit=False)
 
-        # optfunc = pack_function(self._log_density_uncon, packed_keys=optim_params, fixed_values=y0, invert=True)
+        # optfunc = pack_function(self._log_density_uncon, packed_keys=optim_params, fixed_values=y0, invert=True) # todo - remove this
 
         if self.debug: print("At initial uncon position", x0, "with keys", optim_params, "eval for optfunc is",
                              optfunc(x0, data=data))
+
+        assert not np.isinf(optfunc(x0, data=data)[0]), "Something wrong with start positions in scan!"
 
         # =====================
         # Jaxopt Work
@@ -615,7 +625,8 @@ class stats_model(object):
                              **optimizer_args
                              )
 
-        # Debug safety check to see if somethings breaking
+        # Debug safety check to see if something's breaking
+
         if self.debug:
             print("Creating and testing solver...")
             try:
@@ -626,14 +637,16 @@ class stats_model(object):
             except:
                 print("Something went wrong in when making the jaxopt optimizer. Double check your inputs.")
 
-        # Run
+
         with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
             out, state = solver.run(init_params=x0, data=data)
 
         # =====================
         # Cleanup and return
-        if self.debug: print("At final uncon position", out, "with keys", optim_params, "eval for optfunc is",
-                             optfunc(out, data=data))
+        if self.debug:
+            print("At final uncon position", out, "with keys", optim_params, "eval for optfunc is",
+                  optfunc(out, data=data)
+                  )
 
         # Unpack the results to a dict
         out = {key: out[i] for i, key in enumerate(optim_params)}
@@ -775,6 +788,27 @@ class stats_model(object):
         params = pred(rng_key=jax.random.PRNGKey(seed), data=data)
         return (params)
 
+    def params_inprior(self, params):
+        '''
+        :param params:
+        :return:
+        '''
+
+        isgood = {key: True for key in params.keys()}
+        for key in params.keys():
+            if key in self.fixed_params():
+                if np.any(params[key] != self.prior_ranges[key][0]):
+                    isgood[key] = False
+                else:
+                    isgood[key] = True
+            else:
+                if np.any(
+                        not ((params[key] >= self.prior_ranges[key][0]) and (params[key] < self.prior_ranges[key][1]))):
+                    isgood[key] = False
+                else:
+                    isgood[key] = True
+        return isgood
+
     def find_seed(self, data, guesses=None, fixed={}):
         '''
         Find a good initial seed. Unless otherwise over-written, while blindly sample the prior and return the best fit.
@@ -896,6 +930,8 @@ class GP_simple(stats_model):
 
     def find_seed(self, data, guesses=None, fixed={}):
 
+        # -------------------------
+        # Setup
         T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
 
         T1, Y1, E1 = T[bands == 0], Y[bands == 0], E[bands == 0]
@@ -903,29 +939,44 @@ class GP_simple(stats_model):
 
         if guesses is None: guesses = int(np.array(self.prior_ranges['lag']).ptp() / np.median(np.diff(T1)))
 
-        from litmus.ICCF_working import correlfunc_jax_vmapped
+        check_fixed = self.params_inprior(fixed)
+        if False in check_fixed:
+            print("Warning! Tried to fix seed params at values that lie outside of prior range:")
+            for [key, val] in check_fixed.items():
+                if val == False: print('\t%s' % key)
+            print("This may be overwritten")
 
-        approx_season = np.diff(T1).max()
+        # -------------------------
+        # Estimate Correlation Timescale
+        if 'logtau' not in fixed.keys():
+            from litmus.ICCF_working import correlfunc_jax_vmapped
+            approx_season = np.diff(T1).max()
 
-        if approx_season > np.median(np.diff(T1))*5:
-            span = approx_season
+            if approx_season > np.median(np.diff(T1)) * 5:
+                span = approx_season
+            else:
+                span = np.ptp(T1) * 0.25
+
+            autolags = jnp.linspace(-span, span, 1024)
+            autocorrel = correlfunc_jax_vmapped(autolags, T1, Y1, T1, Y1, 1024)
+
+            autolags, autocorrel = np.array(autolags), np.array(autocorrel)
+
+            # Trim to positive values and take a linear regression
+            autolags = autolags[autocorrel > 0]
+            autocorrel = autocorrel[autocorrel > 0]
+            autocorrel[autolags < 0] *= -1
+            autocorrel -= 1
+            tau = (autolags * autolags).sum() / (autolags * autocorrel).sum()
         else:
-            span = np.ptp(T1) * 0.25
-        
-        autolags = jnp.linspace(-span, span, 1024)
-        autocorrel = correlfunc_jax_vmapped(autolags, T1, Y1, T1, Y1, 1024)
+            tau = 1
 
-        autolags, autocorrel = np.array(autolags), np.array(autocorrel)
-
-        # Trim to positive values and take a linear regression
-        autolags = autolags[autocorrel > 0]
-        autocorrel = autocorrel[autocorrel > 0]
-        autocorrel[autolags < 0] *= -1
-        autocorrel -= 1
-        tau = (autolags * autolags).sum() / (autolags * autocorrel).sum()
-
+        # -------------------------
+        # Estimate mean & variances
         Y1bar, Y2bar = np.average(Y1, weights=E1 ** -2), np.average(Y2, weights=E2 ** -2)
         Y1var, Y2var = np.average((Y1 - Y1bar) ** 2, weights=E1 ** -2), np.average((Y2 - Y2bar) ** 2, weights=E2 ** -2)
+
+        # -------------------------
 
         out = {
             'lag': 0.0,
@@ -938,95 +989,81 @@ class GP_simple(stats_model):
 
         out |= fixed
 
+        # -------------------------
+        # Where estimates are outside prior range, round down
+        isgood = self.params_inprior(out)
+        isgood['lag'] = True
+        for key in out.keys():
+            if not isgood[key]:
+                if out[key] < self.prior_ranges[key][0]:
+                    out[key] = self.prior_ranges[key][0]
+                else:
+                    out[key] = self.prior_ranges[key][1]
+
+        # -------------------------
+        # Estimate lag with a sweep if not in fixed
         if 'lag' not in fixed.keys():
             lag_fits = np.linspace(*self.prior_ranges['lag'], guesses)
-            lls = self.log_density(params=dict_extend(out, {'lag': lag_fits}), data=data)
-
-            out |= {'lag': lag_fits[lls.argmax()]}
-
-            ll_out = lls.max()
+            out |= {'lag': lag_fits}
         else:
-            ll_out = self.log_density(params=out, data=data)
+            out |= {'lag': fixed['lag']}
+
+        # -------------------------
+        # Get log likelihoods and return best value
+        out = dict_extend(out)
+
+        lls = self.log_density(params=out, data=data)
+        if dict_dim(out)[1] > 1:
+            i = lls.argmax()
+            ll_out = lls[i]
+            out = {key: out[key][i] for key in out.keys()}
+            if self.debug:
+                print("In find seed, sample no %i is best /w LL %.2f at lag %.2f" % (i, ll_out, out['lag']))
+        else:
+            ll_out = float(lls)
 
         return (out, ll_out)
 
-        # ============================================
-        # ============================================
-        # Testing
+    # ============================================
+    # ============================================
+    # Testing
 
-        if __name__ == '__main__':
-            import matplotlib.pyplot as plt
 
-        # Build a test stats model and adjust priors
-        test_statmodel = dummy_statmodel()
-        test_statmodel.set_priors({
-            'lag': [0, 500],
-            'test_param': [0.0, 0.0]
-        })
+if __name__ == "__main__":
+    print("Testing models.py")
 
-        # Generate prior samples and evaluate likelihoods
-        test_data = jnp.array([100., 0.25])
-        test_params = test_statmodel.prior_sample(num_samples=1_000)
-        log_likes = test_statmodel.log_density(data=test_data, params=test_params)
-        log_grads = test_statmodel.log_density_grad(data=test_data, params=test_params)['lag']
-        log_hess = test_statmodel.log_density_hess(data=test_data, params=test_params)[:, 0, 0]
+    from mocks import mock
+    import matplotlib
 
-        # ------------------------------
-        fig, (a1, a2) = plt.subplots(2, 1, sharex=True)
-        a1.scatter(test_params['lag'], log_likes)
-        a2.scatter(test_params['lag'], np.exp(log_likes))
+    matplotlib.use('module://backend_interagg')
 
-        for a in (a1, a2): a.grid()
-        fig.supxlabel("Lag (days)")
-        a1.set_ylabel("Log-Density")
-        a2.set_ylabel("Density")
-        fig.tight_layout()
+    print("Creating mocks...")
+    mymock = mock()
+    true_params = mymock.params()
+    mymock.plot()
 
-        plt.show()
+    print("Creating model...")
+    my_model = GP_simple()
+    my_model.debug = True
+    lc_1, lc_2 = mymock.lc_1, mymock.lc_2
+    data = my_model.lc_to_data(lc_1, lc_2)
 
-        # ------------------------------
-        fig, (a1, a2) = plt.subplots(2, 1, sharex=True)
-        a1.scatter(test_params['lag'], log_grads)
-        a2.scatter(test_params['lag'], log_hess)
+    my_model.set_priors(true_params | {'lag': [0, 1_000]})
 
-        for a in (a1, a2): a.grid()
-        fig.supxlabel("Lag (days)")
-        a1.set_ylabel("Log-Density Gradient")
-        a2.set_ylabel("Log-Density Curvature")
-        fig.tight_layout()
+    print("Testing sampling and density...")
+    prior_samps = my_model.prior_sample(num_samples=1_000)
+    prior_LL = my_model.log_density(prior_samps, data=data)
 
-        plt.show()
+    plt.scatter(prior_samps['lag'], prior_LL - prior_LL.max())
+    plt.axvline(true_params['lag'], ls='--', c='k')
+    plt.show()
 
-        # ===============================
-        # Try a scan
-        opt_lag = test_statmodel.scan(start_params={'lag': 10.1, 'test_param': 0.0}, data=test_data,
-                                      optim_params=['lag', 'test_param'],
-                                      use_vmap=False,
-                                      stepsize=0.1,
-                                      maxiter=500)['lag']
-        print("best lag is", opt_lag)
+    # ----------------------------
 
-        Z1 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data,
-                                                 integrate_axes=['lag'])
-        Z2 = test_statmodel.laplace_log_evidence(params={'lag': opt_lag, 'test_param': 0.0}, data=test_data,
-                                                 integrate_axes=['lag'], constrained=True)
-        print("Estimate for evidence is %.2f" % np.exp(Z1))
-        print("Estimate for evidence is %.2f" % np.exp(Z2))
+    print("Testing find_seed...")
+    seed_params = my_model.find_seed(data=data, )
 
-        # ------------------------------
-        fig = plt.figure()
-        plt.title("Normalization Demonstration")
-        plt.scatter(test_params['lag'], np.exp(log_likes) / np.exp(log_likes).mean() / 500, s=1,
-                    label="Monte Carlo Approx")
-        plt.scatter(test_params['lag'], np.exp(log_likes - Z1), s=1, label="Laplace norm from unconstrained domain")
-        plt.scatter(test_params['lag'], np.exp(log_likes - Z2), s=1, label="Laplace norm from constrained domain")
+    print("Testing Scan...")
+    scanned_params = my_model.scan(seed_params[0], data, optim_kwargs={})
 
-        # plt.yscale('log')
-
-        plt.legend()
-
-        plt.ylabel("Posterior Probability")
-        fig.tight_layout()
-        plt.grid()
-
-        plt.show()
+    print("All checks okay.")

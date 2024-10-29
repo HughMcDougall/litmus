@@ -1,4 +1,4 @@
-__version__     = "0.0.1"
+__version__     = "0.9.0"
 __author__      = "Hugh McDougall"
 __email__       = "hughmcdougallemaiL@gmail.com"
 __uri__         = "https://github.com/HughMcDougall/LITMUS/"

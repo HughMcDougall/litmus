@@ -75,6 +75,7 @@ class fitting_procedure(object):
         self.name = "Base Fitting Procedure"
 
         self.is_ready = False
+        self.has_prefit = False
         self.has_run = False
 
         self.fitting_params = {} | self._default_params
@@ -191,12 +192,21 @@ class fitting_procedure(object):
     # ----------------------
     # Main methods
 
+    def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        '''
+        Fit lags
+        :param lc_1: Lightcurve 1 (Main)
+        :param lc_2: Lightcurve 2 (Response)
+        :param seed: A random seed for feeding to the fitting process. If none, will select randomly
+        '''
+
+        self.has_prefit = True
+
     def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
         '''
         Fit lags
         :param lc_1: Lightcurve 1 (Main)
         :param lc_2: Lightcurve 2 (Response)
-        :param stat_model: a statistical model object
         :param seed: A random seed for feeding to the fitting process. If none, will select randomly
         '''
 
@@ -335,6 +345,7 @@ class ICCF(fitting_procedure):
                     self.stat_model.prior_ranges['lag'][0]
         '''
         self.is_ready = True
+        self.has_prefit=False
 
     # -------------------------
     def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
@@ -668,6 +679,7 @@ class hessian_scan(fitting_procedure):
                 'grid_depth': None,
                 'grid_Nterp': None,
                 'reverse': True,
+                'optimizer_args_init': {},
                 'optimizer_args': {},
                 'seed_params': {}
             }
@@ -754,7 +766,7 @@ class hessian_scan(fitting_procedure):
         estmap_params = self.stat_model.scan(start_params=seed_params,
                                              optim_params=self.params_toscan,
                                              data=data,
-                                             optim_kwargs=self.optimizer_args,
+                                             optim_kwargs=self.optimizer_args_init,
                                              )
         ll_end = self.stat_model.log_density(estmap_params,
                                              data=data
@@ -774,7 +786,7 @@ class hessian_scan(fitting_procedure):
             self.msg_err("Warning! Optimization seems to have diverged. Defaulting to seed params. \n"
                          "Please consider running with different optim_init inputs")
             estmap_params = seed_params
-        self.estmap_params = estmap_params
+        return estmap_params
 
     def make_grid(self, data, seed_params=None):
         '''
@@ -817,6 +829,28 @@ class hessian_scan(fitting_procedure):
 
     # --------------
 
+    def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        # -------------------
+        fitting_procedure.prefit(**locals())
+        seed = self._tempseed
+        # -------------------
+
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+
+        # ----------------------------------
+        # Estimate the MAP
+
+        self.estmap_params = self.estimate_MAP(lc_1, lc_2, seed)
+
+        # ----------------------------------
+
+        # Make a grid
+
+        lags = self.make_grid(data, seed_params=self.estmap_params)
+        self.lags = lags
+
+        self.has_prefit = True
+
     def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
         # -------------------
         fitting_procedure.fit(**locals())
@@ -827,18 +861,8 @@ class hessian_scan(fitting_procedure):
 
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
-        # ----------------------------------
-        # Estimate the MAP
-
-        self.estimate_MAP(lc_1, lc_2, seed)
-
-        # ----------------------------------
-
-        # Make a grid
-
-        lags = self.make_grid(data, seed_params=self.estmap_params)
-        self.lags = lags
-
+        if not self.has_prefit:
+            self.prefit(lc_1, lc_2, seed)
         # ----------------------------------
         # Run over 'self.lags' and scan all positions
         scanned_optima = []
@@ -924,10 +948,11 @@ class hessian_scan(fitting_procedure):
 
         self.has_run = True
 
-    print("Fitting complete.")
+        self.msg_run("Hessian Scan Fitting complete.")
 
-    # ---------------------------------------
-    # Plotting etc
+        # ---------------------------------------
+        # Plotting etc
+
 
     def diagnostics(self, plot=True):
         '''
@@ -961,6 +986,7 @@ class hessian_scan(fitting_procedure):
         plt.grid()
         plt.show()
 
+
     def get_evidence(self, seed: int = None) -> [float, float, float]:
         # -------------------
         fitting_procedure.get_evidence(**locals())
@@ -984,6 +1010,7 @@ class hessian_scan(fitting_procedure):
         Z_est = (dZ * dlag)[::2].sum() * 2
         uncert = abs(Z - Z_est) / 3
         return (np.array([Z, uncert, uncert]))
+
 
     def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
         # -------------------
@@ -1125,12 +1152,13 @@ class SVI_scan(hessian_scan):
 
         self.msg_run("Starting SVI Scan")
 
+        if not self.has_prefit:
+            self.prefit(lc_1, lc_2, seed)
+
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
         # ----------------------------------
         # Estimate the MAP and its hessian
-
-        self.estimate_MAP(lc_1, lc_2, seed)
 
         estmap_uncon = self.stat_model.to_uncon(self.estmap_params)
 
@@ -1190,13 +1218,6 @@ class SVI_scan(hessian_scan):
         BEST_loc, BEST_tril = MAP_SVI_results.params['auto_loc'], MAP_SVI_results.params['auto_scale_tril']
 
         self.diagnostic_loss_init = MAP_SVI_results.losses
-
-        # ----------------------------------
-
-        # Make a grid
-
-        lags = self.make_grid(data, seed_params=self.estmap_params)
-        self.lags = lags
 
         # ----------------------------------
 
@@ -1275,7 +1296,7 @@ class SVI_scan(hessian_scan):
         self.log_evidences = np.array(Zs)
         self.has_run = True
 
-        print("Fitting complete.")
+        self.msg_run("SVI Fitting complete.")
 
     def diagnostics(self, plot=True):
 

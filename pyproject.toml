@@ -9,7 +9,7 @@ authors = [
   { name="Hugh McDougall", email="hughmcdougallemail@gmail.com" },
 ]
 dependencies = [
-  'jax',
+  'jax==0.4.31',
   'jaxlib',
   'jaxopt',
   'numpyro',

@@ -11,23 +11,84 @@ import sys
 import numpy as np
 import jax
 
-
-
 from contextlib import contextmanager
 import sys, os
+from copy import copy
 
 # ============================================
 # PRINTING UTILITIES
 # ============================================
+
+'''
 @contextmanager
 def suppress_stdout():
     with open(os.devnull, "w") as devnull:
         old_stdout = sys.stdout
+        old_stderr = sys.stderr
+
         sys.stdout = devnull
+        sys.stderr = devnull
         try:
             yield
         finally:
+            sys.stdout.close()
+            sys.stderr.close()
             sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
+
+@contextmanager
+class suppress_stdout:
+    def __enter__(self):
+        self._original_stdout = copy(sys.stdout)
+        sys.stdout = open(os.devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
+'''
+
+
+@contextmanager
+def suppress_stdout():
+    # Duplicate the original stdout file descriptor to restore later
+    original_stdout_fd = os.dup(sys.stdout.fileno())
+
+    # Open devnull file and redirect stdout to it
+    with open(os.devnull, 'w') as devnull:
+        os.dup2(devnull.fileno(), sys.stdout.fileno())
+        try:
+            yield
+        finally:
+            # Restore original stdout from the duplicated file descriptor
+            os.dup2(original_stdout_fd, sys.stdout.fileno())
+            # Close the duplicated file descriptor
+            os.close(original_stdout_fd)
+
+#TODO - Remove this redundant code when swapping to optimistix
+'''
+class SuppressStdout:
+    def __init__(self):
+        # Duplicate the original stdout file descriptor
+        self.original_stdout_fd = os.dup(sys.stdout.fileno())
+        self.devnull = open(os.devnull, 'w')
+        self.is_suppressed = False
+
+    def on(self):
+        if not self.is_suppressed:
+            # Open devnull and redirect stdout to it
+            os.dup2(self.devnull.fileno(), sys.stdout.fileno())
+            self.is_suppressed = True
+
+    def off(self):
+        if self.is_suppressed:
+            # Restore original stdout from the duplicated file descriptor
+            os.dup2(self.original_stdout_fd, sys.stdout.fileno())
+            self.devnull.close()
+            self.is_suppressed = False
+
+sso = SuppressStdout()
+'''
 
 # ============================================
 # DICTIONARY UTILITIES
@@ -133,6 +194,9 @@ def dict_extend(A: dict, B: dict = None) -> dict:
     to_extend = [key for key in out if not isiter(out[key])]
     to_leave = [key for key in out if isiter(out[key])]
 
+    if len(to_extend) == 0: return out
+    if len(to_leave) == 0: return out
+
     N = len(out[to_leave[0]])
     for key in to_leave[1:]:
         assert len(out[key]) == N, "Tried to dict_extend() a dictionary with inhomogeneous lengths"
@@ -213,7 +277,6 @@ def pack_function(func, packed_keys, fixed_values={}, invert=False, jit=False):
 # ============================================
 def randint():
     return (np.random.randint(0, sys.maxsize // 1024))
-
 
 
 # ===================================

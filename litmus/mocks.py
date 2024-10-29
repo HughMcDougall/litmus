@@ -49,7 +49,7 @@ def mock_cadence(maxtime, seed=0, cadence=7, cadence_var=1, season=180, season_v
     # Make windowing function
     if season is not None and season != 0:
 
-        no_seasons = maxtime // season
+        no_seasons = int(maxtime / season)
         window = np.zeros(len(T))
         for n in range(no_seasons):
             if n % 2 == 0: continue
@@ -215,9 +215,9 @@ class mock(object):
         :return:
         '''
         if seed is None:
-            out = copy(self)
-        else:
-            out = mock(seed=seed, **self.args | kwargs)
+            seed = self.seed
+
+        out = mock(seed=seed, **(self.args | kwargs))
         return (out)
 
     # ------------------------------

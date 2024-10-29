@@ -10,23 +10,14 @@ and fitting procedure. In future versions, this will also give access to the GUI
 import sys
 import csv
 
-import chainconsumer
+from chainconsumer import ChainConsumer, Chain, ChainConfig, PlotConfig
+
+from pandas import DataFrame
+
 import numpy as np
 import jax.numpy as jnp
 
-try:
-    from chainconsumer import ChainConsumer
-
-    has_chainconsumer = True
-    new_chainconsumer = 'Chain' in dir(chainconsumer)
-except:
-    has_chainconsumer = False
-
 import matplotlib.pyplot as plt
-
-import matplotlib
-
-matplotlib.use('TkAgg')
 
 import litmus.models as models
 from litmus.models import stats_model
@@ -66,11 +57,6 @@ class LITMUS(object):
         self.model = fitproc.stat_model
         self.fitproc = fitproc
 
-        if self.fitproc.has_run:
-            self.samples = self.fitproc.get_samples(self.Nsamples)
-            self.C.add_chain(self.samples, name="Lightcurves %i-%i")
-            self.msg_err("Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour.")
-
         # ----------------------------
         self.lightcurves = []
         self.data = None
@@ -79,8 +65,12 @@ class LITMUS(object):
         self.samples = {}
         self.C = ChainConsumer()
 
-        self.C.configure(smooth=0, summary=True, linewidths=2, cloud=True, shade_alpha=0.5)
+        self.C.set_override(ChainConfig(smooth=0, linewidth=2, plot_cloud=True, shade_alpha=0.5))
 
+        if self.fitproc.has_run:
+            self.samples = self.fitproc.get_samples(self.Nsamples)
+            self.C.add_chain(Chain(samples=DataFrame.from_dict(self.samples), name="Lightcurves %i-%i"))
+            self.msg_err("Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour.")
 
         return
 
@@ -109,6 +99,16 @@ class LITMUS(object):
 
     # ----------------------
     # Running / interface /w fitting methods
+    def prefit(self, i=0, j=1):
+        '''
+        Performs the full fit for the chosen stats model and fitting method.
+        '''
+
+        lc_1, lc_2 = self.lightcurves[i], self.lightcurves[j]
+        self.data = self.model.lc_to_data(lc_1, lc_2)
+
+        self.fitproc.prefit(lc_1, lc_2)
+
     def fit(self, i=0, j=1):
         '''
         Performs the full fit for the chosen stats model and fitting method.
@@ -120,9 +120,9 @@ class LITMUS(object):
         self.fitproc.fit(lc_1, lc_2)
 
         self.samples = self.fitproc.get_samples(self.Nsamples)
-        self.C.add_chain(self.samples, name="Lightcurves %i-%i" % (i, j))
+        self.C.add_chain(Chain(samples=DataFrame.from_dict(self.samples), name="Lightcurves %i-%i" % (i, j)))
 
-    def save_chain(self, dir=None, method="numpy", headings=True):
+    def save_chain(self, path=None, method="numpy", headings=True):
 
         '''
         methods = ["numpy"]
@@ -133,10 +133,10 @@ class LITMUS(object):
             self.msg_err(err_msg)
         '''
 
-        if dir is None:
-            dir = "./%s_%s.csv" % (self.model.name, self.fitproc.name)
+        if path is None:
+            path = "./%s_%s.csv" % (self.model.name, self.fitproc.name)
 
-        with open(dir, 'w') as csvfile:
+        with open(path, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=self.model.paramnames())
             writer.writeheader()
             writer.writerows(self.samples)
@@ -154,19 +154,23 @@ class LITMUS(object):
         Creates a nicely formatted chainconsumer plot of the parameters
         Returns the chainconsumer plot figure
         '''
-        if not has_chainconsumer:
-            self.msg_err("ChainConsumer not installed or has incompatible verison")
-            return
+
         if Nsamples is not None and Nsamples != self.Nsamples:
             C = ChainConsumer()
-            samps = self.fitproc.get_samples(Nsamples, **CC_kwargs)
-            C.add_chain(samps)
+            samples = self.fitproc.get_samples(Nsamples, **CC_kwargs)
+            C.add_chain(Chain(samples=DataFrame.from_dict(samples), name='samples'))
         else:
             C = self.C
 
-        fig = C.plotter.plot(parameters=self.model.free_params(),
-                             extents=self.model.prior_ranges if prior_extents else None,
-                             **CC_kwargs)
+        if prior_extents:
+            _config = PlotConfig(extents=self.model.prior_ranges, summarise=True,
+                                 **CC_kwargs)
+        else:
+            _config = PlotConfig(summarise=True,
+                                 **CC_kwargs)
+        C.plotter.set_config(_config)
+        fig = C.plotter.plot(columns=self.model.free_params(),
+                             )
         fig.tight_layout()
         if show: fig.show()
 
@@ -181,17 +185,16 @@ class LITMUS(object):
             self.msg_err("Can't plot lags for a model without lags.")
             return
 
-        if not has_chainconsumer:
-            self.msg_err("ChainConsumer not installed or has incompatible verison")
-            return
-
         if Nsamples is not None and Nsamples != self.Nsamples:
             C = ChainConsumer()
-            samps = self.fitproc.get_samples(Nsamples)
-            C.add_chain(samps)
+            samples = self.fitproc.get_samples(Nsamples)
+            C.add_chain(Chain(samples=DataFrame.from_dict(samples), name="lags"))
         else:
             C = self.C
-        fig = C.plotter.plot_distributions(extents=self.model.prior_ranges, parameters=['lag'], figsize=(8, 4))
+
+        _config = PlotConfig(extents=self.model.prior_ranges, summarise=True)
+        C.plotter.set_config(_config)
+        fig = C.plotter.plot_distributions(columns=['lag'], figsize=(8, 4))
         fig.axes[0].set_ylim(*fig.axes[0].get_ylim())
         fig.tight_layout()
 
@@ -259,6 +262,10 @@ if __name__ == "__main__":
     import numpy as np
     import matplotlib.pyplot as plt
 
+    import matplotlib
+
+    matplotlib.use('module://backend_interagg')
+
     #::::::::::::::::::::
     # Mock Data
     from mocks import *
@@ -300,9 +307,9 @@ if __name__ == "__main__":
     test_litmus.add_lightcurve(mymock.lc_1)
     test_litmus.add_lightcurve(mymock.lc_2)
 
-    print("Fitting Start")
+    print("\t Fitting Start")
     test_litmus.fit()
-    print("Fitting complete")
+    print("\t Fitting complete")
 
     test_litmus.plot_parameters()
     test_litmus.lag_plot()
