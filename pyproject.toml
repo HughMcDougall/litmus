@@ -1,13 +1,13 @@
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
 
 [project]
 name = "LITMUS"
-version = "0.1.0"
+version = "0.2.0"
 authors = [
   { name="Hugh McDougall", email="hughmcdougallemail@gmail.com" },
 ]
+description = "JAX-based lag recovery for AGN reverberation mapping"
+readme = "README.md"
+requires-python = ">=3.10"
 dependencies = [
   'jax==0.4.31',
   'jaxlib',
@@ -16,17 +16,22 @@ dependencies = [
   'tinygp',
   'matplotlib',
   'numpy',
-  # 'etils',
-  # 'tensorflow_probability',
-  # 'jaxns',
   'scikit-learn',
   'scipy',
   'chainconsumer',
 ]
+classifiers=[
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
 
-description = "JAX-based lag recovery for AGN reverberation mapping"
-readme = "README.md"
-# requires-python = ">=3.12"
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+jaxns = ["etils", "tensorflow_probability", "jaxns"]
 
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -35,4 +40,4 @@ classifiers = [
 ]
 
 [project.urls]
-homepage = "https://github.com/HughMcDougall/LITMUS"
+repository = "https://github.com/HughMcDougall/LITMUS"

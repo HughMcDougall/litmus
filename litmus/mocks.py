@@ -294,7 +294,7 @@ class mock(object):
                      )
 
         if show: plt.show()
-        return f
+        return axis.get_figure()
 
     def corrected_plot(self, params={}, axis=None, true_args={}, series_args={}):
         params = self.params() | params

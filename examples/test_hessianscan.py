@@ -52,16 +52,6 @@ plt.show()
 
 test_model = GP_simple()
 
-'''
-test_model.set_priors({'logtau': [np.log(mymock.tau / 10), np.log(mymock.tau * 10)],
-                       'logamp': [np.log(0.1), np.log(10.0)],
-                       'mean': [-5, 5],
-                       'rel_amp': [0.1, 10],
-                       'rel_mean': [-5, 5]
-                       })
-'''
-
-test_model.set_priors({'lag': [0, 1000]})
 
 data = test_model.lc_to_data(mymock.lc_1, mymock.lc_2)
 
@@ -70,16 +60,15 @@ data = test_model.lc_to_data(mymock.lc_1, mymock.lc_2)
 Nlags = (mymock.maxtime / np.array(mymock.cadence)).max() * 2
 Nlags = int(Nlags)
 Nlags = 128
-Nlags = 32
 
 print("Doing Hessian Fitting with grid of %i lags" % Nlags)
 fitting_method = hessian_scan(stat_model=test_model,
                               Nlags=Nlags,
                               init_samples=1_000,
-                              grid_bunching=0.8,
-                              optimizer_args={'tol': 1E-2,
-                                              'maxiter': 256,
-                                              'increase_factor': 1.8},
+                              grid_bunching=0.4,
+                              optimizer_args={'tol': 1E-5,
+                                              'maxiter': 1024,
+                                              'increase_factor': 1.5},
                               reverse=False
                               )
 
@@ -94,7 +83,11 @@ print(fitting_method.get_evidence())
 # Plotting
 
 fitting_method.diagnostics(plot=True)
+fitting_method.refit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
+fitting_method.diagnostics(plot=True)
 
+# -----------------
+# Plotting
 f, (a1, a2) = plt.subplots(2, 1, sharex=True)
 
 a1.scatter(fitting_method.scan_peaks['lag'], np.exp(fitting_method.log_evidences),

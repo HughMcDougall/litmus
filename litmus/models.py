@@ -766,11 +766,9 @@ class stats_model(object):
         if not constrained:
             uncon_params = self.to_uncon(params)
 
-            log_height = self.log_density_uncon(uncon_params, data)
             hess = self.log_density_uncon_hess(uncon_params, data)
             grad = self.log_density_uncon_grad(uncon_params, data)
         else:
-            log_height = self.log_density(params, data)
             hess = self.log_density_hess(params, data)
             grad = self.log_density_grad(params, data)
 
@@ -779,13 +777,19 @@ class stats_model(object):
         hess = hess[I, :][:, I]
         grad = np.array([float(x) for x in grad.values()])[I]
 
-        Hinv = np.linalg.inv(hess)
-        loss = np.dot(grad,
-                      np.dot(
-                          Hinv, grad
-                      )
-                      )
-        return (abs(loss))
+        try:
+            Hinv = np.linalg.inv(hess)
+            loss = np.dot(grad,
+                          np.dot(
+                              Hinv, grad
+                          )
+                          )
+            return np.sqrt(abs(loss))
+
+        except:
+            return np.inf
+
+
 
     # --------------------------------
     # Sampling Utils
