@@ -1,3 +1,3 @@
-wsl git add .
-wsl git commit -m "autocommit"
-wsl git push
+git add .
+git commit -m "autocommit"
+git push
