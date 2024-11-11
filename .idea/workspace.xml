@@ -5,17 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
-      <change afterPath="$PROJECT_DIR$/examples/for_luois.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/grid_plot.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/integ_compare.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/test_hessianscan.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/test_hessianscan.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/lin_scatter.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/lin_scatter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/integ_compare.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/integ_compare.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/todo.md" beforeDir="false" afterPath="$PROJECT_DIR$/todo.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -168,6 +160,7 @@
       <workItem from="1730866616471" duration="1316000" />
       <workItem from="1730867954580" duration="10905000" />
       <workItem from="1730954671523" duration="9668000" />
+      <workItem from="1731287033018" duration="4836000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />

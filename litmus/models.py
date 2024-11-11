@@ -1062,7 +1062,7 @@ class GP_simple(stats_model):
         # -------------------------
         # Estimate lag with a sweep if not in fixed
         if 'lag' not in fixed.keys():
-            lag_fits = np.linspace(*self.prior_ranges['lag'], guesses)
+            lag_fits = np.linspace(*self.prior_ranges['lag'], guesses, endpoint=False)
             out |= {'lag': lag_fits}
         else:
             out |= {'lag': fixed['lag']}
