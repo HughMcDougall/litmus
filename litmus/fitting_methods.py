@@ -59,9 +59,9 @@ from litmus.lin_scatter import linscatter
 
 # Base fitting procedure class
 class fitting_procedure(object):
-    '''
+    """
     Generic class for lag fitting procedures. Contains parent methods for setting properties
-    '''
+    """
 
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
@@ -120,9 +120,9 @@ class fitting_procedure(object):
     # ----------------------
 
     def reset(self):
-        '''
+        """
         Clears all memory and resets params to defaults
-        '''
+        """
         self.set_config(**self._default_params)
 
         self.has_run, self.is_ready = False, False
@@ -130,11 +130,11 @@ class fitting_procedure(object):
         return
 
     def set_config(self, **fit_params):
-        '''
+        """
         Configure fitting parameters for fitting_method() object
         Accepts any parameters present with a name in fitting_method.fitting_params
         Unlisted parameters will be ignored.
-        '''
+        """
 
         if self.debug: print("Doing config with keys", fit_params.keys())
 
@@ -155,17 +155,17 @@ class fitting_procedure(object):
         return
 
     def readyup(self):
-        '''
+        """
         Performs pre-fit preparation calcs. Should only be called if not self.is_ready()
-        '''
+        """
         self.is_ready = True
 
     # ----------------------
     # Error message printing
     def msg_err(self, *x: str, end='\n', delim=' '):
-        '''
+        """
         Messages for when something has broken or been called incorrectly
-        '''
+        """
         if True:
             for a in x:
                 print(a, file=self.err_stream, end=delim)
@@ -174,9 +174,9 @@ class fitting_procedure(object):
         return
 
     def msg_run(self, *x: str, end='\n', delim=' '):
-        '''
+        """
         Standard messages about when things are running
-        '''
+        """
         if self.verbose:
             for a in x:
                 print(a, file=self.out_stream, end=delim)
@@ -185,9 +185,9 @@ class fitting_procedure(object):
         return
 
     def msg_debug(self, *x: str, end='\n', delim=' '):
-        '''
+        """
         Explicit messages to help debug when things are behaving strangely
-        '''
+        """
         if self.debug:
             for a in x:
                 print(a, file=self.out_stream, end=delim)
@@ -199,22 +199,22 @@ class fitting_procedure(object):
     # Main methods
 
     def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
-        '''
+        """
         Fit lags
         :param lc_1: Lightcurve 1 (Main)
         :param lc_2: Lightcurve 2 (Response)
         :param seed: A random seed for feeding to the fitting process. If none, will select randomly
-        '''
+        """
 
         self.has_prefit = True
 
     def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
-        '''
+        """
         Fit lags
         :param lc_1: Lightcurve 1 (Main)
         :param lc_2: Lightcurve 2 (Response)
         :param seed: A random seed for feeding to the fitting process. If none, will select randomly
-        '''
+        """
 
         # Sanity checks inherited by all subclasses
         if not self.is_ready: self.readyup()
@@ -252,9 +252,9 @@ class fitting_procedure(object):
             self.msg_err("Fitting \"%s\" method does not have method .get_samples() implemented" % self.name)
 
     def get_evidence(self, seed: int = None) -> [float, float, float]:
-        '''
+        """
         Returns the estimated evidence for the fit model. Returns as array-like [Z,dZ-,dZ+]
-        '''
+        """
 
         if not self.is_ready: self.readyup()
         if not self.has_run: self.msg_err("Warning! Tried to call get_evidence without running first!")
@@ -270,9 +270,9 @@ class fitting_procedure(object):
         return (np.array([0.0, 0.0, 0.0]))
 
     def get_information(self, seed: int = None) -> [float, float, float]:
-        '''
+        """
         Returns an estimate of the information (KL divergence relative to prior). Returns as array-like [I,dI-,dI+]
-        '''
+        """
 
         if not self.is_ready: self.readyup()
         if isinstance(seed, int):
@@ -286,9 +286,9 @@ class fitting_procedure(object):
         return (np.array([0.0, 0.0, 0.0]))
 
     def get_peaks(self, seed=None):
-        '''
+        """
         Returns the maximum posterior position in parameter space
-        '''
+        """
 
         if not self.is_ready: self.readyup()
         if isinstance(seed, int):
@@ -306,11 +306,11 @@ class fitting_procedure(object):
 # ICCF fitting procedure
 
 class ICCF(fitting_procedure):
-    '''
+    """
     Fit lags using interpolated cross correlation function
     todo
         - Add p value, false positive and evidence estimates
-    '''
+    """
 
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
@@ -412,10 +412,10 @@ class ICCF(fitting_procedure):
 # Random Prior Sampling
 
 class prior_sampling(fitting_procedure):
-    '''
+    """
     Randomly samples from the prior and weights with importance sampling.
     The crudest available sampler. For test purposes only.
-    '''
+    """
 
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
@@ -467,7 +467,7 @@ class prior_sampling(fitting_procedure):
         # Mark as having completed a run
         self.has_run = True
 
-    def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
+    def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = True) -> {str: [float]}:
         # -------------------
         fitting_procedure.get_samples(**locals())
         seed = self._tempseed
@@ -495,9 +495,9 @@ class prior_sampling(fitting_procedure):
         fitting_procedure.get_samples(**locals())
         seed = self._tempseed
         # -------------------
-        density = np.exp(self.log_density)
+        density = np.exp(self.log_density - self.log_density.max())
 
-        Z = density.mean() * self.stat_model.prior_volume
+        Z = density.mean() * self.stat_model.prior_volume * np.exp(self.log_density.max())
         uncert = density.std() / np.sqrt(self.Nsamples) * self.stat_model.prior_volume
 
         return (np.array([Z, -uncert, uncert]))
@@ -519,10 +519,10 @@ class prior_sampling(fitting_procedure):
 # Nested Sampling
 
 class nested_sampling(fitting_procedure):
-    '''
+    """
     Access to nested sampling. NOT FULLY IMPLEMENTED
     In version 1.0.0 this will use either jaxns or pypolychord to perform direct nested sampling.
-    '''
+    """
 
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
@@ -634,7 +634,7 @@ class nested_sampling(fitting_procedure):
         if N is None:
             if importance_sampling:
                 out = {key: samples.T[i] for i, key in enumerate(self.stat_model.paramnames())}
-                # return out
+                return out
             else:
                 N = samples.shape[0]
 
@@ -758,7 +758,7 @@ class hessian_scan(fitting_procedure):
                 'constrained_domain': False,
                 'max_opt_eval': 1_000,
                 'max_opt_eval_init': 5_000,
-                'LL_threshold': 10.0,
+                'LL_threshold': 100.0,
                 'init_samples': 5_000,
                 'grid_bunching': 0.5,
                 'grid_relaxation': 0.5,
@@ -928,8 +928,9 @@ class hessian_scan(fitting_procedure):
         # Estimate the MAP
 
         self.estmap_params = self.estimate_MAP(lc_1, lc_2, seed)
-        self.estmap_tol = self.stat_model.opt_tol(self.estmap_params, data)
-        self.msg_run("Estimated to be within ±%.2eσ of local optimum" %self.estmap_tol)
+        self.estmap_tol = self.stat_model.opt_tol(self.estmap_params, data,
+                                                  integrate_axes=self.stat_model.free_params())
+        self.msg_run("Estimated to be within ±%.2eσ of local optimum" % self.estmap_tol)
         # ----------------------------------
 
         # Make a grid
@@ -1045,7 +1046,7 @@ class hessian_scan(fitting_procedure):
 
         self.has_run = True
 
-        self.msg_run("Hessian Scan Fitting complete.")
+        self.msg_run("Hessian Scan Fitting complete.", "-" * 23, "-" * 23, delim='\n')
 
     def refit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
         # -------------------
@@ -1058,7 +1059,7 @@ class hessian_scan(fitting_procedure):
         peaks = _utils.dict_divide(self.scan_peaks)
         I = np.arange(len(peaks))
         select = np.argwhere(self.diagnostic_tols > self.opt_tol).squeeze()
-        if not(_utils.isiter(select)): select = np.array([select])
+        if not (_utils.isiter(select)): select = np.array([select])
 
         peaks, I = np.array(peaks)[select], I[select]
 
@@ -1131,11 +1132,17 @@ class hessian_scan(fitting_procedure):
         seed = self._tempseed
         # -------------------
 
-        select = np.argwhere(self.diagnostic_tols < self.opt_tol).squeeze()
+        if not isinstance(self, SVI_scan):
+            select = np.argwhere(self.diagnostic_tols < self.opt_tol).squeeze()
+        else:
+            select = np.ones_like(self.log_evidences, dtype=bool)
         if not (_utils.isiter(select)): select = np.array([select])
 
+        # Calculating Evidence
         lags_forint = self.scan_peaks['lag'][select]
         minlag, maxlag = self.stat_model.prior_ranges['lag']
+        if self.reverse:
+            minlag, maxlag = maxlag, minlag
         dlag = [*np.diff(lags_forint) / 2, 0]
         dlag[1:] += np.diff(lags_forint) / 2
         dlag[0] += lags_forint.min() - minlag
@@ -1143,14 +1150,28 @@ class hessian_scan(fitting_procedure):
 
         if sum(dlag) == 0: dlag = 1.0
 
-        dZ = np.exp(self.log_evidences[select])
+        dZ = np.exp(self.log_evidences[select] - self.log_evidences[select].max())
         Z = (dZ * dlag).sum()
+        Z *= np.exp(self.log_evidences[select].max())
 
-        # Estimate uncertainty from ~dt^2 error scaling.
-        # todo - add numerical error to this to account for unconverged cells
-        Z_est = (dZ * dlag)[::2].sum() * 2
-        uncert = abs(Z - Z_est) / 3
-        return (np.array([Z, uncert, uncert]))
+        # -------------------------------------
+        # Get Uncertainties
+
+        # Estimate uncertainty from ~dt^2 error scaling
+        Z_subsample = np.trapz(dZ[::2], lags_forint[::2])
+        Z_subsample *= np.exp(self.log_evidences[select].max())
+        uncert_numeric = abs(Z - Z_subsample) / 3
+
+        uncert_tol = (dZ * self.diagnostic_tols[select]).sum()
+        uncert_tol *= np.exp(self.log_evidences[select].max())
+
+        self.msg_debug("Evidence Est: \t %.2e" % Z)
+        self.msg_debug("Evidence uncerts: \n Numeric: \t %.2e \n Convergence: \t %.2e" % (uncert_numeric, uncert_tol))
+
+        uncert_plus = np.sqrt(np.square(np.array([uncert_numeric, uncert_tol])).sum())
+        uncert_minus = uncert_numeric
+
+        return (np.array([Z, uncert_minus, uncert_plus]))
 
     def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
         # -------------------
@@ -1163,14 +1184,19 @@ class hessian_scan(fitting_procedure):
 
         lags_forint = self.scan_peaks['lag']
         minlag, maxlag = self.stat_model.prior_ranges['lag']
+        if self.reverse:
+            minlag, maxlag = maxlag, minlag
+
+        Y = np.exp(self.log_evidences - self.log_evidences.max())
+
         dlag = [*np.diff(lags_forint) / 2, 0]
         dlag[1:] += np.diff(lags_forint) / 2
         dlag[0] += lags_forint.min() - minlag
         dlag[-1] += maxlag - lags_forint.max()
 
-        if sum(dlag) == 0: dlag = 1.0
+        if sum(dlag) == 0:
+            dlag = 1.0
 
-        Y = np.exp(self.log_evidences - self.log_evidences.max())
         weights = Y * dlag
         weights /= weights.sum()
 
@@ -1230,6 +1256,7 @@ class hessian_scan(fitting_procedure):
                     self.msg_err("Something wrong with the lags at node %i in sample generation" % i)
                 else:
                     outs.append(samps)
+
         outs = {key: np.concatenate([out[key] for out in outs]) for key in self.stat_model.paramnames()}
         return (outs)
 
@@ -1264,8 +1291,8 @@ class SVI_scan(hessian_scan):
                 'grid_relaxation': 0.5,
                 'grid_depth': None,
                 'grid_Nterp': None,
-                'reverse': True,
-                'optimizer_args': {},
+                'reverse': False,
+                'optimizer_args_init': {},
                 'seed_params': {},
                 'ELBO_optimstep': 5E-3,
                 'ELBO_particles': 128,
@@ -1306,15 +1333,11 @@ class SVI_scan(hessian_scan):
         fix_param_dict_uncon = {key: estmap_uncon[key] for key in self.stat_model.fixed_params()}
 
         I = np.where([key in self.params_toscan for key in self.stat_model.paramnames()])[0]
-
         init_hess = -1 * self.stat_model.log_density_uncon_hess(estmap_uncon, data=data)
         if len(I) >= 1:
             init_hess = init_hess[I, :][:, I]
         else:
             init_hess = jnp.array([1.0])
-
-        print("Aquired hessian is...")
-        print(init_hess)
 
         # ----------------------------------
         # Convert these into SVI friendly objects and fit an SVI at the map
@@ -1360,11 +1383,16 @@ class SVI_scan(hessian_scan):
         self.diagnostic_loss_init = MAP_SVI_results.losses
 
         # ----------------------------------
+        # Main Scan
 
         lags_forscan = self.lags
         if self.reverse: lags_forscan = lags_forscan[::-1]
         l_old = np.inf
+
         scanned_optima = []
+        ELBOS_tosave = []
+        diagnostic_hessians = []
+        diagnostic_losses = []
 
         for i, lag in enumerate(lags_forscan):
             print(":" * 23)
@@ -1406,18 +1434,19 @@ class SVI_scan(hessian_scan):
                 H = np.dot(NEW_tril, NEW_tril.T)
                 H = (H + H.T) / 2
                 H = jnp.linalg.inv(H)
-                self.diagnostic_hessians.append(H)
+                diagnostic_hessians.append(H)
 
-                self.diagnostic_losses.append(svi_loop_result.losses)
-                self.ELBOS.append(-1 * svi_loop_result.losses[-int(self.ELBO_Nsteps * self.ELBO_fraction):].mean())
-
+                diagnostic_losses.append(svi_loop_result.losses)
+                ELBOS_tosave.append(-1 * svi_loop_result.losses[-int(self.ELBO_Nsteps * self.ELBO_fraction):].mean())
 
             else:
                 self.msg_run("Unable to converge at iteration %i / %i" % (i, self.Nlags))
                 self.msg_debug("Reason for failure: \n large ELBO drop: \t %r \n diverged: \t %r" % (
                     l_new - l_old < self.ELBO_threshold, diverged))
 
-        self.ELBOS = np.array(self.ELBOS)
+        self.ELBOS = np.array(ELBOS_tosave)
+        self.diagnostic_losses = np.array(diagnostic_losses)
+        self.diagnostic_hessians = np.array(diagnostic_hessians)
 
         self.msg_run("Scanning Complete. Calculating ELBO integrals...")
 
@@ -1426,8 +1455,8 @@ class SVI_scan(hessian_scan):
         # ---------------------------------------------------------------------------------
         # For each of these peaks, estimate the evidence
         # todo - vmap and parallelize
-        Zs = []
 
+        Zs = []
         for j, params in enumerate(scanned_optima):
             Z_ELBO = self.ELBOS[j]
             # if not self.constrained_domain: Z_ELBO += self.stat_model.uncon_grad(params)
@@ -1436,7 +1465,7 @@ class SVI_scan(hessian_scan):
         self.log_evidences = np.array(Zs)
         self.has_run = True
 
-        self.msg_run("SVI Fitting complete.")
+        self.msg_run("SVI Fitting complete.", "-" * 23, "-" * 23, delim='\n')
 
     def diagnostics(self, plot=True):
 

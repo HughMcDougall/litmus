@@ -38,8 +38,10 @@ from chainconsumer import ChainConsumer
 # ============================================
 # Generate a mock fit
 
-mymock = mock(cadence=[7, 30], E=[0.05, 0.2], season=180, lag=180, tau=200.0)
+# mymock = mock(cadence=[7, 30], E=[0.05, 0.2], season=180, lag=180, tau=200.0)
 # mymock = mock(cadence=[7, 30], E=[0.1, 0.4], season=180, lag=180, tau=200.0)
+# mymock = mock_C.copy(E=[.25, .25], cadence=[30, 30], maxtime=360 * 2, season=60)
+mymock = mock(1, cadence=[60, 60], E=[0.25, 0.25], season=0)
 
 mymock(12)
 f = mymock.plot(true_args={'alpha': 0.0}, show=False)
@@ -52,6 +54,10 @@ plt.show()
 
 test_model = GP_simple()
 
+fixed_params = mymock.params()
+del fixed_params['lag']
+del fixed_params['logtau']
+test_model.set_priors(fixed_params)
 
 data = test_model.lc_to_data(mymock.lc_1, mymock.lc_2)
 
@@ -59,17 +65,18 @@ data = test_model.lc_to_data(mymock.lc_1, mymock.lc_2)
 
 Nlags = (mymock.maxtime / np.array(mymock.cadence)).max() * 2
 Nlags = int(Nlags)
-Nlags = 128
+Nlags = 32
 
 print("Doing Hessian Fitting with grid of %i lags" % Nlags)
 fitting_method = hessian_scan(stat_model=test_model,
                               Nlags=Nlags,
                               init_samples=1_000,
-                              grid_bunching=0.4,
-                              optimizer_args={'tol': 1E-5,
+                              grid_bunching=0.8,
+                              optimizer_args={'tol': 1E-2,
                                               'maxiter': 1024,
                                               'increase_factor': 1.5},
-                              reverse=False
+                              reverse=False,
+                              debug=True,
                               )
 
 print("Doing prefit in main")

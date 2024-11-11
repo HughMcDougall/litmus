@@ -10,6 +10,7 @@ def linscatter(X: np.array, Y: np.array, N):
 
     dx = np.array([X[0] - X[1], X[2] - X[1]])
     dy = np.array([Y[0] - Y[1], Y[2] - Y[1]])
+    dx, dy = dx[dx.argsort()], dy[dx.argsort()]
 
     weight_leftright = abs((Y[1] + dy / 2.0) * dx)
     weight_leftright /= weight_leftright.sum()
@@ -36,10 +37,15 @@ def linscatter(X: np.array, Y: np.array, N):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
+    reverse = False
     X = [9, 10, 10.5]
     Y = [0.2, 1.5, 1.5]
 
-    Y = np.array(Y)/np.trapz(Y,X)
+    if reverse:
+        X = np.array(X)[::-1]
+        Y = np.array(Y)[::-1]
+
+    Y = np.array(Y) / np.trapz(Y, X)
 
     plt.plot(X, Y)
     samples = linscatter(X, Y, 50_000) + X[1]

@@ -8,7 +8,9 @@ _HUGH MCDOUGALL 2024_
 
 <u>**L**ag **I**nference **T**hrough the **M**ixed **U**se of **S**amplers</u>
 
-LITMUS is an in-progress program that uses modern statistical techniques, like nested sampling and stochastic variational inference, in combination with cutting edge programming tools like the just-in-time compilation framework `jax` and its bayesian modelling package `NumPyro`, to perform the messy task of lag recovery in AGN reverberation mapping.
+LITMUS is an in-progress program that uses modern statistical techniques, like nested sampling and stochastic variational inference, in combination with cutting edge programming tools like the just-in-time compilation framework
+`jax` and its bayesian modelling package
+`NumPyro`, to perform the messy task of lag recovery in AGN reverberation mapping.
 
 ![LITMUS](./logo.png)
 
@@ -18,7 +20,8 @@ This project is still very much in the early stages. If you have any questions, 
 
 ## Installation
 
-In its current pre-release state, `LITMUS` is a bit fragile in its installation thanks to making use of some packages that are still in active developement. At time of writing (30/10/24) this is still changing.
+In its current pre-release state,
+`LITMUS` is a bit fragile in its installation thanks to making use of some packages that are still in active developement. At time of writing (30/10/24) this is still changing.
 
 ### Simple Installation
 
@@ -32,8 +35,7 @@ pip install "git+https://github.com/HughMcDougall/litmus"
 ### Explicit Installation
 
 If you find the above doesn't work, try first installing the dependencies one by
-one, starting with the commonplace
-python packages:
+one, starting with the commonplace python packages:
 
 ```
 pip install numpy matplotlib scikit-learn
@@ -46,18 +48,9 @@ pip install jax jaxlib jaxopt
 pip install numpyro tinygp
 ```
 
-For plotting utilties we need chainconsumer. The classic version is only
-supported with old versions of scipy, which in turn are only useable on
-older version of python. As such, this step can be a little messy:
+For plotting utilties we need chainconsumer, which needs a newer version of scipy, which in turn requires a newish version of python.
 
-**If using python `3.8`-`3.10`:**
-
-```
-pip install scipy==1.11.4
-pip install chainconsumer==0.34.0
-```
-
-**If using python `3.11`-`3.12`:**
+**Requires Using python `3.11`-`3.12`:**
 
 ```
 pip install scipy
@@ -65,25 +58,24 @@ pip install chainconsumer
 ```
 
 **Nested Sampling**  
-Nested sampling is <u>currently incomplete (30/10/24)</u> but will make use of both
-jaxns and polychord If you want to make use of [`jaxns` nested sampling](https://github.com/Joshuaalbert/jaxns),  
-you'll need to install it with:
+If you want to make use of [`jaxns` nested sampling](https://github.com/Joshuaalbert/jaxns), you'll need to install it with:
 
 ```
 pip install etils tensorflow_probability
 pip install jaxns
 ```
 
-If you would rather use the polychord sampler, you can attempt this by
-following the [documentation](https://github.com/PolyChord/PolyChordLite),
-or trying your luck with:
+_Note: You have bump into some trouble installing `tensorflow_probability` if you don't have [`cmake`](https://cmake.org/) installed._
 
-```
-git clone https://github.com/PolyChord/PolyChordLite.git
-cd PolyChordLite
-make
-pip install .
-```
+[//]: # (If you would rather use the polychord sampler, you can attempt this by)
+[//]: # (following the [documentation]&#40;https://github.com/PolyChord/PolyChordLite&#41;,  or trying your luck with:)
+[//]: # ()
+[//]: # (```)
+[//]: # (git clone https://github.com/PolyChord/PolyChordLite.git)
+[//]: # (cd PolyChordLite)
+[//]: # (make)
+[//]: # (pip install .)
+[//]: #```
 
 -----
 

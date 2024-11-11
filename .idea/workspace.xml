@@ -5,18 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
-      <change afterPath="$PROJECT_DIR$/examples/jaxns_testing/NS_direct_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/jaxns_testing/NS_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/jaxns_testing/dual_moons.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/jaxns_testing/gaussian_shells.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/for_luois.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/grid_plot.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/integ_compare.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/examples/test_hessianscan.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/test_hessianscan.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/mocks.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/mocks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/lin_scatter.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/lin_scatter.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/todo.md" beforeDir="false" afterPath="$PROJECT_DIR$/todo.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -58,33 +56,36 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.NS_direct_test.executor": "Run",
-    "Python.NS_test.executor": "Run",
-    "Python.dual_moons.executor": "Run",
-    "Python.fitting_methods.executor": "Run",
-    "Python.gaussian_shells.executor": "Run",
-    "Python.high_SNR_test.executor": "Run",
-    "Python.jaxns_test.executor": "Run",
-    "Python.litmus_class_example.executor": "Run",
-    "Python.litmus_test.executor": "Run",
-    "Python.litmusclass.executor": "Run",
-    "Python.models.executor": "Run",
-    "Python.test_01.executor": "Run",
-    "Python.test_hessianscan.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Work/litmus",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.NS_direct_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.NS_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.dual_moons.executor&quot;: &quot;Run&quot;,
+    &quot;Python.fitting_methods.executor&quot;: &quot;Run&quot;,
+    &quot;Python.gaussian_shells.executor&quot;: &quot;Run&quot;,
+    &quot;Python.grid_plot.executor&quot;: &quot;Run&quot;,
+    &quot;Python.high_SNR_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.integ_compare.executor&quot;: &quot;Run&quot;,
+    &quot;Python.jaxns_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.lin_scatter.executor&quot;: &quot;Run&quot;,
+    &quot;Python.litmus_class_example.executor&quot;: &quot;Run&quot;,
+    &quot;Python.litmus_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.litmusclass.executor&quot;: &quot;Run&quot;,
+    &quot;Python.models.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_01.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_hessianscan.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Work/litmus&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Work\litmus\examples\jaxns_testing" />
@@ -161,7 +162,12 @@
       <workItem from="1730346861809" duration="11525000" />
       <workItem from="1730374170930" duration="4976000" />
       <workItem from="1730379550623" duration="5406000" />
-      <workItem from="1730386315432" duration="3897000" />
+      <workItem from="1730386315432" duration="4620000" />
+      <workItem from="1730423263045" duration="21990000" />
+      <workItem from="1730780484879" duration="1185000" />
+      <workItem from="1730866616471" duration="1316000" />
+      <workItem from="1730867954580" duration="10905000" />
+      <workItem from="1730954671523" duration="9668000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />

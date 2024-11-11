@@ -98,10 +98,13 @@ class stats_model(object):
 
         self.name = type(self).__name__
 
+        self._prep_funcs()
+
+    def _prep_funcs(self):
         # --------------------------------------
         ## Create jitted, vmapped and grad/hessians of all density functions
 
-        for func in [self._log_density, self._log_density_uncon, self._log_prior]:
+        for func in [self._log_density, self._log_density_uncon, self._log_prior, self._log_likelihood]:
             name = func.__name__
             # unpacked_func = _utils.pack_function(func, packed_keys=self.paramnames())
 
@@ -155,6 +158,8 @@ class stats_model(object):
             if b != a:
                 prior_volume *= b - a
         self.prior_volume = prior_volume
+
+        self._prep_funcs()
 
         return
 
@@ -279,8 +284,10 @@ class stats_model(object):
         WARNING! This function won't work if your model has more than one observation site!
         Constrained space un-normalized posterior log likelihood
         '''
-        out = numpyro.infer.util.log_likelihood(self.model_function, posterior_samples=params, data=data)
-        out = sum(out.values())
+        # out = numpyro.infer.util.log_likelihood(self.model_function, posterior_samples=params, data=data)
+        # out = sum(out.values())
+
+        out = self._log_density(params, data) - self._log_prior(params, data)
         return (out)
 
     def _log_density_uncon(self, params, data):
@@ -489,12 +496,16 @@ class stats_model(object):
             return (opt_params)
 
         def runsolver(solver, start_params, aux: bool = False):
+
+            # Main Loop
             # todo - change this to a .update loop to allow us to pass the state
             x0, y0 = converter(start_params)
             with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
                 xopt, state = solver.run(x0, y0, data)
             out_params = deconverter(xopt, y0)
 
+            # ------------
+            # Returns
             if aux == False:
                 return (out_params)
             else:
@@ -504,9 +515,11 @@ class stats_model(object):
                     'grad': state.grad,
                     'val': state.value,
                     'stepsize': state.stepsize,
+                    'iter_num': state.iter_num,
                 }
                 return (out_params, aux_data)
 
+        # todo - deprecated
         def runsolver_jit(solver, start_params, state):
             x0, y0 = converter(start_params)
             outstate = copy(state)
@@ -788,8 +801,6 @@ class stats_model(object):
 
         except:
             return np.inf
-
-
 
     # --------------------------------
     # Sampling Utils
