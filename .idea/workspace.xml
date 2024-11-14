@@ -5,8 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
+      <change afterPath="$PROJECT_DIR$/examples/scan_test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/integ_compare.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/integ_compare.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/high_SNR_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/high_SNR_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/test_hessianscan.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/test_hessianscan.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -64,6 +68,7 @@
     &quot;Python.litmus_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.litmusclass.executor&quot;: &quot;Run&quot;,
     &quot;Python.models.executor&quot;: &quot;Run&quot;,
+    &quot;Python.scan_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.test_01.executor&quot;: &quot;Run&quot;,
     &quot;Python.test_hessianscan.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
@@ -161,6 +166,8 @@
       <workItem from="1730867954580" duration="10905000" />
       <workItem from="1730954671523" duration="9668000" />
       <workItem from="1731287033018" duration="4836000" />
+      <workItem from="1731389015354" duration="17765000" />
+      <workItem from="1731477155432" duration="11611000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />

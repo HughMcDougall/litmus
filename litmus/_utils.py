@@ -9,11 +9,14 @@ Nothing in here is accesible in the public _init_ file
 import sys
 
 import numpy as np
+import jax.numpy as jnp
 import jax
 
 from contextlib import contextmanager
 import sys, os
 from copy import copy
+
+from scipy.special import jnp_zeros
 
 # ============================================
 # PRINTING UTILITIES
@@ -65,7 +68,8 @@ def suppress_stdout():
             # Close the duplicated file descriptor
             os.close(original_stdout_fd)
 
-#TODO - Remove this redundant code when swapping to optimistix
+
+# TODO - Remove this redundant code when swapping to optimistix
 '''
 class SuppressStdout:
     def __init__(self):
@@ -89,6 +93,7 @@ class SuppressStdout:
 
 sso = SuppressStdout()
 '''
+
 
 # ============================================
 # DICTIONARY UTILITIES
@@ -134,46 +139,63 @@ def dict_dim(DICT: dict) -> (int, int):
 
 # -------------
 
-def dict_pack(DICT: dict, keys=None, recursive=True) -> np.array:
+def dict_pack(DICT: dict, keys=None, recursive=True, H=None, d0={}) -> np.array:
     '''
     Packs a dictionary into an array format
     :param DICT: the dict to unpack
     :param keys: the order in which to index the keyed elements. If none, will use DICT.keys(). Can be partial
+    :param recursive: whether to recurse into arrays
+    :param H: Matrix to scale parameters by
+    :param d0: Value to offset by before packing
     :return: (nkeys x len_array) np.arrayobject
+
+    X = H (d-d0)
     '''
 
     nokeys = True if keys is None else 0
     keys = keys if keys is not None else DICT.keys()
 
+    for key in keys:
+        if key in DICT.keys() and key not in d0.keys(): d0 |= {key: 0.0}
+
     if recursive and type(list(DICT.values())[0]) == dict:
-        out = np.array([dict_pack(DICT[key], keys=keys if not nokeys else None, recursive=recursive) for key in keys])
+        out = np.array(
+            [dict_pack(DICT[key] - d0[key], keys=keys if not nokeys else None, recursive=recursive) for key in keys])
     else:
-        out = np.array([DICT[key] for key in keys])
+        out = np.array([DICT[key] - d0[key] for key in keys])
 
     return (out)
 
 
-def dict_unpack(X: np.array, keys: [str], recursive=True) -> np.array:
-    '''
+def dict_unpack(X: np.array, keys: [str], recursive=True, Hinv=None, x0=None) -> np.array:
+    """
     Unpacks an array into a dict
     :param X: Array to unpack
     :param keys: keys to unpack with
     :return:
-    '''
+
+    Hinv(X) + x0
+    """
+    if Hinv is not None: assert Hinv.shape[0] == len(keys), "Size of H must be equal to number of keys in dict_unpack"
 
     if recursive and isiter(X[0]):
         out = {key: dict_unpack(X[i], keys, recursive) for i, key in enumerate(list(keys))}
     else:
+        X = X.copy()
+        if Hinv is not None:
+            X = np.dot(Hinv, X)
+        if x0 is not None:
+            X += x0
         out = {key: X[i] for i, key in enumerate(list(keys))}
 
     return (out)
 
 
 def dict_sortby(A: dict, B: dict, match_only=True) -> dict:
-    '''
+    """
     Sorts dict A to match keys of dict B. If match_only, returns only for keys common to both.
     Else, append un-sorted entries to end
-    '''
+    """
     out = {key: A[key] for key in B if key in A}
     if not match_only:
         out |= {key: A[key] for key in A if key not in B}
@@ -235,10 +257,19 @@ def dict_divide(X: dict) -> [dict]:
     return (out)
 
 
+def dict_split(X: dict, keys: [str]) -> (dict, dict):
+    assert type(X) is dict, "input to dict_split() must be of type dict"
+    assert isiter(keys) and type(keys[0])==str, "in dict_split() keys must be list of strings"
+    A = {key: X[key] for key in keys}
+    B = {key: X[key] for key in X.keys() if key not in keys}
+    return (A, B)
+
+
 # ============================================
 # FUNCTION UTILITIES
 # ============================================
-def pack_function(func, packed_keys, fixed_values={}, invert=False, jit=False):
+def pack_function(func, packed_keys: ['str'], fixed_values: dict = {}, invert: bool = False, jit: bool = False,
+                  H: np.array = None, d0: dict = {}):
     '''
     Re-arranges a function that takes dict arguments to tak array-like arguments instead, so as to be autograd friendly
     Takes a function f(D:dict, *arg, **kwargs) and returns f(X, D2, *args, **kwargs), D2 is all elements of D not
@@ -248,25 +279,34 @@ def pack_function(func, packed_keys, fixed_values={}, invert=False, jit=False):
     :param packed_keys: Keys in 'D' to be packed in an array
     :param fixed_values: Elements of 'D' to be fixed
     :param invert:  If true, will 'flip' the function upside down
+    :param jit: If true, will 'jit' the function
+    :param H: (optional) scaling matrix to reparameterize H with
+    :param x0: (optional) If given, will center the reparameterized  function at x0
     '''
 
-    if invert:
-        def new_func(X, unpacked_params={}, *args, **kwargs):
-            packed_dict = {key: x for key, x in zip(packed_keys, X)}
-            packed_dict |= unpacked_params
-            packed_dict |= fixed_values
-
-            out = func(packed_dict, *args, **kwargs)
-            return (-1 * out)
+    if H is not None:
+        assert H.shape[0] == len(packed_keys), "Scaling matrix H must be same length as packed_keys"
     else:
-        def new_func(X, unpacked_params={}, *args, **kwargs):
-            packed_dict = {key: x for key, x in zip(packed_keys, X)}
-            packed_dict |= unpacked_params
-            packed_dict |= fixed_values
+        H = jnp.eye(len(packed_keys))
+    d0 = {key: 0.0 for key in packed_keys} | d0
+    x0 = dict_pack(d0, packed_keys)
 
-            out = func(packed_dict, *args, **kwargs)
-            return (out)
+    # --------
 
+    sign = -1 if invert else 1
+    print("sign is ", sign)
+
+    # --------
+    def new_func(X, unpacked_params={}, *args, **kwargs):
+        X = jnp.dot(H, X - x0)
+        packed_dict = {key: x for key, x in zip(packed_keys, X)}
+        packed_dict |= unpacked_params
+        packed_dict |= fixed_values
+
+        out = func(packed_dict, *args, **kwargs)
+        return (sign * out)
+
+    # --------
     if jit: new_func = jax.jit(new_func)
 
     return (new_func)

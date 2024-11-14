@@ -767,7 +767,8 @@ class hessian_scan(fitting_procedure):
                 'reverse': True,
                 'optimizer_args_init': {},
                 'optimizer_args': {},
-                'seed_params': {}
+                'seed_params': {},
+                'precondition': 'diag'
             }
 
         super().__init__(**args_in)
@@ -848,18 +849,29 @@ class hessian_scan(fitting_procedure):
                                                    )
 
         # ----------------------------------
+        # SCANNING FOR OPT
 
         self.msg_run("Moving to new location...")
         estmap_params = self.stat_model.scan(start_params=seed_params,
                                              optim_params=self.stat_model.free_params(),
                                              data=data,
                                              optim_kwargs=self.optimizer_args_init,
+                                             precondition=self.precondition
                                              )
         ll_end = self.stat_model.log_density(estmap_params,
                                              data=data
                                              )
 
         # ----------------------------------
+        # CHECKING OUTPUTS
+
+        if ll_end < ll_start:
+            self.msg_err("Warning! Optimization seems to have diverged. Defaulting to seed params. \n"
+                         "Please consider running with different optim_init inputs")
+            estmap_params = seed_params
+
+        # ----------------------------------
+        # CHECKING OUTPUTS
 
         self.msg_run("Optimizer settled at new fit:")
         for it in estmap_params.items():
@@ -869,10 +881,6 @@ class hessian_scan(fitting_procedure):
             "Log-Density for this is: %.2f" % ll_end
         )
 
-        if ll_end < ll_start:
-            self.msg_err("Warning! Optimization seems to have diverged. Defaulting to seed params. \n"
-                         "Please consider running with different optim_init inputs")
-            estmap_params = seed_params
         return estmap_params
 
     def make_grid(self, data, seed_params=None):
@@ -997,14 +1005,8 @@ class hessian_scan(fitting_procedure):
                 scanned_optima.append(opt_params.copy())
 
                 self.diagnostic_grads.append(aux_data['grad'])
-                # self.diagnostic_hessians.append(aux_data['H'])
                 uncon_params = self.stat_model.to_uncon(opt_params)
-                H = self.stat_model.log_density_uncon_hess(uncon_params, data)
-                I = np.where([key in params_toscan for key in self.stat_model.paramnames()])[0]
-                if len(I) > 1:
-                    H = H[I, :][:, I]
-                elif len(I) == 1:
-                    H = H[I, :][:, I]
+                H = self.stat_model.log_density_uncon_hess(uncon_params, data, keys=params_toscan)
                 self.diagnostic_hessians.append(H)
                 try:
                     tol = np.dot(aux_data['grad'],
@@ -1162,14 +1164,18 @@ class hessian_scan(fitting_procedure):
         Z_subsample *= np.exp(self.log_evidences[select].max())
         uncert_numeric = abs(Z - Z_subsample) / 3
 
-        uncert_tol = (dZ * self.diagnostic_tols[select]).sum()
-        uncert_tol *= np.exp(self.log_evidences[select].max())
+        if not isinstance(self, SVI_scan):
+            uncert_tol = (dZ * self.diagnostic_tols[select]).sum()
+            uncert_tol *= np.exp(self.log_evidences[select].max())
 
-        self.msg_debug("Evidence Est: \t %.2e" % Z)
-        self.msg_debug("Evidence uncerts: \n Numeric: \t %.2e \n Convergence: \t %.2e" % (uncert_numeric, uncert_tol))
+            self.msg_debug("Evidence Est: \t %.2e" % Z)
+            self.msg_debug(
+                "Evidence uncerts: \n Numeric: \t %.2e \n Convergence: \t %.2e" % (uncert_numeric, uncert_tol))
 
-        uncert_plus = np.sqrt(np.square(np.array([uncert_numeric, uncert_tol])).sum())
-        uncert_minus = uncert_numeric
+            uncert_plus = np.sqrt(np.square(np.array([uncert_numeric, uncert_tol])).sum())
+            uncert_minus = uncert_numeric
+        else:
+            uncert_plus, uncert_minus = uncert_numeric, uncert_numeric
 
         return (np.array([Z, uncert_minus, uncert_plus]))
 
@@ -1299,6 +1305,7 @@ class SVI_scan(hessian_scan):
                 'ELBO_Nsteps': 100,
                 'ELBO_Nsteps_init': 1_000,
                 'ELBO_fraction': 0.1,
+                'precondition': 'half-eig'
             }
 
         super().__init__(**args_in)
@@ -1332,12 +1339,7 @@ class SVI_scan(hessian_scan):
         fix_param_dict_con = {key: self.estmap_params[key] for key in self.stat_model.fixed_params()}
         fix_param_dict_uncon = {key: estmap_uncon[key] for key in self.stat_model.fixed_params()}
 
-        I = np.where([key in self.params_toscan for key in self.stat_model.paramnames()])[0]
-        init_hess = -1 * self.stat_model.log_density_uncon_hess(estmap_uncon, data=data)
-        if len(I) >= 1:
-            init_hess = init_hess[I, :][:, I]
-        else:
-            init_hess = jnp.array([1.0])
+        init_hess = -1 * self.stat_model.log_density_uncon_hess(estmap_uncon, data=data, keys=self.params_toscan)
 
         # ----------------------------------
         # Convert these into SVI friendly objects and fit an SVI at the map
@@ -1466,6 +1468,10 @@ class SVI_scan(hessian_scan):
         self.has_run = True
 
         self.msg_run("SVI Fitting complete.", "-" * 23, "-" * 23, delim='\n')
+
+    def refit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+
+        return
 
     def diagnostics(self, plot=True):
 

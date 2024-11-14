@@ -360,7 +360,8 @@ class stats_model(object):
 
     # --------------------------------
     # Wrapped Grad evaluations
-    def log_density_grad(self, params, data, use_vmap=False):
+    # todo - fix these and work keys in
+    def log_density_grad(self, params, data, use_vmap=False, keys=None):
 
         if isiter_dict(params):
             m, N = dict_dim(params)
@@ -375,7 +376,7 @@ class stats_model(object):
 
         return out
 
-    def log_density_uncon_grad(self, params, data, use_vmap=False):
+    def log_density_uncon_grad(self, params, data, use_vmap=False, keys=None, asdict=False):
 
         if isiter_dict(params):
             m, N = dict_dim(params)
@@ -388,7 +389,8 @@ class stats_model(object):
 
         return out
 
-    def log_prior_grad(self, params, data=None, use_vmap=False):
+    def log_prior_grad(self, params, data=None, use_vmap=False, keys=None):
+
         if isiter(params):
             m, N = dict_dim(params)
             out = np.zeros(N)
@@ -402,65 +404,75 @@ class stats_model(object):
 
     # --------------------------------
     # Wrapped Hessian evaluations
-    def log_density_hess(self, params, data, use_vmap=False):
+    def log_density_hess(self, params, data, use_vmap=False, keys=None):
 
+        if keys is None: keys = params.keys()
+
+        # todo - VMAP HERE
         if isiter_dict(params):
             m, N = dict_dim(params)
+            N = len(keys)
             out = np.zeros([N, m, m])
             for i in range(N):
-                p = {key: params[key][i] for key in params.keys()}
+                p = {key: params[key][i] for key in keys}
                 hess_eval = self._log_density_hess(p, data)
-                for j, key1 in enumerate(self.paramnames()):
-                    for k, key2 in enumerate(self.paramnames()):
+                for j, key1 in enumerate(keys):
+                    for k, key2 in enumerate(keys):
                         out[i, j, k] = hess_eval[key1][key2]
         else:
-            m = len(self.paramnames())
+            m = len(keys)
             out = np.zeros([m, m])
             hess_eval = self._log_density_hess(params, data)
-            for j, key1 in enumerate(self.paramnames()):
-                for k, key2 in enumerate(self.paramnames()):
+            for j, key1 in enumerate(keys):
+                for k, key2 in enumerate(keys):
                     out[j, k] = hess_eval[key1][key2]
 
         return out
 
-    def log_density_uncon_hess(self, params, data, use_vmap=False):
+    def log_density_uncon_hess(self, params, data, use_vmap=False, keys=None):
+
+        if keys is None: keys = params.keys()
 
         if isiter_dict(params):
             m, N = dict_dim(params)
+            m = len(keys)
             out = np.zeros([N, m, m])
             for i in range(N):
-                p = {key: params[key][i] for key in params.keys()}
+                p = {key: params[key][i] for key in keys}
                 hess_eval = self._log_density_uncon_hess(p, data)
-                for j, key1 in enumerate(self.paramnames()):
-                    for k, key2 in enumerate(self.paramnames()):
+                for j, key1 in enumerate(keys):
+                    for k, key2 in enumerate(keys):
                         out[i, j, k] = hess_eval[key1][key2]
         else:
-            m = len(self.paramnames())
+            m = len(keys)
             out = np.zeros([m, m])
             hess_eval = self._log_density_uncon_hess(params, data)
-            for j, key1 in enumerate(self.paramnames()):
-                for k, key2 in enumerate(self.paramnames()):
+            for j, key1 in enumerate(keys):
+                for k, key2 in enumerate(keys):
                     out[j, k] = hess_eval[key1][key2]
 
         return out
 
-    def log_prior_hess(self, params, data=None, use_vmap=False):
+    def log_prior_hess(self, params, data=None, use_vmap=False, keys=None):
+
+        if keys is None: keys = params.keys()
 
         if isiter_dict(params):
             m, N = dict_dim(params)
+            m = len(keys)
             out = np.zeros([N, m, m])
             for i in range(N):
-                p = {key: params[key][i] for key in params.keys()}
+                p = {key: params[key][i] for key in keys}
                 hess_eval = self._log_prior_hess(p)
-                for j, key1 in enumerate(self.paramnames()):
-                    for k, key2 in enumerate(self.paramnames()):
+                for j, key1 in enumerate(keys):
+                    for k, key2 in enumerate(keys):
                         out[i, j, k] = hess_eval[key1][key2]
         else:
-            m = len(self.paramnames())
+            m = len(keys)
             out = np.zeros([m, m])
             hess_eval = self._log_prior_hess(params)
-            for j, key1 in enumerate(self.paramnames()):
-                for k, key2 in enumerate(self.paramnames()):
+            for j, key1 in enumerate(keys):
+                for k, key2 in enumerate(keys):
                     out[j, k] = hess_eval[key1][key2]
 
         return out
@@ -583,14 +595,14 @@ class stats_model(object):
         else:
             return (solver, runsolver)
 
-    def scan(self, start_params, data, optim_params=None, use_vmap=False, optim_kwargs={}):
+    def scan(self, start_params, data, optim_params=None, use_vmap=False, optim_kwargs={}, precondition='diag'):
         '''
         Beginning at position 'start_params', optimize parameters in 'optim_params' to find maximum
 
         Currently using jaxopt with optim_kwargs:
             'stepsize': 0.0,
             'min_stepsize': 1E-5,
-            'increase_factor': 1.1,
+            'increase_factor': 1.2,
             'maxiter': 1024,
             'linesearch': 'backtracking',
             'verbose': False,
@@ -607,7 +619,7 @@ class stats_model(object):
 
         optimizer_args |= optim_kwargs
 
-        # Convert to unconstrainedc domain
+        # Convert to unconstrained domain
         start_params_uncon = self.to_uncon(start_params)
 
         if optim_params is None:
@@ -617,31 +629,82 @@ class stats_model(object):
         if len(optim_params) == 0: return start_params
 
         # Get all split into fixed and free params
-        x0 = jnp.array([start_params_uncon[key] for key in optim_params])
-        y0 = {key: start_params_uncon[key] for key in start_params_uncon.keys() if key not in optim_params}
+        x0, y0 = dict_split(start_params_uncon, optim_params)
+        x0 = dict_pack(x0)
 
-        # Make a jaxopt friendly packed function
-        def val_and_grad(params, data):
-            val = -self._log_density_uncon_jit(params, data)
-            grad = self._log_density_uncon_grad(params, data)
-            grad_packed = jnp.array([-grad[key] for key in optim_params])
-            return (val, grad_packed)
+        # -------------------------------------
+        # Build preconditioning matrix
+        H = self.log_density_uncon_hess(start_params_uncon, data, keys=optim_params)
+        H *= -1
+        if precondition == "cholesky":
+            H = np.linalg.cholesky(np.linalg.inv(H))
+            Hinv = np.linalg.inv(H)
 
-        optfunc = pack_function(val_and_grad, packed_keys=optim_params, fixed_values=y0, invert=False, jit=False)
+        elif precondition == "eig":
+            D, P = np.linalg.eig(H)
+            if D.min() < 0:
+                D[np.where(D < 0)[0].min()] = 1.0
+            D, P = D.astype(float), P.astype(float)
+            D **= -0.5
 
-        # optfunc = pack_function(self._log_density_uncon, packed_keys=optim_params, fixed_values=y0, invert=True) # todo - remove this
+            H = np.dot(P, np.dot(np.diag(D), P.T))
+            Hinv = np.dot(P, np.dot(np.diag(D ** -1), P.T))
 
-        if self.debug: print("At initial uncon position", x0, "with keys", optim_params, "eval for optfunc is",
-                             optfunc(x0, data=data))
+        elif precondition == "half-eig":
+            D, P = np.linalg.eig(H)
+            if D.min() < 0:
+                D[np.where(D < 0)[0].min()] = 1.0
+            D, P = D.astype(float), P.astype(float)
+            D **= -0.5
 
-        assert not np.isinf(optfunc(x0, data=data)[0]), "Something wrong with start positions in scan!"
+            H = np.dot(P, np.diag(D))
+            Hinv = np.dot(np.diag(D ** -1), P.T)
+
+        elif precondition == "diag":
+            D = np.diag(H) ** -0.5
+            H = np.diag(D)
+            Hinv = np.diag(1 / D)
+
+        else:
+            H = np.eye(len(optim_params))
+            Hinv = np.eye(len(optim_params))
+
+        if self.debug:
+            print("Scaling matrix:")
+            print(H)
+            print("Inverse Scaling matrix:")
+            print(Hinv)
+
+        '''
+        optfunc = pack_function(self._log_density_uncon,
+                                packed_keys=optim_params,
+                                fixed_values=y0,
+                                invert=True,
+                                H=H,
+                                d0=start_params_uncon
+                                )
+        '''
+
+        def optfunc(X):
+            Y = jnp.dot(H, X) + x0
+            params = y0 | {key: Y[i] for i, key in enumerate(optim_params)}
+            out = - self._log_density_uncon(params, data)
+            return (out)
+
+        X0 = np.zeros_like(x0)
+
+        if self.debug:
+            print("At initial uncon position", x0, "with keys", optim_params, "eval for optfunc is",
+                  optfunc(X0))
+
+        assert not np.isinf(optfunc(np.zeros_like(x0))), "Something wrong with start positions in scan!"
 
         # =====================
         # Jaxopt Work
 
         # Build the optimizer
         solver = jaxopt.BFGS(fun=optfunc,
-                             value_and_grad=True,
+                             value_and_grad=False,
                              jit=True,
                              **optimizer_args
                              )
@@ -651,21 +714,23 @@ class stats_model(object):
         if self.debug:
             print("Creating and testing solver...")
             try:
-                init_state = solver.init_state(x0, y0, data)
+                init_state = solver.init_state(X0)
                 with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
-                    solver.update(params=x0, state=init_state, data=data)
+                    solver.update(params=X0, state=init_state)
                 print("Jaxopt solver created and running fine")
             except:
                 print("Something went wrong in when making the jaxopt optimizer. Double check your inputs.")
 
         with suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
-            out, state = solver.run(init_params=x0, data=data)
+            sol, state = solver.run(init_params=X0)
+
+        out = np.dot(H, sol) + x0
 
         # =====================
         # Cleanup and return
         if self.debug:
             print("At final uncon position", out, "with keys", optim_params, "eval for optfunc is",
-                  optfunc(out, data=data)
+                  optfunc(sol)
                   )
 
         # Unpack the results to a dict
@@ -708,22 +773,12 @@ class stats_model(object):
             if self.debug: print(uncon_params)
 
             log_height = self.log_density_uncon(uncon_params, data)
-            hess = self.log_density_uncon_hess(uncon_params, data)
+            hess = self.log_density_uncon_hess(uncon_params, data, keys=integrate_axes)
         else:
             log_height = self.log_density(params, data)
-            hess = self.log_density_hess(params, data)
+            hess = self.log_density_hess(params, data, keys=integrate_axes)
 
-        # Extract relevant entries of hessian matrix
-        I = np.where([key in integrate_axes for key in self.paramnames()])[0]
-        if len(I) > 1:
-            hess = hess[I, :][:, I]
-            dethess = np.linalg.det(hess)
-        elif len(I) == 1:
-            hess = hess[I, :][:, I]
-            dethess = hess[0][0]
-        else:
-            dethess = 1
-        dethess = abs(dethess)
+        dethess = np.linalg.det(-hess)
 
         if self.debug: print("With determinant:")
         if self.debug: print(dethess)
@@ -779,15 +834,14 @@ class stats_model(object):
         if not constrained:
             uncon_params = self.to_uncon(params)
 
-            hess = self.log_density_uncon_hess(uncon_params, data)
-            grad = self.log_density_uncon_grad(uncon_params, data)
+            hess = self.log_density_uncon_hess(uncon_params, data, keys=integrate_axes)
+            grad = self.log_density_uncon_grad(uncon_params, data, keys=integrate_axes)
         else:
-            hess = self.log_density_hess(params, data)
-            grad = self.log_density_grad(params, data)
+            hess = self.log_density_hess(params, data, keys=integrate_axes)
+            grad = self.log_density_grad(params, data, keys=integrate_axes)
 
+        # todo - remove this when properly integrating keys argument into grad funcs
         I = np.where([key in integrate_axes for key in self.paramnames()])[0]
-
-        hess = hess[I, :][:, I]
         grad = np.array([float(x) for x in grad.values()])[I]
 
         try:
@@ -989,7 +1043,8 @@ class GP_simple(stats_model):
         T1, Y1, E1 = T[bands == 0], Y[bands == 0], E[bands == 0]
         T2, Y2, E2 = T[bands == 1], Y[bands == 1], E[bands == 1]
 
-        if guesses is None: guesses = int(np.array(self.prior_ranges['lag']).ptp() / np.median(np.diff(T1)))
+        # If not specified, use roughly 4 per epoch of main lightcurve
+        if guesses is None: guesses = int(np.array(self.prior_ranges['lag']).ptp() / np.median(np.diff(T1))) * 4
 
         check_fixed = self.params_inprior(fixed)
         if False in check_fixed:
@@ -1083,9 +1138,10 @@ class GP_simple(stats_model):
 
         return (out, ll_out)
 
-    # ============================================
-    # ============================================
-    # Testing
+
+# ============================================
+# ============================================
+# Testing
 
 
 if __name__ == "__main__":
@@ -1107,32 +1163,40 @@ if __name__ == "__main__":
     lc_1, lc_2 = mymock.lc_1, mymock.lc_2
     data = my_model.lc_to_data(lc_1, lc_2)
 
-    print("Testing sampling and density...")
-    prior_samps = my_model.prior_sample(num_samples=50_000)
+    if False:
+        print("Testing sampling and density...")
+        prior_samps = my_model.prior_sample(num_samples=50_000)
 
-    lag_samps = dict_extend(mymock.params(), {'lag': prior_samps['lag']})
-    prior_LL = my_model.log_density(lag_samps, data=data)
+        lag_samps = dict_extend(mymock.params(), {'lag': prior_samps['lag']})
+        prior_LL = my_model.log_density(lag_samps, data=data)
 
-    plt.scatter(lag_samps['lag'], prior_LL - prior_LL.max(), s=1, c='k')
-    plt.axvline(true_params['lag'], ls='--', c='k')
-    plt.grid()
-    plt.xlabel("Lag")
-    plt.ylabel("Log Posterior (Arb Units)")
-    plt.gcf().axes[0].set_yticklabels([])
+        plt.scatter(lag_samps['lag'], prior_LL - prior_LL.max(), s=1, c='k')
+        plt.axvline(true_params['lag'], ls='--', c='k')
 
-    plt.show()
+        plt.grid()
+        plt.xlim(*my_model.prior_ranges['lag'])
+        plt.xlabel("Lag")
+        plt.ylabel("Log Posterior (Arb Units)")
+        plt.gcf().axes[0].set_yticklabels([])
+
+        plt.show()
 
     # ----------------------------
 
     print("Testing find_seed...")
-    seed_params = my_model.find_seed(data=data)
+    seed_params, val_seed = my_model.find_seed(data=data)
+
+    tol_seed = my_model.opt_tol(seed_params, data)
+    print("Scan starting at %.2e sigma from optimum & log density %.2f" % (tol_seed, val_seed))
 
     print("Testing Scan...")
-    scanned_params = my_model.scan(seed_params[0],
+    scanned_params = my_model.scan(seed_params,
                                    data,
                                    optim_kwargs={'increase_factor': 1.1,
                                                  'max_stepsize': 0.2
-                                                 }
+                                                 },
+                                   precondition='half-eig',
+                                   optim_params=['lag', 'logtau']
                                    )
 
     val = my_model.log_density(scanned_params, data)
@@ -1143,7 +1207,7 @@ if __name__ == "__main__":
     S = "%s \t Truth \t Seed \t MAP \n" % ("Param".ljust(maxlen))
     for key in my_model.paramnames():
         S += "%s \t %.2f \t %.2f \t %.2f \n" % (
-            key.ljust(maxlen), mymock.params()[key], seed_params[0][key], scanned_params[key])
+            key.ljust(maxlen), mymock.params()[key], seed_params[key], scanned_params[key])
     print(S)
 
     print("All checks okay.")

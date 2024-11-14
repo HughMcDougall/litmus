@@ -30,7 +30,7 @@ from litmus.models import _default_config
 from litmus.ICCF_working import *
 from litmus import _utils
 from litmus.models import stats_model, dummy_statmodel, GP_simple
-from litmus.fitting_methods import hessian_scan
+from litmus.fitting_methods import hessian_scan, SVI_scan
 from litmus.mocks import mock, mock_A, mock_B, mock_C
 
 from chainconsumer import ChainConsumer
@@ -54,11 +54,6 @@ plt.show()
 
 test_model = GP_simple()
 
-fixed_params = mymock.params()
-del fixed_params['lag']
-del fixed_params['logtau']
-test_model.set_priors(fixed_params)
-
 data = test_model.lc_to_data(mymock.lc_1, mymock.lc_2)
 
 # ---------------------------------------------------------------------
@@ -72,11 +67,14 @@ fitting_method = hessian_scan(stat_model=test_model,
                               Nlags=Nlags,
                               init_samples=1_000,
                               grid_bunching=0.8,
-                              optimizer_args={'tol': 1E-2,
+                              optimizer_args={'tol': 1E-4,
+                                              'increase_factor': 1.2,},
+                              optimizer_args_init={'tol': 1E-10,
                                               'maxiter': 1024,
-                                              'increase_factor': 1.5},
+                                              'increase_factor': 1.2, },
                               reverse=False,
                               debug=True,
+                              precondition = "cholesky"
                               )
 
 print("Doing prefit in main")

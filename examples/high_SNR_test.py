@@ -26,21 +26,16 @@ for key in seed_params.keys():
     print("\t %s: \t%.2f \t %.2f" % (key, seed_params[key], mymock.params()[key]))
 
 fitting_method = litmus.fitting_methods.hessian_scan(model,
-                                                     Nlags=32,
+                                                     Nlags=64,
                                                      init_samples=5_000,
-                                                     grid_bunching=0.5,
+                                                     grid_bunching=0.8,
                                                      optimizer_args_init={'tol': 1E-3,
-                                                                          'maxiter': 1024 * 2,
-                                                                          'increase_factor': 1.05,
-                                                                          'max_stepsize': 0.5
                                                                           },
 
                                                      optimizer_args={'tol': 1E-3,
-                                                                     'maxiter': 128,
-                                                                     'increase_factor': 1.2,
                                                                      },
                                                      reverse=False,
-                                                     LL_threshold=100,
+                                                     LL_threshold=20,
                                                      seed_params=seed_params,
                                                      )
 
@@ -50,4 +45,4 @@ litmus_handler.add_lightcurve(lc_2)
 
 litmus_handler.prefit()
 
-# litmus_handler.fit()
+litmus_handler.fit()
