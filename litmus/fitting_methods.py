@@ -10,9 +10,12 @@ import sys
 from functools import partial
 import importlib.util
 from warnings import warn
+from typing import Callable
 
 import numpy as np
+from etils.enp.compat import astype
 from numpy import nan
+import typing
 
 import matplotlib.pyplot as plt
 
@@ -101,9 +104,9 @@ class fitting_procedure(object):
                 and hasattr(self, "_default_params") \
                 and hasattr(self, "fitting_params") \
                 and key in self._default_params.keys():
-            return (self.fitting_params[key])
+            return self.fitting_params[key]
         else:
-            return (super().__getattribute__(key))
+            return super().__getattribute__(key)
 
     def __setattr__(self, key, value):
         if key not in ["_default_params", "fitting_params"] \
@@ -144,7 +147,8 @@ class fitting_procedure(object):
             if key in badkeys: continue
 
             # If something's changed, flag as having not run
-            if self.has_run and val != self.__getattr__(key): self.has_run = False
+            currval = self.__getattribute__(key)
+            if self.has_run and val != currval: self.has_run = False
 
             self.__setattr__(key, val)
             # self.fitting_params |= {key: val}
@@ -777,20 +781,21 @@ class hessian_scan(fitting_procedure):
 
         self.name = "Hessian Scan Fitting Procedure"
 
-        self.scan_peaks = None
-        self.evidence = None
+        self.lags: [float] = np.zeros(self.Nlags)
+        self.converged: np.ndarray[bool] = np.zeros_like(self.lags, dtype=bool)
 
-        self.lags = np.zeros(self.Nlags)
-        self.converged = np.zeros_like(self.lags, dtype=bool)
+        self.scan_peaks: dict = {None}
+        self.log_evidences: list = None
 
-        self.diagnostic_hessians = None
-        self.diagnostic_grads = None
-        self.diagnostic_tols = None
-
-        self.solver = None
+        self.diagnostic_hessians: list = None
+        self.diagnostic_grads: list = None
+        self.diagnostic_tols: list = None
 
         self.params_toscan = self.stat_model.free_params()
         self.params_toscan.remove('lag')
+
+        self.precon_matrix: np.ndarray[np.float64] = np.eye(len(self.params_toscan), dtype=np.float64)
+        self.solver: jaxopt.BFGS = None
 
         self.estmap_params = {}
 
@@ -819,6 +824,7 @@ class hessian_scan(fitting_procedure):
         self.is_ready = True
 
     # --------------
+    # Setup Funcs
 
     def estimate_MAP(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
         '''
@@ -923,6 +929,7 @@ class hessian_scan(fitting_procedure):
         return (lags)
 
     # --------------
+    # Fiting Funcs
 
     def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
         # -------------------
@@ -953,33 +960,34 @@ class hessian_scan(fitting_procedure):
         fitting_procedure.fit(**locals())
         seed = self._tempseed
         # -------------------
-
+        # Setup + prefit if not run
         self.msg_run("Starting Hessian Scan")
 
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
         if not self.has_prefit:
             self.prefit(lc_1, lc_2, seed)
-        # ----------------------------------
-        # Run over 'self.lags' and scan all positions
-        scanned_optima = []
-
         best_params = self.estmap_params.copy()
+
+        # ----------------------------------
+        # Create scanner and perform setup
         params_toscan = self.params_toscan
+        lags_forscan = self.lags.copy()
+        if self.reverse:
+            lags_forscan = lags_forscan[::-1]
 
         solver, runsolver, [converter, deconverter, optfunc, runsolver_jit] = self.stat_model._scanner(data,
                                                                                                        optim_params=params_toscan,
                                                                                                        optim_kwargs=self.optimizer_args,
                                                                                                        return_aux=True
                                                                                                        )
+        self.solver = solver
         x0, y0 = converter(best_params)
         state = solver.init_state(x0, y0, data)
-        self.solver = solver
 
-        lags_forscan = self.lags
-        if self.reverse: lags_forscan = lags_forscan[::-1]
-
-        tols = []
+        # ----------------------------------
+        # Sweep over lags
+        scanned_optima, tols, Zs, grads, Hs = [], [], [], [], []
         for i, lag in enumerate(lags_forscan):
             self.msg_run(":" * 23)
             self.msg_run("Scanning at lag=%.2f ..." % lag)
@@ -997,58 +1005,83 @@ class hessian_scan(fitting_procedure):
             self.msg_run("Change of %.2f against %.2f" % (l_2 - l_1, self.LL_threshold))
 
             if l_2 - l_1 > -self.LL_threshold and not diverged:
-                self.msg_run("Seems to have converged at iteration %i / %i" % (i, self.Nlags))
-                best_params = opt_params
-
                 self.converged[i] = True
 
-                scanned_optima.append(opt_params.copy())
+                is_good = [True, True, True]
 
-                self.diagnostic_grads.append(aux_data['grad'])
-                uncon_params = self.stat_model.to_uncon(opt_params)
-                H = self.stat_model.log_density_uncon_hess(uncon_params, data, keys=params_toscan)
-                self.diagnostic_hessians.append(H)
+                # ======
+                # Check position & Grad
                 try:
-                    tol = np.dot(aux_data['grad'],
-                                 np.dot(np.linalg.inv(H), aux_data['grad'])
-                                 )
-                    tols.append(tol)
+                    uncon_params = self.stat_model.to_uncon(opt_params)
+                    log_height = self.stat_model.log_density_uncon(uncon_params, data)
                 except:
-                    self.converged[i] = False
+                    self.msg_err("Something wrong!")
+                    is_good[0] = False
+
+                # ======
+                # Check tolerances & hessians
+                try:
+                    H = self.stat_model.log_density_uncon_hess(uncon_params, data, keys=params_toscan)
+                    assert np.linalg.det(H), "Error in H calc"
+                    tol = np.dot(aux_data['grad'],
+                                 np.dot(np.linalg.inv(H),
+                                        aux_data['grad'])
+                                 )
+                    tol = self.stat_model.opt_tol(opt_params, data, integrate_axes=params_toscan)
+                except:
+                    self.msg_err("Something wrong in Hessian / Tolerance!:")
+                    is_good[1] = False
+
+                # ======
+                # Get evidence
+                try:
+                    Z = self.stat_model.laplace_log_evidence(opt_params, data,
+                                                             integrate_axes=params_toscan,
+                                                             constrained=self.constrained_domain)
+                    if not self.constrained_domain: Z += self.stat_model.uncon_grad(opt_params)
+                    assert not np.isnan(Z), "Error in Z calc"
+                except:
+                    self.msg_err("Something wrong in Evidence!:")
+                    is_good[2] = False
+
+                # Check and save if good
+                if np.all(is_good):
+                    self.msg_run("Seems to have converged at iteration %i / %i with tolerance %.2e" % (i, self.Nlags, tol))
+
+                    if tol < 1.0 or True:
+                        best_params = opt_params
+                    else:
+                        self.msg_run("Possibly stuck in a furrow. Resetting start params")
+                        best_params = self.estmap_params.copy()
+
+                    scanned_optima.append(opt_params.copy())
+                    tols.append(tol)
+
+                    grads.append(aux_data['grad'])
+                    Hs.append(H)
+                    Zs.append(Z)
+                else:
                     self.msg_run("Seems to have severely diverged at iteration %i / %i" % (i, self.Nlags))
+                    reason = ["Eval", "hessian/tol", "evidence"]
+                    for a, b in zip(reason, is_good):
+                        self.msg_run("%s:\t%r" % (a, b))
 
             else:
+                self.converged[i] = False
                 self.msg_run("Unable to converge at iteration %i / %i" % (i, self.Nlags))
 
         self.msg_run("Scanning Complete. Calculating laplace integrals...")
+
+        # --------
+        # Save and apply
         self.diagnostic_tols = np.sqrt(abs(np.array(tols)))
-
+        self.diagnostic_grads = grads
+        self.diagnostic_hessians = Hs
         self.scan_peaks = _utils.dict_combine(scanned_optima)
-
-        # For each of these peaks, estimate the evidence
-        # todo - add a max LL significance to cut down on evals
-        # todo - vmap and parallelize
-        Zs = []
-        integrate_axes = self.stat_model.free_params().copy()
-
-        if 'lag' in integrate_axes: integrate_axes.remove('lag')
-        for params in scanned_optima:
-
-            # todo - this is partially redundant as we already have the hessians from above
-
-            Z_lap = self.stat_model.laplace_log_evidence(params=params,
-                                                         data=data,
-                                                         integrate_axes=integrate_axes,
-                                                         constrained=self.constrained_domain
-                                                         )
-            if not self.constrained_domain: Z_lap += self.stat_model.uncon_grad(params)
-            Zs.append(Z_lap)
-
         self.log_evidences = np.array(Zs)
 
-        self.has_run = True
-
         self.msg_run("Hessian Scan Fitting complete.", "-" * 23, "-" * 23, delim='\n')
+        self.has_run = True
 
     def refit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
         # -------------------
@@ -1070,30 +1103,44 @@ class hessian_scan(fitting_procedure):
         for j, i, peak in zip(range(len(I)), I, peaks):
 
             self.msg_run(":" * 23, "Refitting lag %i/%i at lag %.2f" % (j, len(peaks), peak['lag']), delim='\n')
+
+            ll_old = self.stat_model.log_density(peak, data)
             old_tol = self.diagnostic_tols[i]
 
             new_peak = self.stat_model.scan(start_params=peak,
+                                            optim_params=self.params_toscan,
                                             data=data,
-                                            optim_kwargs=self.optimizer_args
+                                            optim_kwargs=self.optimizer_args,
+                                            precondition=self.precondition
                                             )
+            ll_new = self.stat_model.log_density(new_peak, data)
+            if ll_old > ll_new or np.isnan(ll_new):
+                self.msg_err("New peak bad (LL from %.2e to %.2e. Trying new start location" % (ll_old, ll_new))
+                new_peak = self.stat_model.scan(start_params=self.estmap_params,
+                                                optim_params=self.params_toscan,
+                                                data=data,
+                                                optim_kwargs=self.optimizer_args,
+                                                precondition=self.precondition
+                                                )
+                ll_new = self.stat_model.log_density(new_peak, data)
+
+                if ll_old > ll_new:
+                    self.msg_err("New peak bad (LL from %.2e to %.2e. Trying new start location" % (ll_old, ll_new))
+                    continue
+
             new_peak_uncon = self.stat_model.to_uncon(new_peak)
             new_grad = self.stat_model.log_density_uncon_grad(new_peak_uncon, data)
-            new_hessian = self.stat_model.log_density_uncon_hess(new_peak_uncon, data)
-
-            J = np.where([key in self.params_toscan for key in self.stat_model.paramnames()])[0]
             new_grad = _utils.dict_pack(new_grad, keys=self.params_toscan)
-            if len(J) > 1:
-                new_hessian = new_hessian[J, :][:, J]
-            elif len(J) == 1:
-                new_hessian = new_hessian[J, :][:, J]
+            new_hessian = self.stat_model.log_density_uncon_hess(new_peak_uncon, data, keys=self.params_toscan)
+
             try:
                 Hinv = np.linalg.inv(new_hessian)
             except:
                 self.msg_run("Optimization failed on %i/%i" % (j, len(peaks)))
                 continue
 
-            tol = np.dot(new_grad, np.dot(Hinv, new_grad))
-            tol = np.sqrt(abs(tol))
+            tol = self.stat_model.opt_tol(new_peak, data, self.params_toscan)
+
             if tol < old_tol:
                 self.diagnostic_grads[i] = new_grad
                 self.diagnostic_hessians[i] = new_hessian
@@ -1103,6 +1150,9 @@ class hessian_scan(fitting_procedure):
                 self.msg_run(
                     "Something went wrong at this refit! Consider changing the optimizer_args and trying again")
         self.msg_run("Refitting complete.")
+
+    # --------------
+    # Checks
 
     def diagnostics(self, plot=True):
         '''
@@ -1127,6 +1177,9 @@ class hessian_scan(fitting_procedure):
         plt.yscale('log')
         plt.grid()
         plt.show()
+
+    # --------------
+    # Outputs
 
     def get_evidence(self, seed: int = None) -> [float, float, float]:
         # -------------------
@@ -1504,6 +1557,99 @@ class SVI_scan(hessian_scan):
         f.tight_layout()
 
         if plot: plt.show()
+
+
+# ------------------------------------------------------
+class JAVELIKE(fitting_procedure):
+    def __init__(self, stat_model: stats_model,
+                 out_stream=sys.stdout, err_stream=sys.stderr,
+                 verbose=True, debug=False, **fit_params):
+        args_in = {**locals(), **fit_params}
+        del args_in['self']
+        del args_in['__class__']
+        del args_in['fit_params']
+
+        if not hasattr(self, '_default_params'):
+            self._default_params = {
+                'alpha': 2.0,
+                'num_chains': 256,
+                'num_samples': 200_000 // 256,
+                'num_warmup': 5_000,
+            }
+
+        self.sampler: numpyro.infer.MCMC = None
+        self.kernel: numpyro.infer.AEIS = None
+        self.limited_model: Callable = None
+
+        super().__init__(**args_in)
+
+        # -----------------------------
+
+        self.name = "AEIS JAVELIN Emulator fitting Procedure"
+
+    def readyup(self):
+
+        fixed_vals = {key: self.stat_model.prior_ranges[key][0] for key in self.stat_model.fixed_params()}
+
+        def limited_model(data):
+            with numpyro.handlers.block(hide=self.stat_model.fixed_params()):
+                params = {key: val for key, val in zip(self.stat_model.paramnames(), self.stat_model.prior())}
+
+            params |= fixed_vals
+            with numpyro.handlers.block(hide=self.stat_model.paramnames()):
+                LL = self.stat_model._log_density(params, data)
+
+            numpyro.factor('ll', LL)
+
+        self.limited_model = limited_model
+
+        self.kernel = numpyro.infer.AIES(self.limited_model,
+                                         moves={numpyro.infer.AIES.StretchMove(a=self.alpha): 1.0}
+                                         )
+
+        self.sampler = numpyro.infer.MCMC(self.kernel,
+                                          num_warmup=self.num_warmup,
+                                          num_samples=self.num_samples,
+                                          num_chains=self.num_chains,
+                                          chain_method='vectorized',
+                                          progress_bar=self.verbose)
+
+        self.is_ready = True
+
+    def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        if seed is None: seed = self.seed
+        if not self.is_ready: self.readyup()
+
+        self.msg_run("Running warmup with %i chains and %i samples" % (self.num_chains, self.num_warmup))
+        # self.sampler.warmup(jax.random.PRNGKey(seed), self.stat_model.lc_to_data(lc_1, lc_2))
+
+        self.has_prefit = True
+
+    def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        if seed is None: seed = self.seed
+        if not self.is_ready: self.readyup()
+        if not self.has_prefit: self.prefit(lc_1, lc_2, seed=seed)
+
+        self.msg_run("Running sampler with %i chains and %i samples" % (self.num_chains, self.num_samples))
+
+        self.sampler.run(jax.random.PRNGKey(seed), self.stat_model.lc_to_data(lc_1, lc_2))
+        self.has_run = True
+
+    def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
+        if seed is None: seed = self.seed
+        if not self.has_run:
+            self.msg_err("Can't get samples before running!")
+        if importance_sampling:
+            self.msg_err("JAVELIKE Already distributed according to posterior (ideally)")
+        samps = self.sampler.get_samples()
+
+        if not (N is None):
+            M = _utils.dict_dim(samps)[1]
+            if M > N: self.msg_err("Tried to get %i sub-samples from chain of %i total samples." % (M, N))
+
+            I = np.random.choice(np.arange(M), N, replace=True)
+            samps = {key: samps[key][I] for key in samps.keys()}
+        return (samps)
 
 
 # =====================================================

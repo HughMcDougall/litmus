@@ -29,14 +29,16 @@ fitting_method = litmus.fitting_methods.hessian_scan(model,
                                                      Nlags=64,
                                                      init_samples=5_000,
                                                      grid_bunching=0.8,
-                                                     optimizer_args_init={'tol': 1E-3,
+                                                     optimizer_args_init={'tol': 1E-8,
                                                                           },
 
-                                                     optimizer_args={'tol': 1E-3,
+                                                     optimizer_args={'tol': 1E-5,
+                                                                     'increase_factor':1.2
                                                                      },
                                                      reverse=False,
                                                      LL_threshold=20,
                                                      seed_params=seed_params,
+                                                     precondition = 'half-eig'
                                                      )
 
 litmus_handler = litmus.LITMUS(fitting_method)
@@ -46,3 +48,7 @@ litmus_handler.add_lightcurve(lc_2)
 litmus_handler.prefit()
 
 litmus_handler.fit()
+
+litmus_handler.lag_plot()
+litmus_handler.plot_parameters()
+litmus_handler.diagnostic_plots()

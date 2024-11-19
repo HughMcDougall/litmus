@@ -408,10 +408,9 @@ class stats_model(object):
 
         if keys is None: keys = params.keys()
 
-        # todo - VMAP HERE
         if isiter_dict(params):
             m, N = dict_dim(params)
-            N = len(keys)
+            m = len(keys)
             out = np.zeros([N, m, m])
             for i in range(N):
                 p = {key: params[key][i] for key in keys}
@@ -480,7 +479,7 @@ class stats_model(object):
     # --------------------------------
     # Wrapped evaluation utilities
 
-    def _scanner(self, data, optim_params=None, use_vmap=False, optim_kwargs={}, return_aux=False):
+    def _scanner(self, data, optim_params=None, use_vmap=False, optim_kwargs={}, return_aux=False, precondition='diag'):
         '''
         Creates a black-box jitted optimizer for when we want to perform many scans in a row
         '''
@@ -559,8 +558,8 @@ class stats_model(object):
         optimizer_args = {
             'stepsize': 0.0,
             'min_stepsize': 1E-5,
-            'increase_factor': 1.5,
-            'maxiter': 256,
+            'increase_factor': 1.2,
+            'maxiter': 1024,
             'linesearch': 'backtracking',
             'verbose': False,
         }
@@ -611,8 +610,8 @@ class stats_model(object):
         optimizer_args = {
             'stepsize': 0.0,
             'min_stepsize': 1E-5,
-            'increase_factor': 1.1,
-            'maxiter': 1024,
+            'increase_factor': 1.2,
+            'maxiter': 256,
             'linesearch': 'backtracking',
             'verbose': False,
         }
@@ -831,6 +830,7 @@ class stats_model(object):
         if integrate_axes is None:
             integrate_axes = self.paramnames()
 
+        # Get hessians and grads
         if not constrained:
             uncon_params = self.to_uncon(params)
 
@@ -843,6 +843,12 @@ class stats_model(object):
         # todo - remove this when properly integrating keys argument into grad funcs
         I = np.where([key in integrate_axes for key in self.paramnames()])[0]
         grad = np.array([float(x) for x in grad.values()])[I]
+        grad, hess = -grad, -hess
+
+        # ------------------------------------------------
+        # Calculate tolerances
+        if np.linalg.det(hess) <= 0 or np.isnan(hess).any():
+            return (np.inf)
 
         try:
             Hinv = np.linalg.inv(hess)
