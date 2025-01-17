@@ -1030,7 +1030,7 @@ class GP_simple(stats_model):
         amps = jnp.array([amp, rel_amp * amp])
         means = jnp.array([mean, mean + rel_mean])
 
-        T_delayed = T + delays[bands]
+        T_delayed = T - delays[bands]
         I = T_delayed.argsort()
 
         # Build and sample GP

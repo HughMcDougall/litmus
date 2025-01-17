@@ -200,9 +200,9 @@ class lightcurve(object):
         '''
         if Tmin is None: Tmin = self.T.min()
         if Tmax is None: Tmax = self.T.max()
-        I = np.where((self.T - lag > Tmin) * (self.T - lag < Tmax))[0]
+        I = np.where((self.T + lag > Tmin) * (self.T + lag < Tmax))[0]
 
-        return (lightcurve(T=self.T[I] - lag,
+        return (lightcurve(T=self.T[I] + lag,
                            Y=self.Y[I],
                            E=self.E[I]
                            ))
@@ -213,7 +213,10 @@ class lightcurve(object):
         '''
         return self.delayed_copy(0, Tmin, Tmax)
 
-    def bootstrap(self, i):
+    def bootstrap(self, i, subsample_frac = np.exp(-1)):
+        '''
+        Returns an enumerator that returns bootstrapped and subsampled lightcurve objects
+        '''
         return
 
     def __getattr__(self, item):

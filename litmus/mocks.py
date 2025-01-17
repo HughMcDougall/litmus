@@ -196,7 +196,7 @@ class mock(object):
                           season=self.season, season_var=self.season_var,
                           N=self.N)
 
-        Y1, Y2 = subsample(T, Y, T1), subsample(T - self.lag, Y, T2)
+        Y1, Y2 = subsample(T, Y, T1), subsample(T + self.lag, Y, T2)
         E1, E2 = [np.random.randn(len(x)) * ev + e for x, ev, e in zip([T1, T2], self.E_var, self.E)]
 
         Y1 += np.random.randn(len(T1)) * abs(E1)
@@ -264,7 +264,8 @@ class mock(object):
 
         # -----------------
         # Plot errorbars
-        series_args = {'c': ['tab:blue', 'tab:orange'], 'alpha': 1.0, 'capsize': 2, 'lw': 1.5} | series_args
+        series_args = {'c': ['tab:blue', 'tab:orange'], 'alpha': 1.0, 'capsize': 2, 'lw': 1.5,
+                       'label': ["Signal", "Response"]} | series_args
         series_args_1 = series_args.copy()
         series_args_2 = series_args.copy()
 
@@ -277,30 +278,28 @@ class mock(object):
                 series_args_2[key] = series_args[key]
 
         axis.errorbar(self.lc_1.T, self.lc_1.Y, self.lc_1.E, fmt='none',
-                      label="Time Series 1",
                       **series_args_1
                       )
         axis.errorbar(self.lc_2.T, self.lc_2.Y, self.lc_2.E, fmt='none',
-                      label="Time Series 2",
                       **series_args_2
                       )
 
         series_args_1.pop('capsize'), series_args_2.pop('capsize')
         axis.scatter(self.lc_1.T, self.lc_1.Y,
-                     **(series_args_1 | {'s': 3})
+                     **(series_args_1 | {'s': 3, 'label': None})
                      )
         axis.scatter(self.lc_2.T, self.lc_2.Y,
-                     **(series_args_2 | {'s': 3})
+                     **(series_args_2 | {'s': 3, 'label': None})
                      )
 
         if show: plt.show()
         return axis.get_figure()
 
-    def corrected_plot(self, params={}, axis=None, true_args={}, series_args={}):
+    def corrected_plot(self, params={}, axis=None, true_args={}, series_args={}, show=False):
         params = self.params() | params
         corrected = self.copy()
 
-        corrected.lc_2.T += params['lag']
+        corrected.lc_2.T -= params['lag']
         corrected.lc_2 += params['rel_mean']
         corrected.lc_2 *= params['rel_amp']
 
@@ -312,7 +311,7 @@ class mock(object):
         else:
             true_args |= {'alpha': [0.3, 0.0]}
 
-        corrected.plot(axis=axis, true_args=true_args, series_args=series_args)
+        corrected.plot(axis=axis, true_args=true_args, series_args=series_args, show=show)
 
     def params(self):
         out = {

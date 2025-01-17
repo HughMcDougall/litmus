@@ -44,10 +44,12 @@ select = (Zbest - Zbest.max() > -np.log(8)) * Zcurve < 0
 select = np.argwhere(select).flatten()
 
 # ---------------------------------
+plt.rc('font', size=12)
+
 print("Doing plot")
 #c1, c2, c3 = 'plum', 'lightsalmon', 'skyblue'
 c1, c2, c3, c4 = 'skyblue', 'lightsalmon', 'plum', 'w'
-a, b = 8, 8
+a, b = 4,4
 f1, f2, f3 = [plt.figure(figsize=(a, b)),
               plt.figure(figsize=(a, b)),
               plt.figure(figsize=(a, b))]
@@ -56,9 +58,9 @@ for j, f in enumerate([f1, f2, f3]):
     ax = plt.axes(projection='3d', computed_zorder=False)
     ax.view_init(elev=30, azim=-55, roll=0)
 
-    ax.set_xlabel('$\Delta t$')
-    ax.set_ylabel('$\ln (\\tau)$')
-    ax.set_zlabel('Posterior Density')
+    ax.set_xlabel('$\Delta t$', fontsize=12)
+    ax.set_ylabel('$\ln (\\tau)$', fontsize=12)
+    ax.set_zlabel('Posterior Density', fontsize=12)
     ax.set_zticklabels([])
 
     for waxis in [ax.xaxis, ax.yaxis, ax.zaxis]:
@@ -67,13 +69,13 @@ for j, f in enumerate([f1, f2, f3]):
     ax.set_box_aspect([1, 1, 0.25])
 
     # --------------------
-    I_forplot = select[::6]
-    if j!=2: ax.plot_wireframe(X, Y, np.exp(Z - Z.max()), color=c1, lw=2, alpha=0.75, rstride=6, cstride=4,
+    I_forplot = select[::12]
+    if j!=2: ax.plot_wireframe(X, Y, np.exp(Z - Z.max()), color=c1, lw=1, alpha=0.75, rstride=6, cstride=4,
                                  zorder=-1)
     ax.plot_wireframe(X, Y, np.zeros_like(Z), color='w', lw=2, alpha=0.25, rstride=6, cstride=4, zorder=-10)
     if j == 0: continue
-    ax.plot(Xbest, Ybest, np.exp(Zbest - Z.max()), c=c2, lw=3, zorder=np.inf)
-    ax.scatter(Xbest[I_forplot], Ybest[I_forplot], np.exp((Zbest[I_forplot] - Z.max())), c=c4, lw=3, zorder=np.inf)
+    ax.plot(Xbest, Ybest, np.exp(Zbest - Z.max()), c=c2, lw=2, zorder=np.inf)
+    ax.scatter(Xbest[I_forplot], Ybest[I_forplot], np.exp((Zbest[I_forplot] - Z.max())), c=c4, lw=2, zorder=np.inf, s=4)
     if j == 1: continue
 
 
@@ -89,12 +91,12 @@ for j, f in enumerate([f1, f2, f3]):
         for k in range(N):
             Z_fill[:, k] *= z[k]
 
-        ax.plot(x, y, z, c=c3, lw=3, zorder=2 * i + 1)
-        ax.plot(x, y, z*0, c=c3, lw=2, zorder=2 * i + 1)
+        ax.plot(x, y, z, c=c3, lw=2, zorder=2 * i + 1)
+        ax.plot(x, y, z*0, c=c3, lw=1, zorder=2 * i + 1)
         ax.plot_surface(X_fill, Y_fill, Z_fill, color=c3, alpha=0.5, lw=0, zorder=2 * i)
 for i,f in enumerate([f1, f2, f3]):
     f.tight_layout()
-    f.savefig("Contour_fig_%i.png"%i)
+    f.savefig("Contour_fig_%i.png"%i, bbox_inches='tight')
 plt.show()
 
 # -----------------------------------------------

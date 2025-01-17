@@ -9,6 +9,7 @@ and fitting procedure. In future versions, this will also give access to the GUI
 # IMPORTS
 import sys
 import csv
+import pandas as pd
 
 from chainconsumer import ChainConsumer, Chain, ChainConfig, PlotConfig
 
@@ -24,6 +25,7 @@ from litmus.models import stats_model
 import litmus.fitting_methods as fitting_methods
 from litmus.fitting_methods import fitting_procedure
 from litmus.lightcurve import lightcurve
+from litmus._utils import *
 
 
 # =========================================================
@@ -122,7 +124,7 @@ class LITMUS(object):
         self.samples = self.fitproc.get_samples(self.Nsamples)
         self.C.add_chain(Chain(samples=DataFrame.from_dict(self.samples), name="Lightcurves %i-%i" % (i, j)))
 
-    def save_chain(self, path=None, method="numpy", headings=True):
+    def save_chain(self, path=None, headings=True):
 
         '''
         methods = ["numpy"]
@@ -135,13 +137,41 @@ class LITMUS(object):
 
         if path is None:
             path = "./%s_%s.csv" % (self.model.name, self.fitproc.name)
+            if path[-4:] != ".csv": path += ".csv"
 
-        with open(path, 'w') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=self.model.paramnames())
-            writer.writeheader()
-            writer.writerows(self.samples)
+        rows = zip(*self.samples.values())
+        with open(path, mode="w", newline="") as file:
+            writer = csv.writer(file)
+            # Write header
+            if headings: writer.writerow(self.samples.keys())
+            # Write rows
+            writer.writerows(rows)
 
-            # ----------------------
+    def read_chain(self, path, header = None):
+        # Reading the CSV into a DataFrame
+        df = pd.read_csv(path)
+
+        if header is None:
+            keys = df.columns
+        else:
+            keys = header.copy()
+
+        # Converting DataFrame to dictionary of numpy arrays
+        out = {col: df[col].to_numpy() for col in keys}
+
+        if out.keys()<=set(self.fitproc.stat_model.paramnames()):
+            self.samples = out
+            self.msg_run("Loaded chain /w headings", *keys)
+        else:
+            self.msg_err("Tried to load chain with different parameter names to model")
+
+    def config(self, **kwargs):
+        '''
+        Quick and easy way to pass arguments to the chainconsumer object.
+        Allows editing while prote
+        '''
+        self.C.set_override(ChainConfig(**kwargs))
+    # ----------------------
 
     # Plotting
 
@@ -149,7 +179,7 @@ class LITMUS(object):
         self.msg_err("plot_lightcurve() not yet implemented")
         return
 
-    def plot_parameters(self, Nsamples: int = None, CC_kwargs={}, show=True, prior_extents=False):
+    def plot_parameters(self, Nsamples: int = None, CC_kwargs={}, show=True, prior_extents=False, dir=None):
         '''
         Creates a nicely formatted chainconsumer plot of the parameters
         Returns the chainconsumer plot figure
@@ -174,9 +204,12 @@ class LITMUS(object):
         fig.tight_layout()
         if show: fig.show()
 
+        if dir is not None:
+            plt.savefig(dir)
+
         return fig
 
-    def lag_plot(self, Nsamples: int = None, show=True, extras=True):
+    def lag_plot(self, Nsamples: int = None, show=True, extras=True, dir=None):
         '''
         Creates a nicely formatted chainconsumer plot of the parameters
         Returns the ChainConsumer object
@@ -211,15 +244,20 @@ class LITMUS(object):
 
                 plt.scatter(self.fitproc.lags, np.zeros_like(self.fitproc.lags), c='red', s=20)
                 plt.scatter(X, np.zeros_like(X), c='black', s=20)
-
+        if dir is not None:
+            plt.savefig(dir)
         if show: fig.show()
         return (fig)
 
-    def diagnostic_plots(self):
+    def diagnostic_plots(self, dir=None):
         if hasattr(self.fitproc, "diagnostics"):
             self.fitproc.diagnostics()
         else:
             self.msg_err("diagnostic_plots() not yet implemented for fitting method %s" % (self.fitproc.name))
+
+        if dir is not None:
+            plt.savefig(dir)
+
         return
 
     # ----------------------

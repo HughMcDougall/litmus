@@ -768,6 +768,7 @@ class hessian_scan(fitting_procedure):
                 'grid_relaxation': 0.5,
                 'grid_depth': None,
                 'grid_Nterp': None,
+                'grid_firstdepth': 2.0,
                 'reverse': True,
                 'optimizer_args_init': {},
                 'optimizer_args': {},
@@ -907,7 +908,7 @@ class hessian_scan(fitting_procedure):
         if seed_params.keys() != self.stat_model.paramnames():
             seed_params, llstart = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=seed_params)
 
-        lags = np.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags + 1, endpoint=False)[1:]
+        lags = np.linspace(*self.stat_model.prior_ranges['lag'], int(self.Nlags*self.grid_firstdepth) + 1, endpoint=False)[1:]
         lag_terp = np.linspace(*self.stat_model.prior_ranges['lag'], self.grid_Nterp)
 
         percentiles_old = np.linspace(0, 1, self.grid_Nterp)
@@ -951,6 +952,7 @@ class hessian_scan(fitting_procedure):
         # Make a grid
 
         lags = self.make_grid(data, seed_params=self.estmap_params)
+        if self.reverse: lags = lags[::-1]
         self.lags = lags
 
         self.has_prefit = True
@@ -973,8 +975,6 @@ class hessian_scan(fitting_procedure):
         # Create scanner and perform setup
         params_toscan = self.params_toscan
         lags_forscan = self.lags.copy()
-        if self.reverse:
-            lags_forscan = lags_forscan[::-1]
 
         solver, runsolver, [converter, deconverter, optfunc, runsolver_jit] = self.stat_model._scanner(data,
                                                                                                        optim_params=params_toscan,
@@ -1441,7 +1441,6 @@ class SVI_scan(hessian_scan):
         # Main Scan
 
         lags_forscan = self.lags
-        if self.reverse: lags_forscan = lags_forscan[::-1]
         l_old = np.inf
 
         scanned_optima = []
