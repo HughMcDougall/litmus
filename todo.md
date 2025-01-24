@@ -1,5 +1,8 @@
 # LITMUS todo
 
+## MAJOR ISSUES
+Something is going wrong in the evidence evals for hessian scan. In model comparisons of delta vs span lag prior, Z isn't being correctly integrated
+
 ### Major Additions
 1. Implement the stoch-opt
 2. Add a scan + HMC method for simplicity

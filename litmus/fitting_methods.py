@@ -257,7 +257,8 @@ class fitting_procedure(object):
 
     def get_evidence(self, seed: int = None) -> [float, float, float]:
         """
-        Returns the estimated evidence for the fit model. Returns as array-like [Z,dZ-,dZ+]
+        Returns the estimated evidence for the fit model.
+        Returns as array-like [Z,dZ-,dZ+]
         """
 
         if not self.is_ready: self.readyup()
@@ -326,11 +327,13 @@ class ICCF(fitting_procedure):
         del args_in['fit_params']
 
         if not hasattr(self, '_default_params'):
-            self._default_params = {
-                'Nboot': 512,
-                'Nterp': 2014,
-                'Nlags': 512,
-            }
+            self._default_params = {}
+
+        self._default_params |= {
+            'Nboot': 512,
+            'Nterp': 2014,
+            'Nlags': 512,
+        }
 
         super().__init__(**args_in)
 
@@ -432,9 +435,10 @@ class prior_sampling(fitting_procedure):
         del args_in['fit_params']
 
         if not hasattr(self, '_default_params'):
-            self._default_params = {
-                'Nsamples': 4096
-            }
+            self._default_params = {}
+        self._default_params |= {
+            'Nsamples': 4096
+        }
 
         super().__init__(**args_in)
         # ------------------------------------
@@ -538,13 +542,14 @@ class nested_sampling(fitting_procedure):
         del args_in['fit_params']
 
         if not hasattr(self, '_default_params'):
-            self._default_params = {
-                'num_live_points': 500,
-                'max_samples': 10_000,
-                'num_parallel_samplers': 1,
-                'evidence_uncert': 1E-3,
-                'live_evidence_frac': np.log(1 + 1e-3),
-            }
+            self._default_params = {}
+        self._default_params |= {
+            'num_live_points': 500,
+            'max_samples': 10_000,
+            'num_parallel_samplers': 1,
+            'evidence_uncert': 1E-3,
+            'live_evidence_frac': np.log(1 + 1e-3),
+        }
 
         super().__init__(**args_in)
 
@@ -754,27 +759,29 @@ class hessian_scan(fitting_procedure):
         del args_in['fit_params']
 
         if not hasattr(self, '_default_params'):
-            self._default_params = {
-                'Nlags': 1024,
-                'opt_tol': 1E-3,
-                'opt_tol_init': 1E-5,
-                'step_size': 0.001,
-                'constrained_domain': False,
-                'max_opt_eval': 1_000,
-                'max_opt_eval_init': 5_000,
-                'LL_threshold': 100.0,
-                'init_samples': 5_000,
-                'grid_bunching': 0.5,
-                'grid_relaxation': 0.5,
-                'grid_depth': None,
-                'grid_Nterp': None,
-                'grid_firstdepth': 2.0,
-                'reverse': True,
-                'optimizer_args_init': {},
-                'optimizer_args': {},
-                'seed_params': {},
-                'precondition': 'diag'
-            }
+            self._default_params = {}
+
+        self._default_params |= {
+            'Nlags': 64,
+            'opt_tol': 1E-2,
+            'opt_tol_init': 1E-4,
+            'step_size': 0.001,
+            'constrained_domain': False,
+            'max_opt_eval': 1_000,
+            'max_opt_eval_init': 5_000,
+            'LL_threshold': 100.0,
+            'init_samples': 5_000,
+            'grid_bunching': 0.5,
+            'grid_relaxation': 0.5,
+            'grid_depth': None,
+            'grid_Nterp': None,
+            'grid_firstdepth': 2.0,
+            'reverse': True,
+            'optimizer_args_init': {},
+            'optimizer_args': {},
+            'seed_params': {},
+            'precondition': 'diag'
+        }
 
         super().__init__(**args_in)
 
@@ -787,13 +794,15 @@ class hessian_scan(fitting_procedure):
 
         self.scan_peaks: dict = {None}
         self.log_evidences: list = None
+        self.log_evidences_uncert: list = None
 
         self.diagnostic_hessians: list = None
         self.diagnostic_grads: list = None
-        self.diagnostic_tols: list = None
+        self.diagnostic_ints: list = None
+        self.diagnostic_tgrads: list = None
 
         self.params_toscan = self.stat_model.free_params()
-        self.params_toscan.remove('lag')
+        if 'lag' in self.params_toscan: self.params_toscan.remove('lag')
 
         self.precon_matrix: np.ndarray[np.float64] = np.eye(len(self.params_toscan), dtype=np.float64)
         self.solver: jaxopt.BFGS = None
@@ -816,7 +825,7 @@ class hessian_scan(fitting_procedure):
         self.scan_peaks = {key: np.array([]) for key in self.stat_model.paramnames()}
         self.diagnostic_hessians = []
         self.diagnostic_grads = []
-        self.diagnostic_tols = []
+        self.log_evidences_uncert = []
 
         self.params_toscan = [key for key in self.stat_model.paramnames() if
                               key not in ['lag'] and key in self.stat_model.free_params()
@@ -834,7 +843,6 @@ class hessian_scan(fitting_procedure):
         :param seed:
         :return:
         '''
-        # todo - reformat this and the make_grid for better consistency in drawing from estmap and seed params
 
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
@@ -869,13 +877,7 @@ class hessian_scan(fitting_procedure):
                                              data=data
                                              )
 
-        # ----------------------------------
-        # CHECKING OUTPUTS
 
-        if ll_end < ll_start:
-            self.msg_err("Warning! Optimization seems to have diverged. Defaulting to seed params. \n"
-                         "Please consider running with different optim_init inputs")
-            estmap_params = seed_params
 
         # ----------------------------------
         # CHECKING OUTPUTS
@@ -888,6 +890,13 @@ class hessian_scan(fitting_procedure):
             "Log-Density for this is: %.2f" % ll_end
         )
 
+        # ----------------------------------
+        # CHECKING OUTPUTS
+
+        if ll_end < ll_start:
+            self.msg_err("Warning! Optimization seems to have diverged. Defaulting to seed params. \n"
+                         "Please consider running with different optim_init inputs")
+            estmap_params = seed_params
         return estmap_params
 
     def make_grid(self, data, seed_params=None):
@@ -900,6 +909,12 @@ class hessian_scan(fitting_procedure):
 
         if not self.is_ready: self.readyup()
 
+        if 'lag' in self.stat_model.fixed_params():
+            lags = np.array([np.mean(self.stat_model.prior_ranges['lag'])])
+            self.Nlags = 1
+            self.readyup()
+            return lags
+
         # If no seed parameters specified, use stored
         if seed_params is None:
             seed_params = self.estmap_params
@@ -908,7 +923,8 @@ class hessian_scan(fitting_procedure):
         if seed_params.keys() != self.stat_model.paramnames():
             seed_params, llstart = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=seed_params)
 
-        lags = np.linspace(*self.stat_model.prior_ranges['lag'], int(self.Nlags*self.grid_firstdepth) + 1, endpoint=False)[1:]
+        lags = np.linspace(*self.stat_model.prior_ranges['lag'], int(self.Nlags * self.grid_firstdepth) + 1,
+                           endpoint=False)[1:]
         lag_terp = np.linspace(*self.stat_model.prior_ranges['lag'], self.grid_Nterp)
 
         percentiles_old = np.linspace(0, 1, self.grid_Nterp)
@@ -925,7 +941,8 @@ class hessian_scan(fitting_procedure):
             percentiles /= percentiles.max()
             percentiles_old = percentiles.copy()
 
-            lags = np.interp(np.linspace(0, 1, self.Nlags), percentiles, lag_terp, left=0, right=lag_terp.max())
+            lags = np.interp(np.linspace(0, 1, self.Nlags), percentiles, lag_terp, left=lag_terp.min(),
+                             right=lag_terp.max())
 
         return (lags)
 
@@ -987,7 +1004,8 @@ class hessian_scan(fitting_procedure):
 
         # ----------------------------------
         # Sweep over lags
-        scanned_optima, tols, Zs, grads, Hs = [], [], [], [], []
+        scanned_optima, grads, Hs = [], [], []
+        tols, Zs, Ints, tgrads = [], [], [], []
         for i, lag in enumerate(lags_forscan):
             self.msg_run(":" * 23)
             self.msg_run("Scanning at lag=%.2f ..." % lag)
@@ -1000,11 +1018,12 @@ class hessian_scan(fitting_procedure):
 
             l_1 = self.stat_model.log_density(best_params | {'lag': lag}, data)
             l_2 = self.stat_model.log_density(opt_params | {'lag': lag}, data)
+            bigdrop = l_2 - l_1 < -self.LL_threshold
             diverged = np.any(np.isinf(np.array([x for x in self.stat_model.to_uncon(opt_params).values()])))
 
             self.msg_run("Change of %.2f against %.2f" % (l_2 - l_1, self.LL_threshold))
 
-            if l_2 - l_1 > -self.LL_threshold and not diverged:
+            if not bigdrop and not diverged:
                 self.converged[i] = True
 
                 is_good = [True, True, True]
@@ -1023,10 +1042,6 @@ class hessian_scan(fitting_procedure):
                 try:
                     H = self.stat_model.log_density_uncon_hess(uncon_params, data, keys=params_toscan)
                     assert np.linalg.det(H), "Error in H calc"
-                    tol = np.dot(aux_data['grad'],
-                                 np.dot(np.linalg.inv(H),
-                                        aux_data['grad'])
-                                 )
                     tol = self.stat_model.opt_tol(opt_params, data, integrate_axes=params_toscan)
                 except:
                     self.msg_err("Something wrong in Hessian / Tolerance!:")
@@ -1035,10 +1050,11 @@ class hessian_scan(fitting_procedure):
                 # ======
                 # Get evidence
                 try:
-                    Z = self.stat_model.laplace_log_evidence(opt_params, data,
-                                                             integrate_axes=params_toscan,
-                                                             constrained=self.constrained_domain)
-                    if not self.constrained_domain: Z += self.stat_model.uncon_grad(opt_params)
+                    laplace_int = self.stat_model.laplace_log_evidence(opt_params, data,
+                                                                       integrate_axes=params_toscan,
+                                                                       constrained=self.constrained_domain)
+                    tgrad = self.stat_model.uncon_grad_lag(opt_params) if not self.constrained_domain else 0
+                    Z = laplace_int + tgrad
                     assert not np.isnan(Z), "Error in Z calc"
                 except:
                     self.msg_err("Something wrong in Evidence!:")
@@ -1046,9 +1062,10 @@ class hessian_scan(fitting_procedure):
 
                 # Check and save if good
                 if np.all(is_good):
-                    self.msg_run("Seems to have converged at iteration %i / %i with tolerance %.2e" % (i, self.Nlags, tol))
+                    self.msg_run(
+                        "Seems to have converged at iteration %i / %i with tolerance %.2e" % (i, self.Nlags, tol))
 
-                    if tol < 1.0 or True:
+                    if tol < 1.0:
                         best_params = opt_params
                     else:
                         self.msg_run("Possibly stuck in a furrow. Resetting start params")
@@ -1059,6 +1076,8 @@ class hessian_scan(fitting_procedure):
 
                     grads.append(aux_data['grad'])
                     Hs.append(H)
+                    Ints.append(laplace_int)
+                    tgrads.append(tgrad)
                     Zs.append(Z)
                 else:
                     self.msg_run("Seems to have severely diverged at iteration %i / %i" % (i, self.Nlags))
@@ -1068,17 +1087,22 @@ class hessian_scan(fitting_procedure):
 
             else:
                 self.converged[i] = False
-                self.msg_run("Unable to converge at iteration %i / %i" % (i, self.Nlags))
+                self.msg_run("Unable to converge at iteration %i / %i" % (i, self.Nlags),
+                             "\nLarge Drop?:\t", bigdrop,
+                             "\nOptimizer Diverged:\t", diverged)
 
         self.msg_run("Scanning Complete. Calculating laplace integrals...")
 
         # --------
         # Save and apply
-        self.diagnostic_tols = np.sqrt(abs(np.array(tols)))
         self.diagnostic_grads = grads
         self.diagnostic_hessians = Hs
+        self.diagnostic_tgrads = np.array(tgrads).squeeze().flatten()
+        self.diagnostic_ints = np.array(Ints).squeeze().flatten()
+
         self.scan_peaks = _utils.dict_combine(scanned_optima)
-        self.log_evidences = np.array(Zs)
+        self.log_evidences = np.array(Zs).squeeze().flatten()
+        self.log_evidences_uncert = np.square(tols).squeeze().flatten()
 
         self.msg_run("Hessian Scan Fitting complete.", "-" * 23, "-" * 23, delim='\n')
         self.has_run = True
@@ -1093,7 +1117,7 @@ class hessian_scan(fitting_procedure):
 
         peaks = _utils.dict_divide(self.scan_peaks)
         I = np.arange(len(peaks))
-        select = np.argwhere(self.diagnostic_tols > self.opt_tol).squeeze()
+        select = np.argwhere(self.log_evidences_uncert > self.opt_tol).squeeze()
         if not (_utils.isiter(select)): select = np.array([select])
 
         peaks, I = np.array(peaks)[select], I[select]
@@ -1105,7 +1129,7 @@ class hessian_scan(fitting_procedure):
             self.msg_run(":" * 23, "Refitting lag %i/%i at lag %.2f" % (j, len(peaks), peak['lag']), delim='\n')
 
             ll_old = self.stat_model.log_density(peak, data)
-            old_tol = self.diagnostic_tols[i]
+            old_tol = self.log_evidences_uncert[i]
 
             new_peak = self.stat_model.scan(start_params=peak,
                                             optim_params=self.params_toscan,
@@ -1129,11 +1153,13 @@ class hessian_scan(fitting_procedure):
                     continue
 
             new_peak_uncon = self.stat_model.to_uncon(new_peak)
-            new_grad = self.stat_model.log_density_uncon_grad(new_peak_uncon, data)
             new_grad = _utils.dict_pack(new_grad, keys=self.params_toscan)
             new_hessian = self.stat_model.log_density_uncon_hess(new_peak_uncon, data, keys=self.params_toscan)
 
             try:
+                int = self.stat_model.laplace_log_evidence(new_peak, data, constrained=self.constrained_domain)
+                tgrad = self.stat_model.uncon_grad_lag(new_peak)
+                Z = tgrad + int
                 Hinv = np.linalg.inv(new_hessian)
             except:
                 self.msg_run("Optimization failed on %i/%i" % (j, len(peaks)))
@@ -1142,9 +1168,13 @@ class hessian_scan(fitting_procedure):
             tol = self.stat_model.opt_tol(new_peak, data, self.params_toscan)
 
             if tol < old_tol:
+                self.diagnostic_tgrads[i] = tgrad
+                self.diagnostic_ints[i] = int
+                self.log_evidences[i] = tgrad + int
+
                 self.diagnostic_grads[i] = new_grad
                 self.diagnostic_hessians[i] = new_hessian
-                self.diagnostic_tols[i] = tol
+                self.log_evidences_uncert[i] = tol ** 2
                 self.msg_run("Settled at new tol %.2e" % tol)
             else:
                 self.msg_run(
@@ -1160,7 +1190,7 @@ class hessian_scan(fitting_procedure):
         :return:
         '''
 
-        loss = self.diagnostic_tols
+        loss = self.log_evidences_uncert
 
         lagplot = self.scan_peaks['lag']
 
@@ -1187,52 +1217,64 @@ class hessian_scan(fitting_procedure):
         seed = self._tempseed
         # -------------------
 
-        if not isinstance(self, SVI_scan):
-            select = np.argwhere(self.diagnostic_tols < self.opt_tol).squeeze()
-        else:
-            select = np.ones_like(self.log_evidences, dtype=bool)
+        good_tol = self.log_evidences_uncert <= self.opt_tol
+        good_tgrad = abs(self.diagnostic_tgrads) <= np.median(abs(self.diagnostic_tgrads))*10
+        select = np.argwhere(good_tol * good_tgrad).squeeze()
         if not (_utils.isiter(select)): select = np.array([select])
+        if len(select) == 0:
+            self.msg_err("High uncertainty in slice evidences: result may be innacurate!. Try re-fitting.")
+            select = np.where(good_tgrad)[0]
+
+        if len(select)==0:
+            self.msg_err("Zero good slices in evidence integral!")
+            #return(0, -np.inf, np.inf)
 
         # Calculating Evidence
         lags_forint = self.scan_peaks['lag'][select]
+        logZ_forint = self.log_evidences[select]
+        I = lags_forint.argsort()
+        lags_forint, logZ_forint = lags_forint[I], logZ_forint[I]
+
         minlag, maxlag = self.stat_model.prior_ranges['lag']
-        if self.reverse:
-            minlag, maxlag = maxlag, minlag
-        dlag = [*np.diff(lags_forint) / 2, 0]
-        dlag[1:] += np.diff(lags_forint) / 2
-        dlag[0] += lags_forint.min() - minlag
-        dlag[-1] += maxlag - lags_forint.max()
-
-        if sum(dlag) == 0: dlag = 1.0
-
-        dZ = np.exp(self.log_evidences[select] - self.log_evidences[select].max())
-        Z = (dZ * dlag).sum()
-        Z *= np.exp(self.log_evidences[select].max())
-
-        # -------------------------------------
-        # Get Uncertainties
-
-        # Estimate uncertainty from ~dt^2 error scaling
-        Z_subsample = np.trapz(dZ[::2], lags_forint[::2])
-        Z_subsample *= np.exp(self.log_evidences[select].max())
-        uncert_numeric = abs(Z - Z_subsample) / 3
-
-        if not isinstance(self, SVI_scan):
-            uncert_tol = (dZ * self.diagnostic_tols[select]).sum()
-            uncert_tol *= np.exp(self.log_evidences[select].max())
-
-            self.msg_debug("Evidence Est: \t %.2e" % Z)
-            self.msg_debug(
-                "Evidence uncerts: \n Numeric: \t %.2e \n Convergence: \t %.2e" % (uncert_numeric, uncert_tol))
-
-            uncert_plus = np.sqrt(np.square(np.array([uncert_numeric, uncert_tol])).sum())
-            uncert_minus = uncert_numeric
+        if maxlag - minlag == 0:
+            Z = np.exp(logZ_forint.max())
+            imax = logZ_forint.argmax()
+            uncert_plus, uncert_minus = self.log_evidences_uncert[imax], self.log_evidences_uncert[imax]
         else:
-            uncert_plus, uncert_minus = uncert_numeric, uncert_numeric
+            dlag = [*np.diff(lags_forint) / 2, 0]
+            dlag[1:] += np.diff(lags_forint) / 2
+            dlag[0] += lags_forint.min() - minlag
+            dlag[-1] += maxlag - lags_forint.max()
+
+            dlogZ = logZ_forint + np.log(dlag)
+            dZ = np.exp(dlogZ - dlogZ.max())
+            Z = dZ.sum() * np.exp(dlogZ.max())
+
+            # -------------------------------------
+            # Get Uncertainties
+
+            # Estimate uncertainty from ~dt^2 error scaling
+            Z_subsample = np.trapz(dZ[::2], lags_forint[::2])
+            Z_subsample *= np.exp(self.log_evidences[select].max())
+            uncert_numeric = abs(Z - Z_subsample) / 3
+
+            if not isinstance(self, SVI_scan):
+                uncert_tol = (dZ * self.log_evidences_uncert[select]).sum()
+                uncert_tol *= np.exp(self.log_evidences[select].max())
+
+                self.msg_debug("Evidence Est: \t %.2e" % Z)
+                self.msg_debug(
+                    "Evidence uncerts: \n Numeric: \t %.2e \n Convergence: \t %.2e" % (uncert_numeric, uncert_tol))
+
+                uncert_plus = np.sqrt(np.square(np.array([uncert_numeric, uncert_tol])).sum())
+                uncert_minus = uncert_numeric
+
+            else:
+                uncert_plus, uncert_minus = uncert_numeric, uncert_numeric
 
         return (np.array([Z, uncert_minus, uncert_plus]))
 
-    def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
+    def get_samples(self, N: int = 1, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
         # -------------------
         fitting_procedure.get_samples(**locals())
         seed = self._tempseed
@@ -1246,7 +1288,7 @@ class hessian_scan(fitting_procedure):
         if self.reverse:
             minlag, maxlag = maxlag, minlag
 
-        Y = np.exp(self.log_evidences - self.log_evidences.max())
+        Y = np.exp(self.log_evidences - self.log_evidences.max()).squeeze()
 
         dlag = [*np.diff(lags_forint) / 2, 0]
         dlag[1:] += np.diff(lags_forint) / 2
@@ -1264,7 +1306,10 @@ class hessian_scan(fitting_procedure):
         peaks = _utils.dict_divide(self.stat_model.to_uncon(self.scan_peaks))
 
         # Get hessians and peak locations
-        I = np.random.choice(range(Npeaks), N, replace=True, p=weights)
+        if Npeaks >1:
+            I = np.random.choice(range(Npeaks), N, replace=True, p=weights)
+        else:
+            I = np.zeros(N)
 
         to_choose = [(I == i).sum() for i in range(Npeaks)]  # number of samples to draw from peak i
 
@@ -1286,7 +1331,7 @@ class hessian_scan(fitting_procedure):
 
                 # -------------
                 # Add linear interpolation 'smudging' to lags
-                if Npeaks > 1:
+                if Npeaks > 1 and 'lag' in self.stat_model.free_params():
 
                     # Get nodes
                     tnow, ynow = lags_forint[i], Y[i]
@@ -1336,30 +1381,16 @@ class SVI_scan(hessian_scan):
         del args_in['fit_params']
 
         if not hasattr(self, '_default_params'):
-            self._default_params = {
-                'Nlags': 1024,
-                'opt_tol': 1E-3,
-                'opt_tol_init': 1E-5,
-                'step_size': 0.001,
-                'constrained_domain': False,
-                'max_opt_eval': 1_000,
-                'max_opt_eval_init': 5_000,
-                'ELBO_threshold': 100.0,
-                'init_samples': 5_000,
-                'grid_bunching': 0.5,
-                'grid_relaxation': 0.5,
-                'grid_depth': None,
-                'grid_Nterp': None,
-                'reverse': False,
-                'optimizer_args_init': {},
-                'seed_params': {},
-                'ELBO_optimstep': 5E-3,
-                'ELBO_particles': 128,
-                'ELBO_Nsteps': 100,
-                'ELBO_Nsteps_init': 1_000,
-                'ELBO_fraction': 0.1,
-                'precondition': 'half-eig'
-            }
+            self._default_params = {}
+
+        self._default_params |= {
+            'ELBO_threshold': 100.0,
+            'ELBO_optimstep': 5E-3,
+            'ELBO_particles': 128,
+            'ELBO_Nsteps': 128,
+            'ELBO_Nsteps_init': 1_000,
+            'ELBO_fraction': 0.25,
+        }
 
         super().__init__(**args_in)
 
@@ -1367,9 +1398,9 @@ class SVI_scan(hessian_scan):
 
         self.name = "SVI Scan Fitting Procedure"
 
-        self.ELBOS = []
         self.diagnostic_losses = []
         self.diagnostic_loss_init = []
+        self.diagnostic_ints = []
 
     def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
         # -------------------
@@ -1385,7 +1416,7 @@ class SVI_scan(hessian_scan):
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
         # ----------------------------------
-        # Estimate the MAP and its hessian
+        # Estimate the MAP and its hessian for starting conditions
 
         estmap_uncon = self.stat_model.to_uncon(self.estmap_params)
 
@@ -1394,15 +1425,22 @@ class SVI_scan(hessian_scan):
 
         init_hess = -1 * self.stat_model.log_density_uncon_hess(estmap_uncon, data=data, keys=self.params_toscan)
 
-        # ----------------------------------
         # Convert these into SVI friendly objects and fit an SVI at the map
         self.msg_run("Performing SVI slice at the MAP estimate")
         init_loc = _utils.dict_pack(estmap_uncon, keys=self.params_toscan)
         init_tril = jnp.linalg.cholesky(jnp.linalg.inv(init_hess))
 
+        bad_starts = False
+        if np.isnan(init_loc).any() or np.isnan(init_tril).any():
+            self.msg_err("Issue with finding initial solver state for SVI. Proceeding /w numpyro defaults")
+            bad_starts = True
+        # ----------------------------------
         self.msg_debug("\t Constructing slice model")
 
         def slice_function(data, lag):
+            '''
+            This is the conditional model that SVI will map
+            '''
 
             params = {}
             for key in self.stat_model.free_params():
@@ -1414,7 +1452,9 @@ class SVI_scan(hessian_scan):
 
             with numpyro.handlers.block(hide=self.stat_model.paramnames()):
                 LL = self.stat_model._log_likelihood(params, data)
-            numpyro.factor('log_likelihood', LL)
+
+            dilute = -np.log(self.stat_model.prior_ranges['lag'][1] - self.stat_model.prior_ranges['lag'][0]) if 'lag' in self.stat_model.free_params() else 0.0
+            numpyro.factor('lag_prior', dilute)
 
         # SVI settup
         self.msg_debug("\t Constructing and running optimizer and SVI guides")
@@ -1429,7 +1469,7 @@ class SVI_scan(hessian_scan):
                                       data=data, lag=self.estmap_params['lag'],
                                       init_params={'auto_loc': init_loc,
                                                    'auto_scale_tril': init_tril
-                                                   }
+                                                   } if not bad_starts else None
                                       )
 
         self.msg_debug("\t Success. Extracting solution")
@@ -1441,16 +1481,17 @@ class SVI_scan(hessian_scan):
         # Main Scan
 
         lags_forscan = self.lags
-        l_old = np.inf
+        l_old = -np.inf
 
         scanned_optima = []
         ELBOS_tosave = []
+        ElBOS_uncert = []
         diagnostic_hessians = []
         diagnostic_losses = []
 
         for i, lag in enumerate(lags_forscan):
             print(":" * 23)
-            self.msg_run("Scanning at lag=%.2f ..." % lag)
+            self.msg_run("Doing SVI fit at lag=%.2f ..." % lag)
 
             svi_loop_result = autosvi.run(jax.random.PRNGKey(seed),
                                           self.ELBO_Nsteps,
@@ -1467,13 +1508,14 @@ class SVI_scan(hessian_scan):
             # Check if the optimization has suceeded or broken
 
             l_old = l_old
-            l_new = svi_loop_result.losses[-1]
+            l_new = self._getELBO(svi_loop_result.losses)[0]
             diverged = bool(np.isinf(NEW_loc).any() + np.isinf(NEW_tril).any())
+            big_drop = l_new - l_old < - self.ELBO_threshold
 
             self.msg_run(
                 "From %.2f to %.2f, change of %.2f against %.2f" % (l_old, l_new, l_new - l_old, self.ELBO_threshold))
 
-            if l_new - l_old < self.ELBO_threshold and not diverged:
+            if not big_drop and not diverged:
                 self.msg_run("Seems to have converged at iteration %i / %i" % (i, self.Nlags))
 
                 self.converged[i] = True
@@ -1487,18 +1529,24 @@ class SVI_scan(hessian_scan):
 
                 H = np.dot(NEW_tril, NEW_tril.T)
                 H = (H + H.T) / 2
-                H = jnp.linalg.inv(H)
+                H = jnp.linalg.inv(-H)
                 diagnostic_hessians.append(H)
 
                 diagnostic_losses.append(svi_loop_result.losses)
-                ELBOS_tosave.append(-1 * svi_loop_result.losses[-int(self.ELBO_Nsteps * self.ELBO_fraction):].mean())
+
+                ELBO, uncert = self._getELBO(svi_loop_result.losses)
+                ELBOS_tosave.append(ELBO)
+                ElBOS_uncert.append(uncert)
+
 
             else:
                 self.msg_run("Unable to converge at iteration %i / %i" % (i, self.Nlags))
                 self.msg_debug("Reason for failure: \n large ELBO drop: \t %r \n diverged: \t %r" % (
-                    l_new - l_old < self.ELBO_threshold, diverged))
+                    big_drop, diverged))
 
-        self.ELBOS = np.array(ELBOS_tosave)
+        self.diagnostic_ints = np.array(ELBOS_tosave)
+
+        self.log_evidences_uncert = np.array(ElBOS_uncert)
         self.diagnostic_losses = np.array(diagnostic_losses)
         self.diagnostic_hessians = np.array(diagnostic_hessians)
 
@@ -1510,27 +1558,59 @@ class SVI_scan(hessian_scan):
         # For each of these peaks, estimate the evidence
         # todo - vmap and parallelize
 
-        Zs = []
+        Zs, tgrads = [], []
         for j, params in enumerate(scanned_optima):
-            Z_ELBO = self.ELBOS[j]
-            # if not self.constrained_domain: Z_ELBO += self.stat_model.uncon_grad(params)
-            Zs.append(Z_ELBO)
+            Z = self.diagnostic_ints[j]
+            tgrad = self.stat_model.uncon_grad_lag(params) if not self.constrained_domain else 0
+            tgrad = 0
+            tgrads.append(tgrad)
+            Zs.append(Z + tgrad)
 
         self.log_evidences = np.array(Zs)
+        self.diagnostic_tgrads = np.array(tgrads)
         self.has_run = True
 
         self.msg_run("SVI Fitting complete.", "-" * 23, "-" * 23, delim='\n')
 
     def refit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        # TODO - fill this out
 
         return
+
+    def _getELBO(self, losses):
+        """
+        A utility for taking the chains of losses output by SVI and returning
+        estimates of log|Z| and dlog|Z|
+        """
+
+        N = int(self.ELBO_Nsteps * self.ELBO_fraction)
+        ns = np.arange(2, N // 2) * 2
+        MEANS = np.zeros(len(ns))
+        UNCERTS = np.zeros(len(ns))
+
+
+        for i, n in enumerate(ns):
+            ELBO_samps = -1 * losses[-n:]
+            mean = ELBO_samps.mean()
+
+            samps_left, samps_right = np.split(ELBO_samps, 2)
+            uncert = ELBO_samps.var() / n
+            gap = max(0, samps_left.mean() - samps_right.mean())
+            skew = gap ** 2
+            uncert += skew
+
+            MEANS[i], UNCERTS[i] = mean, uncert ** 0.5
+
+        mean, uncert = MEANS[UNCERTS.argmin()], UNCERTS.min()
+
+        return (mean, uncert)
 
     def diagnostics(self, plot=True):
 
         f, (a2, a1) = plt.subplots(2, 1)
 
         for i, x in enumerate(self.diagnostic_losses):
-            a1.plot(x - (-self.ELBOS[i]), c='k', alpha=0.25)
+            a1.plot(x - (self.diagnostic_ints[i]), c='k', alpha=0.25)
         a2.plot(self.diagnostic_loss_init, c='k')
 
         a1.axvline(int((1 - self.ELBO_fraction) * self.ELBO_Nsteps), c='k', ls='--')
@@ -1551,7 +1631,7 @@ class SVI_scan(hessian_scan):
         txt = "Trace plots of ELBO convergence. All lines should be flat by the right hand side.\n" \
               "Top panel is for initial guess and need only be flat. Bottom panel should be flat within" \
               "averaging range, i.e. to the right of dotted line."
-        f.supxlabel(r'$\begin{center}X-axis\\*\textit{\small{%s}}\end{center}$' % txt)
+        f.supxlabel('$\begin{center}X-axis\\*\textit{\small{%s}}\end{center}$' % txt)
 
         f.tight_layout()
 
@@ -1569,12 +1649,13 @@ class JAVELIKE(fitting_procedure):
         del args_in['fit_params']
 
         if not hasattr(self, '_default_params'):
-            self._default_params = {
-                'alpha': 2.0,
-                'num_chains': 256,
-                'num_samples': 200_000 // 256,
-                'num_warmup': 5_000,
-            }
+            self._default_params = {}
+        self._default_params |= {
+            'alpha': 2.0,
+            'num_chains': 256,
+            'num_samples': 200_000 // 256,
+            'num_warmup': 5_000,
+        }
 
         self.sampler: numpyro.infer.MCMC = None
         self.kernel: numpyro.infer.AEIS = None

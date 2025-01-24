@@ -246,7 +246,7 @@ def dict_combine(X: [dict]) -> {str: [float]}:
 
 def dict_divide(X: dict) -> [dict]:
     '''
-    Combines an array, list etc of dictionary into a dictionary of arrays
+    Splits dict of arrays into array of dicts
     '''
 
     keys = list(X.keys())

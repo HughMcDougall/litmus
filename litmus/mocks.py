@@ -220,6 +220,18 @@ class mock(object):
         out = mock(seed=seed, **(self.args | kwargs))
         return (out)
 
+    def swap_response(self, other):
+        '''
+        Swaps the response lightcurves between this mock and its target.
+        Over-writes target and self
+        '''
+
+        self.lc_2, other.lc_2 = other.lc_2, self.lc_2
+        self.lc, other.lc = None, None
+        return
+
+
+
     # ------------------------------
     # TEST UTILS
     def plot(self, axis=None, true_args={}, series_args={}, show=True):
@@ -255,12 +267,11 @@ class mock(object):
                 true_args_1[key] = true_args[key]
                 true_args_2[key] = true_args[key]
 
-        lc_true_1, lc_true_2 = self.lc.delayed_copy(0, 0, self.maxtime), self.lc.delayed_copy(self.lag, 0, self.maxtime)
-        # lc_true_2.T -= self.lag
-        # lc_true_1.trim(0, self.maxtime), lc_true_2.trim(0, self.maxtime)
+        if self.lc is not None:
+            lc_true_1, lc_true_2 = self.lc.delayed_copy(0, 0, self.maxtime), self.lc.delayed_copy(self.lag, 0, self.maxtime)
 
-        axis.plot(lc_true_1.T, lc_true_1.Y, **true_args_1)
-        axis.plot(lc_true_2.T, lc_true_2.Y, **true_args_2)
+            axis.plot(lc_true_1.T, lc_true_1.Y, **true_args_1)
+            axis.plot(lc_true_2.T, lc_true_2.Y, **true_args_2)
 
         # -----------------
         # Plot errorbars

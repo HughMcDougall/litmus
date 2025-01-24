@@ -199,8 +199,18 @@ class LITMUS(object):
             _config = PlotConfig(summarise=True,
                                  **CC_kwargs)
         C.plotter.set_config(_config)
-        fig = C.plotter.plot(columns=self.model.free_params(),
-                             )
+        params_toplot = [param for param in self.model.free_params() if self.samples[param].ptp()!=0]
+        if len(params_toplot) ==0:
+            fig = plt.figure()
+            if show: plt.show()
+            return fig
+
+        try:
+            fig = C.plotter.plot(columns=params_toplot,
+                                 )
+        except:
+            fig = plt.figure()
+            fig.text(0.5, 0.5, "Something wrong with plotter")
         fig.tight_layout()
         if show: fig.show()
 

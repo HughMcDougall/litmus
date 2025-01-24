@@ -55,8 +55,8 @@ _default_config = {
     'logtau': (0, 10),
     'logamp': (-3, 3),
     'rel_amp': (0, 10),
-    'mean': (-50, +50),
-    'rel_mean': (-2.0, +2.0),
+    'mean': (-20, +20),
+    'rel_mean': (-10.0, +10.0),
     'lag': (0, 1000),
 
     'outlier_spread': 10.0,
@@ -234,6 +234,26 @@ class stats_model(object):
         out = con_dens - uncon_dens
         return out
 
+    def uncon_grad_lag(self, params):
+
+        from numpyro.infer.util import transform_fn
+
+        if 'lag' not in self.paramnames(): return 0
+        if np.ptp(self.prior_ranges['lag']) == 0: return 0
+
+        dist = numpyro.distributions.Uniform(*self.prior_ranges['lag'])
+        lag_con = params['lag']
+
+        transforms = {"lag": numpyro.distributions.biject_to(dist.support)}
+
+        def tform(x):
+            out = transform_fn(transforms, params | {'lag': x}, invert=True)['lag']
+            return (out)
+
+        tform = jax.grad(tform)
+        out = np.log(abs(tform(lag_con)))
+        return out
+
     def paramnames(self):
         '''
         Returns the names of all model parameters. Purely for brevity.
@@ -380,10 +400,12 @@ class stats_model(object):
 
         if isiter_dict(params):
             m, N = dict_dim(params)
-            out = np.zeros(N)
+            out = {key: np.zeros([N]) for key in params.keys()}
             for i in range(N):
                 p = {key: params[key][i] for key in params.keys()}
-                out[i, :] = self._log_density_uncon_grad(p, data)
+                grads = self._log_density_uncon_grad(p, data)
+                for key in params.keys():
+                    out[key][i] = grads[key]
         else:
             out = self._log_density_uncon_grad(params, data)
 
@@ -661,6 +683,7 @@ class stats_model(object):
 
         elif precondition == "diag":
             D = np.diag(H) ** -0.5
+            D = np.where(D>0,D,1.0)
             H = np.diag(D)
             Hinv = np.diag(1 / D)
 
@@ -841,7 +864,7 @@ class stats_model(object):
             grad = self.log_density_grad(params, data, keys=integrate_axes)
 
         # todo - remove this when properly integrating keys argument into grad funcs
-        I = np.where([key in integrate_axes for key in self.paramnames()])[0]
+        I = np.where([key in integrate_axes for key in grad.keys()])[0]
         grad = np.array([float(x) for x in grad.values()])[I]
         grad, hess = -grad, -hess
 
@@ -926,15 +949,18 @@ class stats_model(object):
         Find a good initial seed. Unless otherwise over-written, while blindly sample the prior and return the best fit.
         '''
 
+        if len(fixed.keys()) == len(self.paramnames()): return (fixed, self.log_density(fixed, data))
+
         if guesses == None: guesses = 50 * 2 ** len(self.free_params())
 
-        samples = self.prior_sample()
+        samples = self.prior_sample(num_samples=guesses)
 
         if fixed != {}: samples = dict_extend(samples | fixed)
 
         ll = self.log_density(samples, data)
         i = ll.argmax()
-        out = dict_unpack(samples)[i]
+
+        out = dict_divide(samples)[i]
         return (out, ll.max())
 
 
@@ -952,11 +978,14 @@ class dummy_statmodel(stats_model):
     def __init__(self, prior_ranges=None):
         self._default_prior_ranges = {
             'lag': _default_config['lag'],
-            'test_param': [0.0, 1.0]
+            'logtau': _default_config['logtau'],
+            'logamp': _default_config['logamp']
         }
         super().__init__(prior_ranges=prior_ranges)
         self.lag_peak = 250.0
-        self.amp_peak = 0.5
+        self.tau_peak = 0.5
+
+        self.evidence_approx = np.product(np.array([np.ptp(x) for x in self.prior_ranges.values()])) ** -1
 
     # ----------------------------------
     def prior(self):
@@ -967,15 +996,24 @@ class dummy_statmodel(stats_model):
         '''
 
         lag = quickprior(self, 'lag')
-        test_param = quickprior(self, 'test_param')
+        logtau = quickprior(self, 'logtau')
+        logamp = quickprior(self, 'logamp')
 
-        return (lag, test_param)
+        return (lag, logtau, logamp)
 
     def model_function(self, data):
-        lag, test_param = self.prior()
+        lag, logtau, logamp = self.prior()
 
-        numpyro.sample('test_sample', dist.Normal(lag, 100), obs=self.lag_peak)
-        numpyro.sample('test_sample_2', dist.Normal(test_param, 1.0), obs=self.amp_peak)
+        numpyro.sample('test_sample', dist.Normal(lag, 25), obs=self.lag_peak)
+        numpyro.sample('test_sample_2',
+                       dist.MultivariateNormal(
+                           loc=jnp.array([0.25, 0.5]),
+                           covariance_matrix=jnp.array([
+                               [0.25, 0.00],
+                               [0.00, 0.25]
+                           ])),
+                       obs=jnp.array([logtau, logamp])
+                       )
 
 
 # ============================================
@@ -1145,6 +1183,7 @@ class GP_simple(stats_model):
         return (out, ll_out)
 
 
+
 # ============================================
 # ============================================
 # Testing
@@ -1217,3 +1256,41 @@ if __name__ == "__main__":
     print(S)
 
     print("All checks okay.")
+
+
+# ------------------
+class GP_simple_null(GP_simple):
+    def lc_to_data(self, lc_1: lightcurve, lc_2: lightcurve):
+        return super().lc_to_data(lc_1, lc_2) | {
+            'T1': lc_1.T,
+            'Y1': lc_1.Y,
+            'E1': lc_1.E,
+            'T2': lc_2.T,
+            'Y2': lc_2.Y,
+            'E2': lc_2.E,
+        }
+
+    def model_function(self, data):
+        lag, logtau, logamp, rel_amp, mean, rel_mean = self.prior()
+
+        T1, Y1, E1 = [data[key] for key in ['T1', 'Y1', 'E1']]
+        T2, Y2, E2 = [data[key] for key in ['T2', 'Y2', 'E2']]
+
+        # Conversions to gp-friendly form
+        amp, tau = jnp.exp(logamp), jnp.exp(logtau)
+
+        diag1, diag2 = jnp.square(E1), jnp.square(E2)
+
+        # amps = jnp.array([amp, rel_amp * amp])
+        # means = jnp.array([mean, mean + rel_mean])
+        Y1 -= mean
+        Y2 -= (mean + rel_mean)
+
+        # Build and sample GP
+        kernel1 = tinygp.kernels.quasisep.Exp(scale=tau, sigma=amp)
+        kernel2 = tinygp.kernels.quasisep.Exp(scale=tau, sigma=amp * rel_amp)
+
+        gp1 = GaussianProcess(kernel1, T1, diag=diag1)
+        gp2 = GaussianProcess(kernel2, T2, diag=diag2)
+        numpyro.sample("Y1", gp1.numpyro_dist(), obs=Y1)
+        numpyro.sample("Y2", gp2.numpyro_dist(), obs=Y2)

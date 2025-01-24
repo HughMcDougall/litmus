@@ -1,3 +1,6 @@
+'''
+Demonstration of how the lag posterior smooths with bootstrapping
+'''
 import numpy as np
 
 from litmus import *
