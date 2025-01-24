@@ -32,7 +32,7 @@ for mock in MOCKS:
     mock.plot()
 
     for model in MODELS:
-        fitter = litmus.fitting_methods.hessian_scan(model, Nlags = 32, precondition="eig", ELBO_Nsteps = 256)
+        fitter = litmus.fitting_methods.hessian_scan(model, Nlags = 32, precondition="diag", ELBO_Nsteps = 256)
         fitter.verbose=True
         fitter.debug=True
         fitter.fit(mock.lc_1, mock.lc_2)

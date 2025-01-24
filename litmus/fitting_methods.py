@@ -866,17 +866,45 @@ class hessian_scan(fitting_procedure):
         # ----------------------------------
         # SCANNING FOR OPT
 
-        self.msg_run("Moving to new location...")
+        self.msg_run("Moving non-lag params to new location...")
         estmap_params = self.stat_model.scan(start_params=seed_params,
-                                             optim_params=self.stat_model.free_params(),
+                                             optim_params=[key for key in self.stat_model.free_params() if key!='lag'],
                                              data=data,
                                              optim_kwargs=self.optimizer_args_init,
                                              precondition=self.precondition
                                              )
+        if 'lag' in self.stat_model.free_params():
+            self.msg_run("Optimizer settled at new fit:")
+            for it in estmap_params.items():
+                self.msg_run('\t %s: \t %.2f' % (it[0], it[1]))
+            self.msg_run(
+                "Log-Density for this is: %.2f" % self.stat_model.log_density(estmap_params,data)
+            )
+
+            self.msg_run("Finding a good lag...")
+            test_lags = self.stat_model.prior_sample(self.init_samples)['lag']
+            test_samples = _utils.dict_extend(estmap_params, {'lag': test_lags})
+            ll_test = self.stat_model.log_density(test_samples,data)
+            bestlag = test_lags[ll_test.argmax()]
+
+            self.msg_run("Grid finds good lag at %.2f:" %bestlag)
+            self.msg_run(
+                "Log-Density for this is: %.2f" % ll_test.max()
+            )
+
+            estmap_params = self.stat_model.scan(start_params=estmap_params|{'lag': bestlag},
+                                                 optim_params=['lag'],
+                                                 data=data,
+                                                 optim_kwargs=self.optimizer_args_init,
+                                                 precondition=self.precondition
+                                                 )
+
+            self.msg_run("Lag-only opt settled at new lag %.2f..." % estmap_params['lag'])
+
+
         ll_end = self.stat_model.log_density(estmap_params,
                                              data=data
                                              )
-
 
 
         # ----------------------------------
@@ -885,7 +913,6 @@ class hessian_scan(fitting_procedure):
         self.msg_run("Optimizer settled at new fit:")
         for it in estmap_params.items():
             self.msg_run('\t %s: \t %.2f' % (it[0], it[1]))
-
         self.msg_run(
             "Log-Density for this is: %.2f" % ll_end
         )

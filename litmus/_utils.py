@@ -294,7 +294,6 @@ def pack_function(func, packed_keys: ['str'], fixed_values: dict = {}, invert: b
     # --------
 
     sign = -1 if invert else 1
-    print("sign is ", sign)
 
     # --------
     def new_func(X, unpacked_params={}, *args, **kwargs):
