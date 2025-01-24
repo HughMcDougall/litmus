@@ -100,6 +100,12 @@ class stats_model(object):
 
         self._prep_funcs()
 
+    def __setattr__(self, key, value):
+        if key == "_default_prior_ranges" and hasattr(self, "_default_prior_ranges"):
+            super().__setattr__(key, value | self._default_prior_ranges)
+        else:
+            super().__setattr__(key, value)
+
     def _prep_funcs(self):
         # --------------------------------------
         ## Create jitted, vmapped and grad/hessians of all density functions
@@ -683,7 +689,7 @@ class stats_model(object):
 
         elif precondition == "diag":
             D = np.diag(H) ** -0.5
-            D = np.where(D>0,D,1.0)
+            D = np.where(D > 0, D, 1.0)
             H = np.diag(D)
             Hinv = np.diag(1 / D)
 
@@ -1183,7 +1189,6 @@ class GP_simple(stats_model):
         return (out, ll_out)
 
 
-
 # ============================================
 # ============================================
 # Testing
@@ -1260,6 +1265,12 @@ if __name__ == "__main__":
 
 # ------------------
 class GP_simple_null(GP_simple):
+    def __init__(self):
+        self._default_prior_ranges = {
+            'lag': [0.0, 0.0]
+        }
+        super().__init__()
+
     def lc_to_data(self, lc_1: lightcurve, lc_2: lightcurve):
         return super().lc_to_data(lc_1, lc_2) | {
             'T1': lc_1.T,

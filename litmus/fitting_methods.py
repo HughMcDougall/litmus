@@ -868,7 +868,8 @@ class hessian_scan(fitting_procedure):
 
         self.msg_run("Moving non-lag params to new location...")
         estmap_params = self.stat_model.scan(start_params=seed_params,
-                                             optim_params=[key for key in self.stat_model.free_params() if key!='lag'],
+                                             optim_params=[key for key in self.stat_model.free_params() if
+                                                           key != 'lag'],
                                              data=data,
                                              optim_kwargs=self.optimizer_args_init,
                                              precondition=self.precondition
@@ -878,21 +879,21 @@ class hessian_scan(fitting_procedure):
             for it in estmap_params.items():
                 self.msg_run('\t %s: \t %.2f' % (it[0], it[1]))
             self.msg_run(
-                "Log-Density for this is: %.2f" % self.stat_model.log_density(estmap_params,data)
+                "Log-Density for this is: %.2f" % self.stat_model.log_density(estmap_params, data)
             )
 
             self.msg_run("Finding a good lag...")
             test_lags = self.stat_model.prior_sample(self.init_samples)['lag']
             test_samples = _utils.dict_extend(estmap_params, {'lag': test_lags})
-            ll_test = self.stat_model.log_density(test_samples,data)
+            ll_test = self.stat_model.log_density(test_samples, data)
             bestlag = test_lags[ll_test.argmax()]
 
-            self.msg_run("Grid finds good lag at %.2f:" %bestlag)
+            self.msg_run("Grid finds good lag at %.2f:" % bestlag)
             self.msg_run(
                 "Log-Density for this is: %.2f" % ll_test.max()
             )
 
-            estmap_params = self.stat_model.scan(start_params=estmap_params|{'lag': bestlag},
+            estmap_params = self.stat_model.scan(start_params=estmap_params | {'lag': bestlag},
                                                  optim_params=['lag'],
                                                  data=data,
                                                  optim_kwargs=self.optimizer_args_init,
@@ -901,11 +902,9 @@ class hessian_scan(fitting_procedure):
 
             self.msg_run("Lag-only opt settled at new lag %.2f..." % estmap_params['lag'])
 
-
         ll_end = self.stat_model.log_density(estmap_params,
                                              data=data
                                              )
-
 
         # ----------------------------------
         # CHECKING OUTPUTS
@@ -954,24 +953,30 @@ class hessian_scan(fitting_procedure):
                            endpoint=False)[1:]
         lag_terp = np.linspace(*self.stat_model.prior_ranges['lag'], self.grid_Nterp)
 
-        percentiles_old = np.linspace(0, 1, self.grid_Nterp)
+        log_density_all, lags_all = np.empty(shape=(1,)), np.empty(shape=(1,))
         for i in range(self.grid_depth):
             params = _utils.dict_extend(seed_params, {'lag': lags})
-            density = np.exp(self.stat_model.log_density(params, data))
-            density /= density.sum()
+            log_density_all = np.concatenate([log_density_all, self.stat_model.log_density(params, data)])
+            lags_all = np.concatenate([lags_all, lags])
+            I = lags_all.argsort()
+            log_density_all, lags_all = log_density_all[I], lags_all[I]
 
-            density_terp = np.interp(lag_terp, lags, density, left=0, right=0)
+            density = np.exp(log_density_all - log_density_all.max())
+
+            # Linearly interpolate the density profile
+            density_terp = np.interp(lag_terp, lags_all, density, left=0, right=0)
+            density_terp /= density_terp.sum()
+
             gets = np.linspace(0, 1, self.grid_Nterp)
-
-            percentiles_new = np.cumsum(density_terp) * self.grid_bunching + gets * (1 - self.grid_bunching)
-            percentiles = percentiles_old * self.grid_relaxation + percentiles_new * (1 - self.grid_relaxation)
+            percentiles = np.cumsum(density_terp) * self.grid_bunching + gets * (1 - self.grid_bunching)
             percentiles /= percentiles.max()
-            percentiles_old = percentiles.copy()
 
-            lags = np.interp(np.linspace(0, 1, self.Nlags), percentiles, lag_terp, left=lag_terp.min(),
-                             right=lag_terp.max())
+            lags = np.interp(np.linspace(0, 1, self.Nlags), percentiles, lag_terp,
+                             left=lag_terp.min(),
+                             right=lag_terp.max()
+                             )
 
-        return (lags)
+        return lags
 
     # --------------
     # Fiting Funcs
@@ -1245,16 +1250,16 @@ class hessian_scan(fitting_procedure):
         # -------------------
 
         good_tol = self.log_evidences_uncert <= self.opt_tol
-        good_tgrad = abs(self.diagnostic_tgrads) <= np.median(abs(self.diagnostic_tgrads))*10
+        good_tgrad = abs(self.diagnostic_tgrads) <= np.median(abs(self.diagnostic_tgrads)) * 10
         select = np.argwhere(good_tol * good_tgrad).squeeze()
         if not (_utils.isiter(select)): select = np.array([select])
         if len(select) == 0:
             self.msg_err("High uncertainty in slice evidences: result may be innacurate!. Try re-fitting.")
             select = np.where(good_tgrad)[0]
 
-        if len(select)==0:
+        if len(select) == 0:
             self.msg_err("Zero good slices in evidence integral!")
-            #return(0, -np.inf, np.inf)
+            # return(0, -np.inf, np.inf)
 
         # Calculating Evidence
         lags_forint = self.scan_peaks['lag'][select]
@@ -1333,7 +1338,7 @@ class hessian_scan(fitting_procedure):
         peaks = _utils.dict_divide(self.stat_model.to_uncon(self.scan_peaks))
 
         # Get hessians and peak locations
-        if Npeaks >1:
+        if Npeaks > 1:
             I = np.random.choice(range(Npeaks), N, replace=True, p=weights)
         else:
             I = np.zeros(N)
@@ -1480,7 +1485,8 @@ class SVI_scan(hessian_scan):
             with numpyro.handlers.block(hide=self.stat_model.paramnames()):
                 LL = self.stat_model._log_likelihood(params, data)
 
-            dilute = -np.log(self.stat_model.prior_ranges['lag'][1] - self.stat_model.prior_ranges['lag'][0]) if 'lag' in self.stat_model.free_params() else 0.0
+            dilute = -np.log(self.stat_model.prior_ranges['lag'][1] - self.stat_model.prior_ranges['lag'][
+                0]) if 'lag' in self.stat_model.free_params() else 0.0
             numpyro.factor('lag_prior', dilute)
 
         # SVI settup
@@ -1614,7 +1620,6 @@ class SVI_scan(hessian_scan):
         ns = np.arange(2, N // 2) * 2
         MEANS = np.zeros(len(ns))
         UNCERTS = np.zeros(len(ns))
-
 
         for i, n in enumerate(ns):
             ELBO_samps = -1 * losses[-n:]

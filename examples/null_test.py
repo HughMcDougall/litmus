@@ -8,9 +8,9 @@ from litmus import *
 # MODELS
 model_alt = litmus.models.GP_simple()
 model_null_delta = litmus.models.GP_simple_null()
-model_null_delta.set_priors({'lag': [0.0, 0.0]})
+# model_null_delta.set_priors({'lag': [0.0, 0.0]})
 
-MODELS = [model_alt, model_null_delta]
+MODELS = [model_null_delta]
 
 # ------
 # DATA
