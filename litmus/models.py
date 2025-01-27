@@ -81,6 +81,8 @@ class stats_model(object):
 
     def __init__(self, prior_ranges=None):
 
+        self._protected_keys = []
+
         # Setting prior boundaries
         if not hasattr(self, "_default_prior_ranges"):
             self._default_prior_ranges = {
@@ -103,8 +105,13 @@ class stats_model(object):
     def __setattr__(self, key, value):
         if key == "_default_prior_ranges" and hasattr(self, "_default_prior_ranges"):
             super().__setattr__(key, value | self._default_prior_ranges)
+        elif key == "_protected_keys" and hasattr(self, "_protected_keys"):
+            super().__setattr__(key, value + self._protected_keys)
         else:
             super().__setattr__(key, value)
+
+        if hasattr(self, "_protected_keys") and key in self._protected_keys:
+            self._prep_funcs()
 
     def _prep_funcs(self):
         # --------------------------------------
@@ -247,10 +254,10 @@ class stats_model(object):
         if 'lag' not in self.paramnames(): return 0
         if np.ptp(self.prior_ranges['lag']) == 0: return 0
 
-        dist = numpyro.distributions.Uniform(*self.prior_ranges['lag'])
+        lagdist = dist.Uniform(*self.prior_ranges['lag'])
         lag_con = params['lag']
 
-        transforms = {"lag": numpyro.distributions.biject_to(dist.support)}
+        transforms = {"lag": numpyro.distributions.biject_to(lagdist.support)}
 
         def tform(x):
             out = transform_fn(transforms, params | {'lag': x}, invert=True)['lag']
@@ -1042,6 +1049,7 @@ class GP_simple(stats_model):
             'mean': _default_config['mean'],
             'rel_mean': _default_config['rel_mean'],
         }
+        self._protected_keys = ['basekernel']
         super().__init__(prior_ranges=prior_ranges)
 
         self.basekernel = kwargs['basekernel'] if 'basekernel' in kwargs.keys() else tinygp.kernels.quasisep.Exp
@@ -1305,3 +1313,87 @@ class GP_simple_null(GP_simple):
         gp2 = GaussianProcess(kernel2, T2, diag=diag2)
         numpyro.sample("Y1", gp1.numpyro_dist(), obs=Y1)
         numpyro.sample("Y2", gp2.numpyro_dist(), obs=Y2)
+
+
+class whitenoise_null(GP_simple_null):
+
+    def model_function(self, data):
+        lag, logtau, logamp, rel_amp, mean, rel_mean = self.prior()
+
+        T1, Y1, E1 = [data[key] for key in ['T1', 'Y1', 'E1']]
+        T2, Y2, E2 = [data[key] for key in ['T2', 'Y2', 'E2']]
+
+        # Conversions to gp-friendly form
+        amp, tau = jnp.exp(logamp), jnp.exp(logtau)
+
+        diag1, diag2 = jnp.square(E1), jnp.square(E2)
+
+        # amps = jnp.array([amp, rel_amp * amp])
+        # means = jnp.array([mean, mean + rel_mean])
+        Y1 -= mean
+
+        # Build and sample GP
+        kernel1 = tinygp.kernels.quasisep.Exp(scale=tau, sigma=amp)
+
+        gp1 = GaussianProcess(kernel1, T1, diag=diag1)
+        numpyro.sample("Y1", gp1.numpyro_dist(), obs=Y1)
+
+        with numpyro.plate("whitenoise", len(Y2)):
+            numpyro.sample('Y2',
+                           dist.Normal(mean + rel_mean, jnp.sqrt((amp * rel_amp) ** 2 + E2 ** 2)),
+                           obs=Y2)
+
+
+class GP_simple_normalprior(GP_simple):
+    def __init__(self):
+        self._default_prior_ranges = {
+            'lag': [1.0, 1000.0]
+        }
+        self._protected_keys = ['mu_lagpred', 'sig_lagpred']
+        super().__init__()
+
+        # Default values for hbeta AGN @ ~44 dex lum, from R-L relations
+        self.mu_lagpred = 1.44*np.log(10) # ~28 days, from McDougall et al 2025a
+        self.sig_lagpred = np.log(10) * 0.24 # ~1.75 dex, from McDougall et al 2025a
+
+    def prior(self):
+
+
+        domain = numpyro.distributions.constraints.interval(lower_bound=jnp.log(self.prior_ranges['lag'][0]),
+                                                            upper_bound=jnp.log(self.prior_ranges['lag'][1])
+                                                            )
+
+        tform = numpyro.distributions.transforms.ExpTransform()
+        tformed_dist = numpyro.distributions.TransformedDistribution(
+            dist.TruncatedNormal(self.mu_lagpred,self.sig_lagpred, low=jnp.log(self.prior_ranges['lag'][0]), high = jnp.log(self.prior_ranges['lag'][1])), [tform, ]
+        )
+        lag = numpyro.sample('lag', tformed_dist)
+        masked_model = numpyro.handlers.substitute(super().prior, {'lag': lag})
+        with numpyro.handlers.block(hide=['lag']):
+            _, logtau, logamp, rel_amp, mean, rel_mean = masked_model()
+        return lag, logtau, logamp, rel_amp, mean, rel_mean
+
+
+    def uncon_grad_lag(self, params):
+
+        from numpyro.infer.util import transform_fn
+
+        if 'lag' not in self.paramnames(): return 0
+        if np.ptp(self.prior_ranges['lag']) == 0: return 0
+
+        tform = numpyro.distributions.transforms.ExpTransform()
+        lagdist = numpyro.distributions.TransformedDistribution(
+            dist.TruncatedNormal(self.mu_lagpred, self.sig_lagpred, low=jnp.log(self.prior_ranges['lag'][0]),
+                                 high=jnp.log(self.prior_ranges['lag'][1])), [tform, ]
+        )
+        lag_con = params['lag']
+
+        transforms = {"lag": numpyro.distributions.biject_to(lagdist.support)}
+
+        def tform(x):
+            out = transform_fn(transforms, params | {'lag': x}, invert=True)['lag']
+            return (out)
+
+        tform = jax.grad(tform)
+        out = np.log(abs(tform(lag_con)))
+        return out

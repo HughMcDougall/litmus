@@ -119,7 +119,7 @@ def isiter_dict(DICT: dict) -> bool:
     '''
 
     key = list(DICT.keys())[0]
-    if isiter(DICT[key]) and len(DICT[key]) > 1:
+    if isiter(DICT[key]):
         return True
     else:
         return False

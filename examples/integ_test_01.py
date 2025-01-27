@@ -32,8 +32,10 @@ model_7c = litmus.models.dummy_statmodel()
 model_7c.set_priors({'lag': [-1000, 1000.0],
                      'logtau': [-30.0, 30.0]})
 
-model_names = ["normal", "fixed_lag", "narrow_lag", "fix_logtau", "narrow_logtau", "wide_prior", "wide_lag"]
-models = [model_1, model_2, model_3, model_4, model_5, model_6]
+#model_names = ["normal", "fixed_lag", "narrow_lag", "fix_logtau", "narrow_logtau", "wide_prior", "wide_lag"]
+#models = [model_1, model_2, model_3, model_4, model_5, model_6]
+models = [model_1, model_7a, model_7b, model_7c ]
+model_names = ["normal"] + list('abc')
 
 mock = litmus.mocks.mock_C()
 lc_1, lc_2 = mock.lc_1, mock.lc_2
@@ -48,13 +50,13 @@ for model, name in zip(models, model_names):
     PS = litmus.fitting_methods.prior_sampling(model, Nsamples=32 ** len(model.free_params()))
 
     HS1 = litmus.fitting_methods.hessian_scan(model, Nlags=64)
-    HS2 = litmus.fitting_methods.hessian_scan(model, Nlags=64, constrained_domain=True)
-    HS2.name += "-Constrained Domain"
+    HS2 = litmus.fitting_methods.hessian_scan(model, Nlags=64, interp_scale = 'linear')
+    HS2.name += "-Linear Interp Scale"
 
     SV = litmus.fitting_methods.SVI_scan(model, Nlags=64, ELBO_Nsteps = 256, ELBO_particles = 128, constrained_domain = False)
 
     NS = litmus.fitting_methods.nested_sampling(model, num_live_points =800, max_samples = 200_000)
-    methods = [HS1, SV, NS]
+    methods = [HS1, HS2, NS]
 
     for method in methods:
         print("-" * 23)
@@ -92,7 +94,7 @@ print("\n\n log Rat vs Model 1")
 for i, row in enumerate(LZ - np.tile(LZ[0, :], [len(models), 1])):
     print(model_names[i],'\t', row)
 
-
+'''
 for i in range(len(models)):
     f, ([a1,a2,a3], [b1,b2,b3]) = plt.subplots(2,3, sharex=True)
     for fm in [FM[3*i+0],FM[3*i+1]]:
@@ -105,6 +107,8 @@ for i in range(len(models)):
     a3.set_title("tgrad")
     select = np.where(FM[1].converged * FM[0].converged)[0]
     X = FM[0].lags[select]
+    select = select[X.argsort()]
+    X.sort()
     b1.plot(X, FM[1].log_evidences[select] - FM[0].log_evidences[select], '.--')
     b2.plot(X, FM[1].diagnostic_ints[select] - FM[0].diagnostic_ints[select], '.--')
     b3.plot(X, FM[1].diagnostic_tgrads[select] - FM[0].diagnostic_tgrads[select], '.--')
@@ -114,7 +118,7 @@ for i in range(len(models)):
         pass
     f.tight_layout()
     plt.show()
-
+'''
 
 '''
 print("Doing Plots")

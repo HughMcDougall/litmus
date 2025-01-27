@@ -55,7 +55,7 @@ from litmus.models import quickprior
 from litmus.models import _default_config
 from litmus.models import stats_model
 from litmus.lightcurve import lightcurve
-from litmus.lin_scatter import linscatter
+from litmus.lin_scatter import linscatter, expscatter
 
 
 # ============================================
@@ -255,11 +255,14 @@ class fitting_procedure(object):
         if self.__class__.fit == fitting_procedure.fit:
             self.msg_err("Fitting \"%s\" method does not have method .get_samples() implemented" % self.name)
 
-    def get_evidence(self, seed: int = None) -> [float, float, float]:
+    def get_evidence(self, seed: int = None, return_type='linear') -> [float, float, float]:
         """
         Returns the estimated evidence for the fit model.
-        Returns as array-like [Z,dZ-,dZ+]
+        if return_type = 'linear', returns as array-like [Z,-dZ-,dZ+]
+        if return_type = 'log', returns as array-like [logZ,-dlogZ-,dlogZ+]
         """
+
+        assert return_type in ['linear', 'log'], "Return type must be 'linear' or 'log'"
 
         if not self.is_ready: self.readyup()
         if not self.has_run: self.msg_err("Warning! Tried to call get_evidence without running first!")
@@ -271,8 +274,7 @@ class fitting_procedure(object):
 
         if self.__class__.get_evidence == fitting_procedure.get_evidence:
             self.msg_err("Fitting \"%s\" method does not have method .get_evidence() implemented" % self.name)
-
-        return (np.array([0.0, 0.0, 0.0]))
+            return np.array([0.0, 0.0, 0.0])
 
     def get_information(self, seed: int = None) -> [float, float, float]:
         """
@@ -288,7 +290,7 @@ class fitting_procedure(object):
         if self.__class__.get_information == fitting_procedure.get_information:
             self.msg_err("Fitting \"%s\" method does not have method .get_information() implemented" % self.name)
 
-        return (np.array([0.0, 0.0, 0.0]))
+            return np.array([0.0, 0.0, 0.0])
 
     def get_peaks(self, seed=None):
         """
@@ -304,7 +306,7 @@ class fitting_procedure(object):
         if self.__class__.get_peaks == fitting_procedure.get_peaks:
             self.msg_err("Fitting \"%s\" method does not have method .get_peaks() implemented" % self.name)
 
-        return ({}, np.array([]))
+            return {}, np.array([])
 
 
 # ============================================
@@ -498,9 +500,9 @@ class prior_sampling(fitting_procedure):
             key: val[I] for key, val in zip(self.samples.keys(), self.samples.values())
         })
 
-    def get_evidence(self, seed=None) -> [float, float, float]:
+    def get_evidence(self, seed=None, return_type='linear') -> [float, float, float]:
         # -------------------
-        fitting_procedure.get_samples(**locals())
+        fitting_procedure.get_evidence(**locals())
         seed = self._tempseed
         # -------------------
         density = np.exp(self.log_density - self.log_density.max())
@@ -508,11 +510,14 @@ class prior_sampling(fitting_procedure):
         Z = density.mean() * self.stat_model.prior_volume * np.exp(self.log_density.max())
         uncert = density.std() / np.sqrt(self.Nsamples) * self.stat_model.prior_volume
 
-        return (np.array([Z, -uncert, uncert]))
+        if return_type == 'linear':
+            np.array([Z, -uncert, uncert])
+        elif return_type == 'log':
+            np.array([np.log(Z), np.log(1 - uncert / Z), np.log(1 + uncert / Z)])
 
     def get_information(self, seed: int = None) -> [float, float, float]:
         # -------------------
-        fitting_procedure.get_samples(**locals())
+        fitting_procedure.get_information(**locals())
         seed = self._tempseed
         # -------------------
         info_partial = np.random.choice(self.log_density - self.log_prior, self.Nsamples,
@@ -661,7 +666,7 @@ class nested_sampling(fitting_procedure):
 
         return (out)
 
-    def get_evidence(self, seed: int = None) -> [float, float, float]:
+    def get_evidence(self, seed: int = None, return_type='linear') -> [float, float, float]:
         '''
         Returns the -1, 0 and +1 sigma values for model evidence from nested sampling.
         This represents an estimate of numerical uncertainty
@@ -671,15 +676,19 @@ class nested_sampling(fitting_procedure):
 
         l, l_e = self._jaxnsresults.log_Z_mean, self._jaxnsresults.log_Z_uncert
 
-        out = np.exp([
-            l,
-            l - l_e,
-            l + l_e
-        ])
+        if return_type == 'linear':
 
-        out -= np.array([0, out[0], out[0]])
+            out = np.exp([
+                l,
+                l - l_e,
+                l + l_e
+            ])
 
-        return (out)
+            out -= np.array([0, out[0], out[0]])
+        elif return_type == 'log':
+            out = np.array([l, -l_e, l_e])
+
+        return out
 
     def get_information(self, seed: int = None) -> [float, float, float]:
         '''
@@ -772,16 +781,20 @@ class hessian_scan(fitting_procedure):
             'LL_threshold': 100.0,
             'init_samples': 5_000,
             'grid_bunching': 0.5,
-            'grid_relaxation': 0.5,
             'grid_depth': None,
             'grid_Nterp': None,
+            'grid_relaxation': 0.1,  # deprecated, remove
             'grid_firstdepth': 2.0,
             'reverse': True,
+            'split_lags': False,
             'optimizer_args_init': {},
             'optimizer_args': {},
             'seed_params': {},
-            'precondition': 'diag'
+            'precondition': 'diag',
+            'interp_scale': 'log',
         }
+
+        self._allowable_interpscales = ['linear', 'log']
 
         super().__init__(**args_in)
 
@@ -797,6 +810,7 @@ class hessian_scan(fitting_procedure):
         self.log_evidences_uncert: list = None
 
         self.diagnostic_hessians: list = None
+        self.diagnostic_densities: list = None
         self.diagnostic_grads: list = None
         self.diagnostic_ints: list = None
         self.diagnostic_tgrads: list = None
@@ -825,6 +839,7 @@ class hessian_scan(fitting_procedure):
         self.scan_peaks = {key: np.array([]) for key in self.stat_model.paramnames()}
         self.diagnostic_hessians = []
         self.diagnostic_grads = []
+        self.diagnostic_densities = []
         self.log_evidences_uncert = []
 
         self.params_toscan = [key for key in self.stat_model.paramnames() if
@@ -874,12 +889,13 @@ class hessian_scan(fitting_procedure):
                                              optim_kwargs=self.optimizer_args_init,
                                              precondition=self.precondition
                                              )
+        ll_firstscan = self.stat_model.log_density(estmap_params, data)
         if 'lag' in self.stat_model.free_params():
             self.msg_run("Optimizer settled at new fit:")
             for it in estmap_params.items():
                 self.msg_run('\t %s: \t %.2f' % (it[0], it[1]))
             self.msg_run(
-                "Log-Density for this is: %.2f" % self.stat_model.log_density(estmap_params, data)
+                "Log-Density for this is: %.2f" % ll_firstscan
             )
 
             self.msg_run("Finding a good lag...")
@@ -892,6 +908,11 @@ class hessian_scan(fitting_procedure):
             self.msg_run(
                 "Log-Density for this is: %.2f" % ll_test.max()
             )
+
+            if ll_test.max() > ll_firstscan:
+                bestlag = bestlag
+            else:
+                bestlag = estmap_params['lag']
 
             estmap_params = self.stat_model.scan(start_params=estmap_params | {'lag': bestlag},
                                                  optim_params=['lag'],
@@ -1001,7 +1022,13 @@ class hessian_scan(fitting_procedure):
         # Make a grid
 
         lags = self.make_grid(data, seed_params=self.estmap_params)
-        if self.reverse: lags = lags[::-1]
+        if self.split_lags:
+            split_index = abs(lags - self.estmap_params['lag']).argmin()
+            lags_left, lags_right = lags[:split_index], lags[split_index:]
+            lags = np.concatenate([lags_right, lags_left[::-1]])
+            if self.reverse: lags = lags = np.concatenate([lags_left[::-1], lags_right])
+        elif self.reverse:
+            lags = lags[::-1]
         self.lags = lags
 
         self.has_prefit = True
@@ -1123,6 +1150,9 @@ class hessian_scan(fitting_procedure):
                              "\nLarge Drop?:\t", bigdrop,
                              "\nOptimizer Diverged:\t", diverged)
 
+        if sum(self.converged) == 0:
+            self.msg_err("All slices catastrophically diverged! Try different starting conditions and/or grid spacing")
+
         self.msg_run("Scanning Complete. Calculating laplace integrals...")
 
         # --------
@@ -1133,6 +1163,7 @@ class hessian_scan(fitting_procedure):
         self.diagnostic_ints = np.array(Ints).squeeze().flatten()
 
         self.scan_peaks = _utils.dict_combine(scanned_optima)
+        self.diagnostic_densities = self.stat_model.log_density(self.scan_peaks, data)
         self.log_evidences = np.array(Zs).squeeze().flatten()
         self.log_evidences_uncert = np.square(tols).squeeze().flatten()
 
@@ -1240,14 +1271,30 @@ class hessian_scan(fitting_procedure):
         plt.grid()
         plt.show()
 
-    # --------------
-    # Outputs
+    def diagnostic_lagplot(self, show=True):
+        f, (a1, a2) = plt.subplots(2, 1, sharex=True)
 
-    def get_evidence(self, seed: int = None) -> [float, float, float]:
-        # -------------------
-        fitting_procedure.get_evidence(**locals())
-        seed = self._tempseed
-        # -------------------
+        lags_forint, logZ_forint, density_forint = self._get_slices('lags', 'logZ', 'densities')
+
+        # ---------------------
+        for a in (a1, a2):
+            a.scatter(lags_forint, np.exp(logZ_forint - logZ_forint.max()), label="Evidence")
+            a.scatter(lags_forint, np.exp(density_forint - density_forint.max()), label="Density")
+            a.grid()
+
+        a2.set_yscale('log')
+        a1.legend()
+
+        # --------------
+        # Outputs
+        if show: plt.show()
+        return f
+
+    def _get_slices(self, *args):
+        '''
+        Summarizes the currently good scan peaks & lag slices
+        Combined in one function for utility
+        '''
 
         good_tol = self.log_evidences_uncert <= self.opt_tol
         good_tgrad = abs(self.diagnostic_tgrads) <= np.median(abs(self.diagnostic_tgrads)) * 10
@@ -1257,54 +1304,118 @@ class hessian_scan(fitting_procedure):
             self.msg_err("High uncertainty in slice evidences: result may be innacurate!. Try re-fitting.")
             select = np.where(good_tgrad)[0]
 
-        if len(select) == 0:
-            self.msg_err("Zero good slices in evidence integral!")
-            # return(0, -np.inf, np.inf)
-
         # Calculating Evidence
+        select = select[self.scan_peaks['lag'][select].argsort()]
         lags_forint = self.scan_peaks['lag'][select]
         logZ_forint = self.log_evidences[select]
-        I = lags_forint.argsort()
-        lags_forint, logZ_forint = lags_forint[I], logZ_forint[I]
+        logZ_uncert_forint = self.log_evidences_uncert[select]
 
+        grads = np.array([self.diagnostic_grads[i] for i in select]) if len(self.diagnostic_grads) > 0 else np.zeros(
+            len(select))
+        densities = self.diagnostic_densities[select]
+
+        peaks = {key: val[select] for key, val in self.scan_peaks.items()}
+        peaks = np.array(_utils.dict_divide(peaks))
+        covars = -1 * np.array([np.linalg.inv(self.diagnostic_hessians[i]) for i in select])
+
+        out = {
+            'lags': lags_forint,
+            'logZ': logZ_forint,
+            'dlogZ': logZ_uncert_forint,
+            'peaks': peaks,
+            'covars': covars,
+            'densities': densities,
+            'grads': grads,
+        }
+
+        if args is None:
+            return out
+        else:
+            return (out[key] for key in args)
+
+    def get_evidence(self, seed: int = None, return_type='linear') -> [float, float, float]:
+        # -------------------
+        fitting_procedure.get_evidence(**locals())
+        seed = self._tempseed
+        # -------------------
+
+        assert self.interp_scale in self._allowable_interpscales, "Interp scale %s not recognised. Must be selection from %s" % (
+            self.interp_scale, self._allowable_interpscales)
+
+        lags_forint, logZ_forint, logZ_uncert_forint = self._get_slices('lags', 'logZ', 'dlogZ')
         minlag, maxlag = self.stat_model.prior_ranges['lag']
+
         if maxlag - minlag == 0:
             Z = np.exp(logZ_forint.max())
             imax = logZ_forint.argmax()
-            uncert_plus, uncert_minus = self.log_evidences_uncert[imax], self.log_evidences_uncert[imax]
+            uncert_plus, uncert_minus = logZ_uncert_forint[imax], logZ_uncert_forint[imax]
+
+
         else:
-            dlag = [*np.diff(lags_forint) / 2, 0]
-            dlag[1:] += np.diff(lags_forint) / 2
-            dlag[0] += lags_forint.min() - minlag
-            dlag[-1] += maxlag - lags_forint.max()
 
-            dlogZ = logZ_forint + np.log(dlag)
-            dZ = np.exp(dlogZ - dlogZ.max())
-            Z = dZ.sum() * np.exp(dlogZ.max())
+            if self.interp_scale == 'linear':
+                dlag = [*np.diff(lags_forint) / 2, 0]
+                dlag[1:] += np.diff(lags_forint) / 2
+                dlag[0] += lags_forint.min() - minlag
+                dlag[-1] += maxlag - lags_forint.max()
 
-            # -------------------------------------
-            # Get Uncertainties
+                dlogZ = logZ_forint + np.log(dlag)
+                dZ = np.exp(dlogZ - dlogZ.max())
+                Z = dZ.sum() * np.exp(dlogZ.max())
 
-            # Estimate uncertainty from ~dt^2 error scaling
-            Z_subsample = np.trapz(dZ[::2], lags_forint[::2])
-            Z_subsample *= np.exp(self.log_evidences[select].max())
-            uncert_numeric = abs(Z - Z_subsample) / 3
+                # -------------------------------------
+                # Get Uncertainties
 
-            if not isinstance(self, SVI_scan):
-                uncert_tol = (dZ * self.log_evidences_uncert[select]).sum()
-                uncert_tol *= np.exp(self.log_evidences[select].max())
+                # todo Fix this to be generic and move outside of scope
+                # Estimate uncertainty from ~dt^2 error scaling
+                dlag_sub = [*np.diff(lags_forint[::2]) / 2, 0]
+                dlag_sub[1:] += np.diff(lags_forint[::2]) / 2
+                dlag_sub[0] += lags_forint.min() - minlag
+                dlag_sub[-1] += maxlag - lags_forint.max()
 
-                self.msg_debug("Evidence Est: \t %.2e" % Z)
-                self.msg_debug(
-                    "Evidence uncerts: \n Numeric: \t %.2e \n Convergence: \t %.2e" % (uncert_numeric, uncert_tol))
+                dlogZ_sub= logZ_forint[::2] + np.log(dlag_sub)
+                dZ_sub = np.exp(dlogZ_sub - dlogZ_sub.max())
+                Z_subsample = dZ_sub.sum() * np.exp(dlogZ_sub.max())
+                uncert_numeric = abs(Z - Z_subsample) / np.sqrt(17)
 
-                uncert_plus = np.sqrt(np.square(np.array([uncert_numeric, uncert_tol])).sum())
-                uncert_minus = uncert_numeric
+                uncert_tol = np.square(dZ * logZ_uncert_forint).sum()
+                uncert_tol = np.sqrt(uncert_tol)
+                uncert_tol *= np.exp(dlogZ.max())
 
-            else:
-                uncert_plus, uncert_minus = uncert_numeric, uncert_numeric
 
-        return (np.array([Z, uncert_minus, uncert_plus]))
+            elif self.interp_scale == 'log':
+                # dZ = dXdY/dln|Y|
+                dlag = np.diff(lags_forint)
+                dY = np.diff(np.exp(logZ_forint - logZ_forint.max()))
+                dE = np.diff(logZ_forint)
+                dZ = dlag * dY / dE
+                Z = np.sum(dZ) * np.exp(logZ_forint.max())
+
+                uncert_tol = 4 * np.square(
+                    np.exp(logZ_forint - logZ_forint.max())[:-1] - dZ / dE
+                ) * logZ_uncert_forint[:-1]
+                uncert_tol += np.square(logZ_uncert_forint[-1] * np.exp(logZ_forint - logZ_forint.max())[-1])
+                uncert_tol = np.sqrt(uncert_tol.sum())
+                uncert_tol *= np.exp(logZ_forint.max())
+
+                dlag_sub = np.diff(lags_forint[::2])
+                dY_sub = np.diff(np.exp(logZ_forint[::2] - logZ_forint.max()))
+                dE_sub = np.diff(logZ_forint[::2])
+                dZ_sub = dlag_sub * dY_sub / dE_sub
+                Z_subsample = np.sum(dZ_sub) * np.exp(logZ_forint.max())
+                uncert_numeric = abs(Z - Z_subsample) / np.sqrt(17)
+
+            self.msg_debug("Evidence Est: \t %.2e" % Z)
+            self.msg_debug(
+                "Evidence uncerts: \n Numeric: \t %.2e \n Convergence: \t %.2e" % (uncert_numeric, uncert_tol))
+
+            uncert_plus = uncert_numeric + uncert_tol.sum()
+            uncert_minus = uncert_numeric
+
+        if return_type == 'linear':
+            return np.array([Z, -uncert_minus, uncert_plus])
+        elif return_type == 'log':
+            return np.array([np.log(Z), np.log(1 - uncert_minus / Z), np.log(1 + uncert_plus / Z)])
 
     def get_samples(self, N: int = 1, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
         # -------------------
@@ -1312,15 +1423,19 @@ class hessian_scan(fitting_procedure):
         seed = self._tempseed
         # -------------------
 
+        assert self.interp_scale in self._allowable_interpscales, "Interp scale %s not recognised. Must be selection from %s" % (
+            self.interp_scale, self._allowable_interpscales)
+        lags_forint, logZ_forint, peaks, covars = self._get_slices('lags', 'logZ', 'peaks', 'covars')
+
+        if len(lags_forint) == 0:
+            self.msg_err("Zero good slices in evidence integral!")
+            return (0, -np.inf, np.inf)
+
         # Get weights and peaks etc
-        Npeaks = len(self.log_evidences)
-
-        lags_forint = self.scan_peaks['lag']
+        Npeaks = len(lags_forint)
         minlag, maxlag = self.stat_model.prior_ranges['lag']
-        if self.reverse:
-            minlag, maxlag = maxlag, minlag
 
-        Y = np.exp(self.log_evidences - self.log_evidences.max()).squeeze()
+        Y = np.exp(logZ_forint - logZ_forint.max()).squeeze()
 
         dlag = [*np.diff(lags_forint) / 2, 0]
         dlag[1:] += np.diff(lags_forint) / 2
@@ -1334,10 +1449,6 @@ class hessian_scan(fitting_procedure):
         weights /= weights.sum()
 
         # Get hessians and peak locations
-        covars = np.array([np.linalg.inv(H) for H in self.diagnostic_hessians])
-        peaks = _utils.dict_divide(self.stat_model.to_uncon(self.scan_peaks))
-
-        # Get hessians and peak locations
         if Npeaks > 1:
             I = np.random.choice(range(Npeaks), N, replace=True, p=weights)
         else:
@@ -1348,15 +1459,17 @@ class hessian_scan(fitting_procedure):
         # Sweep over scan peaks and add scatter
         outs = []
         for i in range(Npeaks):
-            if to_choose[i] != 0:
+            if to_choose[i] > 0:
+                peak_uncon = self.stat_model.to_uncon(peaks[i])
+
                 # Get normal dist properties in uncon space in vector form
-                mu = _utils.dict_pack(peaks[i], keys=self.params_toscan)
+                mu = _utils.dict_pack(peak_uncon, keys=self.params_toscan)
                 cov = covars[i]
 
                 # Generate samples
                 samps = np.random.multivariate_normal(mean=mu, cov=cov, size=to_choose[i])
                 samps = _utils.dict_unpack(samps.T, keys=self.params_toscan, recursive=False)
-                samps = _utils.dict_extend(peaks[i], samps)
+                samps = _utils.dict_extend(peak_uncon, samps)
 
                 # Reconvert to constrained space
                 samps = self.stat_model.to_con(samps)
@@ -1380,8 +1493,10 @@ class hessian_scan(fitting_procedure):
 
                     # Perform CDF shift
                     Ti, Yi = [tprev, tnow, tnext], [yprev, ynow, ynext]
-                    tshift = linscatter(Ti, Yi, N=to_choose[i])
-
+                    if self.interp_scale == 'linear':
+                        tshift = linscatter(Ti, Yi, N=to_choose[i])
+                    elif self.interp_scale == 'log':
+                        tshift = expscatter(Ti, Yi, N=to_choose[i])
                     if np.isnan(tshift).any():
                         self.msg_err("Something wrong with the lag shift at node %i in sample generation" % i)
                     else:
@@ -1577,15 +1692,18 @@ class SVI_scan(hessian_scan):
                 self.msg_debug("Reason for failure: \n large ELBO drop: \t %r \n diverged: \t %r" % (
                     big_drop, diverged))
 
+        self.msg_run("Scanning Complete. Calculating ELBO integrals...")
+        if sum(self.converged) == 0:
+            self.msg_err("All slices catastrophically diverged! Try different starting conditions and/or grid spacing")
+
         self.diagnostic_ints = np.array(ELBOS_tosave)
 
         self.log_evidences_uncert = np.array(ElBOS_uncert)
         self.diagnostic_losses = np.array(diagnostic_losses)
         self.diagnostic_hessians = np.array(diagnostic_hessians)
 
-        self.msg_run("Scanning Complete. Calculating ELBO integrals...")
-
         self.scan_peaks = _utils.dict_combine(scanned_optima)
+        self.diagnostic_densities = self.stat_model.log_density(self.scan_peaks, data)
 
         # ---------------------------------------------------------------------------------
         # For each of these peaks, estimate the evidence

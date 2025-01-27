@@ -65,11 +65,14 @@ class LITMUS(object):
 
         self.Nsamples = 50_000
         self.samples = {}
+        self.prior_samples = self.model.prior_sample(self.Nsamples)
         self.C = ChainConsumer()
 
         self.C.set_override(ChainConfig(smooth=0, linewidth=2, plot_cloud=True, shade_alpha=0.5))
 
+        # self.C.add_chain(Chain(samples=DataFrame.from_dict(self.prior_samples), name="Prior", color='gray'))
         if self.fitproc.has_run:
+            self.samples = self.fitproc.get_samples(self.Nsamples)
             self.samples = self.fitproc.get_samples(self.Nsamples)
             self.C.add_chain(Chain(samples=DataFrame.from_dict(self.samples), name="Lightcurves %i-%i"))
             self.msg_err("Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour.")
@@ -219,7 +222,7 @@ class LITMUS(object):
 
         return fig
 
-    def lag_plot(self, Nsamples: int = None, show=True, extras=True, dir=None):
+    def lag_plot(self, Nsamples: int = None, show=True, extras=True, dir=None, prior = False):
         '''
         Creates a nicely formatted chainconsumer plot of the parameters
         Returns the ChainConsumer object
@@ -328,6 +331,7 @@ if __name__ == "__main__":
     lag_true = mymock.lag
 
     test_model = models.GP_simple()
+    test_model.set_priors(mock.params())
 
     seed_params = {}
 

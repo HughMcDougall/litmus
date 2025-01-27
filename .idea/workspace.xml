@@ -5,8 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/integ_test_01.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/integ_test_01.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/examples/null_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/null_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/lin_scatter.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/lin_scatter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/litmusclass.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/litmusclass.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -191,6 +196,12 @@
       <workItem from="1734258739418" duration="1018000" />
       <workItem from="1736736844187" duration="24946000" />
       <workItem from="1737080436337" duration="93811000" />
+      <workItem from="1737712222544" duration="17010000" />
+      <workItem from="1737776539518" duration="3351000" />
+      <workItem from="1737779949477" duration="2953000" />
+      <workItem from="1737784543528" duration="9984000" />
+      <workItem from="1737919672402" duration="6254000" />
+      <workItem from="1737959351473" duration="7453000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />
