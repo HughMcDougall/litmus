@@ -13,6 +13,7 @@ from typing import Callable
 import jaxopt
 import numpyro
 import numpy as np
+import matplotlib.pyplot as plt
 
 # ------
 # Samplers, stats etc
@@ -1293,6 +1294,13 @@ class hessian_scan(fitting_procedure):
         '''
         Summarizes the currently good scan peaks & lag slices
         Combined in one function for utility
+            'lags': lags_forint,
+            'logZ': logZ_forint,
+            'dlogZ': logZ_uncert_forint,
+            'peaks': peaks,
+            'covars': covars,
+            'densities': densities,
+            'grads': grads,
         '''
 
         good_tol = self.log_evidences_uncert <= self.opt_tol

@@ -150,7 +150,7 @@ class LITMUS(object):
             # Write rows
             writer.writerows(rows)
 
-    def read_chain(self, path, header = None):
+    def read_chain(self, path, header=None):
         # Reading the CSV into a DataFrame
         df = pd.read_csv(path)
 
@@ -162,7 +162,7 @@ class LITMUS(object):
         # Converting DataFrame to dictionary of numpy arrays
         out = {col: df[col].to_numpy() for col in keys}
 
-        if out.keys()<=set(self.fitproc.stat_model.paramnames()):
+        if out.keys() <= set(self.fitproc.stat_model.paramnames()):
             self.samples = out
             self.msg_run("Loaded chain /w headings", *keys)
         else:
@@ -174,6 +174,7 @@ class LITMUS(object):
         Allows editing while prote
         '''
         self.C.set_override(ChainConfig(**kwargs))
+
     # ----------------------
 
     # Plotting
@@ -202,8 +203,8 @@ class LITMUS(object):
             _config = PlotConfig(summarise=True,
                                  **CC_kwargs)
         C.plotter.set_config(_config)
-        params_toplot = [param for param in self.model.free_params() if self.samples[param].ptp()!=0]
-        if len(params_toplot) ==0:
+        params_toplot = [param for param in self.model.free_params() if self.samples[param].ptp() != 0]
+        if len(params_toplot) == 0:
             fig = plt.figure()
             if show: plt.show()
             return fig
@@ -222,7 +223,7 @@ class LITMUS(object):
 
         return fig
 
-    def lag_plot(self, Nsamples: int = None, show=True, extras=True, dir=None, prior = False):
+    def lag_plot(self, Nsamples: int = None, show=True, extras=True, dir=None, prior=False):
         '''
         Creates a nicely formatted chainconsumer plot of the parameters
         Returns the ChainConsumer object
@@ -246,14 +247,22 @@ class LITMUS(object):
 
         fig.axes[0].grid()
 
+        # Method specific plotting of fun stuff
         if extras:
-
             if isinstance(self.fitproc, fitting_methods.hessian_scan):
-                X, Y = self.fitproc.scan_peaks['lag'], self.fitproc.log_evidences
-                Y -= Y.max()
-                Y = np.exp(Y)
-                Y /= np.trapz(Y, X)
-                fig.axes[0].plot(X, Y)
+                X, logY = self.fitproc._get_slices('lags', 'logZ')
+
+                if self.fitproc.interp_scale == 'linear':
+                    Y = np.exp(logY - logY.max())
+                    Y /= np.trapz(Y, X)
+                    fig.axes[0].plot(X, Y)
+
+                elif self.fitproc.interp_scale == 'log':
+                    Xterp = np.linspace(*self.model.prior_ranges['lag'], self.Nsamples)
+                    logYterp = np.interp(Xterp, X, logY, left=logY[0], right=logY[-1])
+                    Yterp = np.exp(logYterp - logYterp.max())
+                    Yterp /= np.trapz(Yterp, Xterp)
+                    fig.axes[0].plot(Xterp, Yterp)
 
                 plt.scatter(self.fitproc.lags, np.zeros_like(self.fitproc.lags), c='red', s=20)
                 plt.scatter(X, np.zeros_like(X), c='black', s=20)

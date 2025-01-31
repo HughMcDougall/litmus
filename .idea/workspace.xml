@@ -6,13 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/et" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/et 564a1cc --hard" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/null_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/null_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/test_hessianscan.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/test_hessianscan.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/ICCF_working.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/ICCF_working.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/litmus_class_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/litmus_class_example.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/todo.md" beforeDir="false" afterPath="$PROJECT_DIR$/todo.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/litmusclass.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/litmusclass.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -206,7 +202,8 @@
       <workItem from="1738029306697" duration="7841000" />
       <workItem from="1738122607985" duration="391000" />
       <workItem from="1738123091150" duration="1157000" />
-      <workItem from="1738292584695" duration="395000" />
+      <workItem from="1738292584695" duration="1180000" />
+      <workItem from="1738294495585" duration="939000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />
