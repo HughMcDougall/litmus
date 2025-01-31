@@ -54,7 +54,7 @@ def correlfunc_jax(lag: float, X1: [float], Y1: [float], X2: [float], Y2: [float
     Like correl_jax, but with signal 2 delayed by some lag
     '''
     return (
-        correl_jax(X1, Y1, X2 + lag, Y2, Nterp)
+        correl_jax(X1, Y1, X2 - lag, Y2, Nterp)
     )
 
 
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     # Mock Data
     from mocks import mock_A, mock_B, mock_C
 
-    mock = mock_B(seed=3)
+    mock = mock_A
     mock01 = mock.lc_1
     mock02 = mock.lc_2
 

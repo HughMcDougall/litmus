@@ -68,13 +68,13 @@ fitting_method = hessian_scan(stat_model=test_model,
                               init_samples=1_000,
                               grid_bunching=0.8,
                               optimizer_args={'tol': 1E-4,
-                                              'increase_factor': 1.2,},
-                              optimizer_args_init={'tol': 1E-10,
-                                              'maxiter': 1024,
                                               'increase_factor': 1.2, },
+                              optimizer_args_init={'tol': 1E-10,
+                                                   'maxiter': 1024,
+                                                   'increase_factor': 1.2, },
                               reverse=False,
                               debug=True,
-                              precondition = "cholesky"
+                              precondition="cholesky"
                               )
 
 print("Doing prefit in main")

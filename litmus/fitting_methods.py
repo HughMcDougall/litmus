@@ -4,34 +4,18 @@ Contains fitting procedures to be executed by the litmus class object
 HM 24
 '''
 
+import importlib.util
 # ============================================
 # IMPORTS
 import sys
-from functools import partial
-import importlib.util
-from warnings import warn
 from typing import Callable
 
-import numpy as np
-from etils.enp.compat import astype
-from numpy import nan
-import typing
-
-import matplotlib.pyplot as plt
-
-import jax
-import jax.numpy as jnp
 import jaxopt
-from jax.random import PRNGKey
+import numpyro
+import numpy as np
 
 # ------
 # Samplers, stats etc
-
-from tinygp import GaussianProcess
-
-import numpyro
-from numpyro import distributions as dist
-from numpyro import infer
 
 has_jaxns = importlib.util.find_spec('jaxns') is not None
 has_polychord = importlib.util.find_spec('pypolychord') is not None
@@ -43,7 +27,7 @@ if has_jaxns:
         has_jaxns = False
         print("Warning! Something likely wrong in jaxns install or with numpyro integration", file=sys.stderr)
 if has_polychord:
-    import pypolychord
+    pass
 
 # ------
 # Internal
@@ -52,7 +36,6 @@ import litmus.clustering as clustering
 from litmus.ICCF_working import *
 
 from litmus.models import quickprior
-from litmus.models import _default_config
 from litmus.models import stats_model
 from litmus.lightcurve import lightcurve
 from litmus.lin_scatter import linscatter, expscatter
@@ -228,8 +211,8 @@ class fitting_procedure(object):
             self._tempseed = _utils.randint()
         seed = self._tempseed
 
-        self._data = self.stat_model.lc_to_data(lc_1, lc_2)
-        data = self._data
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+        self._data = data
 
         # An error message raised if this fitting procedure doesn't have .fit()
         if self.__class__.fit == fitting_procedure.fit:
@@ -419,6 +402,7 @@ class ICCF(fitting_procedure):
 
 # ============================================
 # Random Prior Sampling
+
 
 class prior_sampling(fitting_procedure):
     """
@@ -786,7 +770,7 @@ class hessian_scan(fitting_procedure):
             'grid_relaxation': 0.1,  # deprecated, remove
             'grid_firstdepth': 2.0,
             'reverse': True,
-            'split_lags': False,
+            'split_lags': True,
             'optimizer_args_init': {},
             'optimizer_args': {},
             'seed_params': {},
@@ -946,13 +930,16 @@ class hessian_scan(fitting_procedure):
             estmap_params = seed_params
         return estmap_params
 
-    def make_grid(self, data, seed_params=None):
-        '''
+    def make_grid(self, data, seed_params=None, interp_scale='log'):
+        """
         :param data:
         :param seed_params:
+        :param interp_scale:
         :return:
-        '''
+        """
         # todo - reformat this and the make_grid for better consistency in drawing from estmap and seed params
+
+        assert interp_scale in ['log', 'linear'], "Interp scale was %s, must be in 'log' or 'linear'" % interp_scale
 
         if not self.is_ready: self.readyup()
 
@@ -982,11 +969,23 @@ class hessian_scan(fitting_procedure):
             I = lags_all.argsort()
             log_density_all, lags_all = log_density_all[I], lags_all[I]
 
-            density = np.exp(log_density_all - log_density_all.max())
+            if interp_scale == 'linear':
 
-            # Linearly interpolate the density profile
-            density_terp = np.interp(lag_terp, lags_all, density, left=0, right=0)
-            density_terp /= density_terp.sum()
+                density = np.exp(log_density_all - log_density_all.max())
+
+                # Linearly interpolate the density profile
+                density_terp = np.interp(lag_terp, lags_all, density, left=0, right=0)
+                density_terp /= density_terp.sum()
+
+
+            elif interp_scale == 'log':
+
+                density = np.exp(log_density_all - log_density_all.max())
+
+                # Linearly interpolate the density profile
+                log_density_terp = np.interp(lag_terp, log_density_all - log_density_all.max(), density, left=log_density_all[0], right=log_density_all[-1])
+                density_terp = np.exp(log_density_terp)
+                density_terp /= density_terp.sum()
 
             gets = np.linspace(0, 1, self.grid_Nterp)
             percentiles = np.cumsum(density_terp) * self.grid_bunching + gets * (1 - self.grid_bunching)
@@ -1373,7 +1372,7 @@ class hessian_scan(fitting_procedure):
                 dlag_sub[0] += lags_forint.min() - minlag
                 dlag_sub[-1] += maxlag - lags_forint.max()
 
-                dlogZ_sub= logZ_forint[::2] + np.log(dlag_sub)
+                dlogZ_sub = logZ_forint[::2] + np.log(dlag_sub)
                 dZ_sub = np.exp(dlogZ_sub - dlogZ_sub.max())
                 Z_subsample = dZ_sub.sum() * np.exp(dlogZ_sub.max())
                 uncert_numeric = abs(Z - Z_subsample) / np.sqrt(17)
@@ -1884,40 +1883,40 @@ class JAVELIKE(fitting_procedure):
 
 # =====================================================
 if __name__ == "__main__":
-    from mocks import mock_A, mock_B, mock_C
+    import mocks
 
     import matplotlib.pyplot as plt
     from models import dummy_statmodel
 
     #::::::::::::::::::::
 
-    mock = mock_A(seed=5)
+    mock = mocks.mock(seed=2, lag=100, season=0)
     mock01 = mock.lc_1
     mock02 = mock.lc_2
     lag_true = mock.lag
 
-    plt.figure()
-    mock().plot(axis=plt.gca())
-    plt.legend()
-    plt.grid()
-    plt.show()
-
+    mock().plot()
     #::::::::::::::::::::
     test_statmodel = dummy_statmodel()
 
     # ICCF Test
-    test_ICCF = ICCF(Nboot=128, Nterp=128, Nlags=128, stat_model=test_statmodel)
-    print("Doing Fit")
+    print("Doing ICCF Testing:")
+    test_ICCF = ICCF(Nboot=128, Nterp=1024, Nlags=1024, stat_model=test_statmodel, debug=True)
+    print("\tDoing Fit")
     test_ICCF.fit(mock01, mock02)
-    print("Fit done")
+    print("\tFit done")
 
     ICCF_samples = test_ICCF.get_samples()['lag']
-    print(ICCF_samples.mean(), ICCF_samples.std())
+    print("\tICCF Results , dT = %.2f +/- %.2f compared to true lag of %.2f"
+          % (ICCF_samples.mean(), ICCF_samples.std(), lag_true)
+          )
 
     plt.figure()
     plt.hist(ICCF_samples, histtype='step', bins=24)
     plt.axvline(lag_true, ls='--', c='k', label="True Lag")
     plt.axvline(ICCF_samples.mean(), ls='--', c='r', label="Mean Lag")
+    plt.axvline(ICCF_samples.mean() + ICCF_samples.std(), ls=':', c='r')
+    plt.axvline(ICCF_samples.mean() - ICCF_samples.std(), ls=':', c='r')
     plt.title("ICCF Results")
     plt.legend()
     plt.grid()
@@ -1926,15 +1925,24 @@ if __name__ == "__main__":
     # ---------------------
     # Prior Sampling
 
+    print("Doing PriorSampling Testing:")
     test_prior_sampler = prior_sampling(stat_model=test_statmodel)
+    print("\tDoing Fit")
     test_prior_sampler.fit(lc_1=mock01, lc_2=mock02, seed=0)
+    print("\tFit done")
+
     test_samples = test_prior_sampler.get_samples(512, importance_sampling=True)
+    print("\tPriorSampling Results , dT = %.2f +/- %.2f compared to true lag of %.2f"
+          % (test_samples['lag'].mean(), test_samples['lag'].std(), test_statmodel.lag_peak)
+          )
 
     plt.figure()
-    plt.title("Dummy prior sampling test")
+    plt.title("Prior Sampling")
     plt.hist(test_samples['lag'], histtype='step', density=True)
-    plt.axvline(250.0, ls='--', c='k')
+    plt.axvline(test_statmodel.lag_peak, ls='--', c='k')
     plt.axvline(test_samples['lag'].mean(), ls='--', c='r')
+    plt.axvline(test_samples['lag'].mean() + test_samples['lag'].std(), ls=':', c='r')
+    plt.axvline(test_samples['lag'].mean() - test_samples['lag'].std(), ls=':', c='r')
     plt.ylabel("Posterior Density")
     plt.xlabel("Lag")
     plt.grid()

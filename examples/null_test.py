@@ -12,13 +12,13 @@ model_alt_norm.mu_lagpred = 4.3
 model_null = litmus.models.GP_simple_null()
 model_whitenoise = litmus.models.whitenoise_null()
 
-MODELS = [model_alt, model_alt_norm, model_null, model_whitenoise]
+MODELS = [model_alt, model_null, model_whitenoise]
 
 # ------
 # DATA
-mock1 = litmus.mocks.mock(1, lag = 540, tau=200, E = [0.1,0.25])
-mock2 = mock1.copy(seed=2)
-mock3 = litmus.mocks.mock(2, lag = 180, tau=0.001, E = [0.1,0.25])
+mock1 = litmus.mocks.mock(3, lag = 540, tau=50, E = [0.2,0.5])
+mock2 = mock1.copy(seed=5)
+mock3 = litmus.mocks.mock(8, lag = 180, tau=0.001, E = [0.2,0.5])
 
 mock1_null, mock1_whitenoise = mock1.copy(), mock1.copy()
 mock1_null.swap_response(mock2)
@@ -32,6 +32,11 @@ fig, axes = plt.subplots(len(MOCKS), 1, sharex=True, sharey=True)
 for mock, ax in zip(MOCKS, axes):
     mock.plot(axis=ax, show=False)
     ax.grid()
+fig.supxlabel("Time (Days)"), fig.supylabel("Signal (Arb Units)")
+axes[0].set_title("True Lag Response"), axes[1].set_title("Decoupled Response"), axes[2].set_title("White Noise Response")
+axes[0].legend()
+fig.tight_layout()
+fig.savefig("./null_test_vague.pdf", dpi=300)
 plt.show()
 
 # ------
@@ -44,7 +49,7 @@ for mock in MOCKS:
         if i<len(Z):
             i += 1
             continue
-        fitter = litmus.fitting_methods.hessian_scan(model, Nlags=64, precondition="diag", ELBO_Nsteps=512, grid_bunching = 0.25)
+        fitter = litmus.fitting_methods.SVI_scan(model, Nlags=64, precondition="diag", ELBO_Nsteps=512, grid_bunching = 0.25)
         fitter.name = mock.name + " " + model.name
         fitter.verbose = True
         fitter.debug = True
