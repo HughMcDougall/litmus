@@ -1256,13 +1256,16 @@ class hessian_scan(fitting_procedure):
         loss = self.log_evidences_uncert
 
         lagplot = self.scan_peaks['lag']
+        I = self.scan_peaks['lag'].argsort()
+        lagplot = lagplot[I]
+        Y = self.estmap_tol[I]
 
         # ---------
         fig = plt.figure()
         plt.ylabel("Loss Norm, $ \\vert \Delta x / \sigma_x \\vert$")
         plt.xlabel("Scan Lag No.")
         plt.plot(lagplot, loss, 'o-', c='k', label="Scan Losses")
-        plt.scatter(self.estmap_params['lag'], self.estmap_tol, c='r', marker='x', s=40, label="Initial MAP Scan Loss")
+        plt.scatter(self.estmap_params['lag'], Y, c='r', marker='x', s=40, label="Initial MAP Scan Loss")
         plt.axhline(self.opt_tol, ls='--', c='k', label="Nominal Tolerance Limit")
         plt.legend(loc='best')
 

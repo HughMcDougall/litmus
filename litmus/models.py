@@ -79,9 +79,12 @@ class stats_model(object):
         - Add Hessian & Grad functions
     '''
 
-    def __init__(self, prior_ranges=None):
+    def __init__(self, prior_ranges=None, out_stream=sys.stdout, err_stream=sys.stderr):
 
         self._protected_keys = []
+
+        self.out_stream = out_stream
+        self.err_stream = err_stream
 
         # Setting prior boundaries
         if not hasattr(self, "_default_prior_ranges"):
@@ -137,8 +140,46 @@ class stats_model(object):
             self.__setattr__(name + "_jit", jitted_func)
             self.__setattr__(name + "_grad", graded_func)
             self.__setattr__(name + "_hess", hessed_func)
+        # ------------------
+        # Aux functions
+        self.gen_lightcurve = self._gen_lightcurve
 
         ## --------------------------------------
+
+    # ----------------------
+    # Error message printing
+    def msg_err(self, *x: str, end='\n', delim=' '):
+        """
+        Messages for when something has broken or been called incorrectly
+        """
+        if True:
+            for a in x:
+                print(a, file=self.err_stream, end=delim)
+
+        print('', end=end, file=self.err_stream)
+        return
+
+    def msg_run(self, *x: str, end='\n', delim=' '):
+        """
+        Standard messages about when things are running
+        """
+        if self.verbose:
+            for a in x:
+                print(a, file=self.out_stream, end=delim)
+
+        print('', end=end, file=self.out_stream)
+        return
+
+    def msg_debug(self, *x: str, end='\n', delim=' '):
+        """
+        Explicit messages to help debug when things are behaving strangely
+        """
+        if self.debug:
+            for a in x:
+                print(a, file=self.out_stream, end=delim)
+
+        print('', end=end, file=self.out_stream, )
+        return
 
     def set_priors(self, prior_ranges: dict):
         '''
@@ -922,7 +963,7 @@ class stats_model(object):
 
     def realization(self, data=None, num_samples: int = 1, seed: int = None):
         '''
-        Generates realizations by blindly sampling from the prior
+        Generates realizations of the observables by blindly sampling from the prior
         :param num_samples: Number of realizations to generate
         :return:
         '''
@@ -935,6 +976,61 @@ class stats_model(object):
 
         params = pred(rng_key=jax.random.PRNGKey(seed), data=data)
         return (params)
+
+    def _gen_lightcurve(self, data, params: dict, Tpred):
+        '''
+        At times Tpred, predict the signal mean and covariance.
+        Returns like (loc_1, loc_2, covar_1,covar_2)
+        '''
+
+        loc_1 = np.zeros_like(Tpred)
+        covar_1 = np.zeros([len(Tpred), len(Tpred)])
+        loc_2, covar_2 = loc_1.copy(), covar_1.copy()
+
+        return (loc_1, loc_2, covar_1, covar_2)
+
+    def make_lightcurves(self, data, params: dict, Tpred, num_samples: int = 1) -> (lightcurve, lightcurve):
+        '''
+        Returns lightcurves at time 'T' for 'parameters' conditioned on 'data' over `num_samples` draws from `params`
+        Returns like (loc_1, loc_2, covar_1,covar_2)
+        '''
+
+        len_params = dict_dim(params)[1]
+        if num_samples > len_params:
+            self.msg_err("Warning! Tried to call %i samples from only %i parameters in make_lightcurves" % (
+                num_samples, len_params))
+
+        loc_1 = np.zeros_like(Tpred)
+        covar_1 = np.zeros([len(Tpred), len(Tpred)])
+        loc_2, covar_2 = loc_1.copy(), covar_1.copy()
+
+        if self._gen_lightcurve is stats_model._gen_lightcurve:
+            self.msg_err("Warning, called make_lightcurves on a stats_model that doesn't have implementation")
+
+        if not isiter_dict(params):
+            loc_1, loc_2, covar_1, covar_2 = self.gen_lightcurve(data, params, jnp.array(Tpred))
+
+        else:
+            I = np.random.choice(range(len_params), num_samples, replace=True)
+            loc_1_all = np.tile(loc_1, (num_samples,1)) * 0
+            loc_2_all = loc_1_all.copy()
+
+            for k, p_sample in enumerate([dict_divide(params)[i] for i in I]):
+                loc_1_i, loc_2_i, covar_1_i, covar_2_i = self.gen_lightcurve(data, p_sample, jnp.array(Tpred))
+                covar_1 += covar_1_i
+                covar_2 += covar_2_i
+                loc_1_all[k, :] = loc_1_i
+                loc_2_all[k, :] = loc_2_i
+            loc_1 = np.mean(loc_1_all, axis=0)
+            loc_2 = np.mean(loc_2_all, axis=0)
+            covar_1 = covar_1 / num_samples + np.diag(np.var(loc_1_all, axis=0))
+            covar_2 = covar_2 / num_samples + np.diag(np.var(loc_2_all, axis=0))
+
+        err_1, err_2 = np.diag(covar_1) ** 0.5, np.diag(covar_2) ** 0.5
+
+        outs = (lightcurve(Tpred, loc_1, err_1), lightcurve(Tpred, loc_2, err_2))
+
+        return outs
 
     def params_inprior(self, params):
         '''
@@ -1091,6 +1187,32 @@ class GP_simple(stats_model):
         numpyro.sample("Y", gp.numpyro_dist(), obs=Y[I])
 
     # -----------------------
+    def _gen_lightcurve(self, data, params: dict, Tpred):
+        # Unpack params
+        lag, logtau, logamp, rel_amp, mean, rel_mean = [params[key] for key in
+                                                        ['lag', 'logtau', 'logamp', 'rel_amp', 'mean', 'rel_mean']]
+
+        T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
+        diag = jnp.square(E)
+
+        # Conversions to gp-friendly form & making of matrices
+        amp, tau = jnp.exp(logamp), jnp.exp(logtau)
+
+        delays = jnp.array([0, lag])
+        amps = jnp.array([amp, rel_amp * amp])
+        means = jnp.array([mean, mean + rel_mean])
+
+        T_delayed = T - delays[bands]
+        I = T_delayed.argsort()
+
+        # Build and sample GP
+        gp = build_gp(T_delayed[I], Y[I], diag[I], bands[I], tau, amps, means,
+                      basekernel=self.basekernel)
+
+        loc1, var1 = gp.predict(y=Y[I], X_test=(Tpred, jnp.zeros(len(Tpred), dtype=int)), return_cov=True)
+        loc2, var2 = gp.predict(y=Y[I], X_test=(Tpred - lag, jnp.ones(len(Tpred), dtype=int)), return_cov=True)
+
+        return loc1, loc2, var1, var2
 
     def find_seed(self, data, guesses=None, fixed={}):
 
@@ -1353,11 +1475,10 @@ class GP_simple_normalprior(GP_simple):
         super().__init__()
 
         # Default values for hbeta AGN @ ~44 dex lum, from R-L relations
-        self.mu_lagpred = 1.44*np.log(10) # ~28 days, from McDougall et al 2025a
-        self.sig_lagpred = np.log(10) * 0.24 # ~1.75 dex, from McDougall et al 2025a
+        self.mu_lagpred = 1.44 * np.log(10)  # ~28 days, from McDougall et al 2025a
+        self.sig_lagpred = np.log(10) * 0.24  # ~1.75 dex, from McDougall et al 2025a
 
     def prior(self):
-
 
         domain = numpyro.distributions.constraints.interval(lower_bound=jnp.log(self.prior_ranges['lag'][0]),
                                                             upper_bound=jnp.log(self.prior_ranges['lag'][1])
@@ -1365,14 +1486,14 @@ class GP_simple_normalprior(GP_simple):
 
         tform = numpyro.distributions.transforms.ExpTransform()
         tformed_dist = numpyro.distributions.TransformedDistribution(
-            dist.TruncatedNormal(self.mu_lagpred,self.sig_lagpred, low=jnp.log(self.prior_ranges['lag'][0]), high = jnp.log(self.prior_ranges['lag'][1])), [tform, ]
+            dist.TruncatedNormal(self.mu_lagpred, self.sig_lagpred, low=jnp.log(self.prior_ranges['lag'][0]),
+                                 high=jnp.log(self.prior_ranges['lag'][1])), [tform, ]
         )
         lag = numpyro.sample('lag', tformed_dist)
         masked_model = numpyro.handlers.substitute(super().prior, {'lag': lag})
         with numpyro.handlers.block(hide=['lag']):
             _, logtau, logamp, rel_amp, mean, rel_mean = masked_model()
         return lag, logtau, logamp, rel_amp, mean, rel_mean
-
 
     def uncon_grad_lag(self, params):
 

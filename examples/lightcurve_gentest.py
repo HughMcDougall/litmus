@@ -1,0 +1,71 @@
+import litmus
+import numpy as np
+import matplotlib.pyplot as plt
+from litmus._utils import *
+
+from litmus.mocks import mock_A, mock_B, mock_C
+
+mock = litmus.mocks.mock(lag=180,
+                         E=[0.1, 0.25],
+                         tau=200)
+mock.plot()
+
+model = litmus.models.GP_simple()
+lc_1, lc_2 = mock.lc_1, mock.lc_2
+
+data = model.lc_to_data(lc_1, lc_2)
+
+Tpred = np.linspace(-1000, 2500, 512)
+
+# --------------------------------------
+
+for p, num_samples in zip(
+        [mock.params(), dict_extend(mock.params(), {'logtau': np.random.randn(32) * 1.0 + 6.0})],
+        [1]):
+
+    pred1, pred2 = model.make_lightcurves(data, params=p, Tpred=Tpred, num_samples=num_samples)
+
+    print("Predictions Clear. Plotting")
+    c0 = 'midnightblue'
+    c1, c2 = 'navy', 'orchid'
+
+    f, (a1, a2) = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
+    lc_1.plot(axis=a1, show=False, c=c1, capsize=2, label="Measurements")
+    lc_2.plot(axis=a2, show=False, c=c2, capsize=2, label="Measurements")
+    # a1.plot(pred1.T, pred1.Y)
+    # a2.plot(pred2.T, pred2.Y, c='tab:orange')
+
+    a1.plot(mock.lc.T, mock.lc.Y, c=c0, lw=0.5, zorder=-1000)
+    a2.plot(mock.lc.T + mock.lag, mock.lc.Y, c=c0, lw=0.5, zorder=-1000)
+    a1.fill_between(pred1.T, pred1.Y - pred1.E, pred1.Y + pred1.E, alpha=0.25, color=c1,
+                    label="Constrained Lightcurve, Continuum")
+    a2.fill_between(pred2.T, pred2.Y - pred2.E, pred2.Y + pred2.E, alpha=0.25, color=c2,
+                    label="Constrained Lightcurve, Response")
+    a1.fill_between(pred1.T, pred1.Y - 2 * pred1.E, pred1.Y + 2 * pred1.E, alpha=0.125, color=c1)
+    a2.fill_between(pred2.T, pred2.Y - 2 * pred2.E, pred2.Y + 2 * pred2.E, alpha=0.125, color=c2)
+
+    f.supxlabel("Time (Days)")
+    f.supylabel("Signal (Arb Units)")
+
+    for a in a1, a2:
+        a.grid()
+        a.set_yticklabels([])
+        a.set_ylim(-3, 3)
+
+        if mock.season != 0:
+            tmax = Tpred.max()
+            nyears = int(tmax // (mock.season * 2) + 1)
+            for i in range(nyears):
+                a.axvspan((i + 1 / 2 - 1 / 2) * mock.season * 2, (i + 1 - 1 / 2) * mock.season * 2,
+                          ymin=0, ymax=1, alpha=0.125, color='royalblue',
+                          zorder=-10,
+                          label= None)
+            a.legend()
+
+    a1.set_xlim(0, 2000)
+    f.tight_layout()
+
+    print("Plots done")
+
+    f.savefig("./constrained_lc.pdf", dpi=300)
+    plt.show()

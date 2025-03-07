@@ -96,7 +96,7 @@ for j, f in enumerate([f1, f2, f3]):
         ax.plot_surface(X_fill, Y_fill, Z_fill, color=c3, alpha=0.5, lw=0, zorder=2 * i)
 for i,f in enumerate([f1, f2, f3]):
     f.tight_layout()
-    f.savefig("Contour_fig_%i.png"%i, bbox_inches='tight')
+    f.savefig("Contour_fig_%i.png"%i, bbox_inches='tight', dpi=300)
 plt.show()
 
 # -----------------------------------------------

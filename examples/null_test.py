@@ -16,9 +16,16 @@ MODELS = [model_alt, model_null, model_whitenoise]
 
 # ------
 # DATA
-mock1 = litmus.mocks.mock(3, lag = 540, tau=50, E = [0.2,0.5])
-mock2 = mock1.copy(seed=5)
-mock3 = litmus.mocks.mock(8, lag = 180, tau=0.001, E = [0.2,0.5])
+vague = True
+
+if not vague:
+    mock1 = litmus.mocks.mock(1, lag=540, tau=200, E=[0.01, 0.1])
+    mock2 = mock1.copy(seed=5)
+    mock3 = litmus.mocks.mock(8, lag=180, tau=0.001, E=[0.01, 0.1])
+else:
+    mock1 = litmus.mocks.mock(3, lag=540, tau=50, E=[0.2, 0.5])
+    mock2 = mock1.copy(seed=5)
+    mock3 = litmus.mocks.mock(8, lag=180, tau=0.001, E=[0.2, 0.5])
 
 mock1_null, mock1_whitenoise = mock1.copy(), mock1.copy()
 mock1_null.swap_response(mock2)
@@ -30,26 +37,31 @@ mock1_null.name = "Negative"
 mock1_whitenoise.name = "Noise"
 fig, axes = plt.subplots(len(MOCKS), 1, sharex=True, sharey=True)
 for mock, ax in zip(MOCKS, axes):
-    mock.plot(axis=ax, show=False)
+    mock.plot(axis=ax, show=False,
+              true_args={'c': ['navy', 'orchid'], 'label': [None, None]},
+              series_args={'c': ['navy', 'orchid'], 'label': ["Continuum", "Response"]}
+              )
     ax.grid()
 fig.supxlabel("Time (Days)"), fig.supylabel("Signal (Arb Units)")
-axes[0].set_title("True Lag Response"), axes[1].set_title("Decoupled Response"), axes[2].set_title("White Noise Response")
+axes[0].set_title("True Lag Response"), axes[1].set_title("Decoupled Response"), axes[2].set_title(
+    "White Noise Response")
 axes[0].legend()
 fig.tight_layout()
-fig.savefig("./null_test_vague.pdf", dpi=300)
+fig.savefig("./null_test_vague.pdf" if vague else "./null_test.pdf", dpi=300)
 plt.show()
 
 # ------
 Z = []
 FITTERS = []
-i=0
+i = 0
 for mock in MOCKS:
     for model in MODELS:
         print(i)
-        if i<len(Z):
+        if i < len(Z):
             i += 1
             continue
-        fitter = litmus.fitting_methods.SVI_scan(model, Nlags=64, precondition="diag", ELBO_Nsteps=512, grid_bunching = 0.25)
+        fitter = litmus.fitting_methods.SVI_scan(model, Nlags=64, precondition="diag", ELBO_Nsteps=512,
+                                                 grid_bunching=0.25)
         fitter.name = mock.name + " " + model.name
         fitter.verbose = True
         fitter.debug = True
@@ -80,18 +92,17 @@ for fitter in FITTERS:
     mu, sig = samplags.mean(), samplags.std()
     mumed = np.median(samplags)
     print("For fitter %s, recovered lag is " % fitter.name, end=' ')
-    if abs(mumed - mu )< 2 * sig:
-        print("%.2f +/- %.2f" %(mu,sig))
+    if abs(mumed - mu) < 2 * sig:
+        print("%.2f +/- %.2f" % (mu, sig))
     else:
         print("Unconverged")
-
 
 for fitter in FITTERS:
     print("Fit done. Making litmus")
     lt = LITMUS(fitter)
 
     # print("Doing param plot")
-    # lt.plot_parameters(prior_extents=True)
+    lt.plot_parameters(prior_extents=True)
     print("Doing lag plot")
     lt.lag_plot()
 print("Script finished")

@@ -228,7 +228,7 @@ class lightcurve(object):
     def __iter__(self):
         return (lightcurve_iter(self.T, self.Y, self.E))
 
-    def plot(self, axis=None, **kwargs):
+    def plot(self, axis=None, show=True, **kwargs):
         '''
         :return:
         '''
@@ -239,6 +239,7 @@ class lightcurve(object):
         if axis == None:
             axis.set_xlabel("T")
             axis.set_Ylabel("Y")
+        if show: plt.show()
 
     def copy(self):
         return (copy(self))

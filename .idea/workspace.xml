@@ -5,10 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
+      <change afterPath="$PROJECT_DIR$/examples/lightcurve_gentest.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/litmus_class_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/litmus_class_example.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/Contour_fig_0.png" beforeDir="false" afterPath="$PROJECT_DIR$/examples/Contour_fig_0.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/Contour_fig_1.png" beforeDir="false" afterPath="$PROJECT_DIR$/examples/Contour_fig_1.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/Contour_fig_2.png" beforeDir="false" afterPath="$PROJECT_DIR$/examples/Contour_fig_2.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/grid_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/grid_plot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/null_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/null_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/null_test_vague.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/examples/null_test_vague.pdf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/litmusclass.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/litmusclass.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/lightcurve.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/lightcurve.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,6 +63,7 @@
     &quot;Python.JAVELIKE_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.NS_direct_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.NS_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python._utils.executor&quot;: &quot;Run&quot;,
     &quot;Python.dual_moons.executor&quot;: &quot;Run&quot;,
     &quot;Python.fitting_methods.executor&quot;: &quot;Run&quot;,
     &quot;Python.gaussian_shells.executor&quot;: &quot;Run&quot;,
@@ -65,6 +73,7 @@
     &quot;Python.integ_test_01.executor&quot;: &quot;Run&quot;,
     &quot;Python.jaxns_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.lightcurve.executor&quot;: &quot;Run&quot;,
+    &quot;Python.lightcurve_gentest.executor&quot;: &quot;Run&quot;,
     &quot;Python.lin_scatter.executor&quot;: &quot;Run&quot;,
     &quot;Python.litmus_class_example.executor&quot;: &quot;Run&quot;,
     &quot;Python.litmus_test.executor&quot;: &quot;Run&quot;,
@@ -203,7 +212,16 @@
       <workItem from="1738122607985" duration="391000" />
       <workItem from="1738123091150" duration="1157000" />
       <workItem from="1738292584695" duration="1180000" />
-      <workItem from="1738294495585" duration="939000" />
+      <workItem from="1738294495585" duration="969000" />
+      <workItem from="1738297500366" duration="142000" />
+      <workItem from="1738649400619" duration="3520000" />
+      <workItem from="1738721415041" duration="1051000" />
+      <workItem from="1738821197632" duration="294000" />
+      <workItem from="1739165356883" duration="761000" />
+      <workItem from="1739321134083" duration="208000" />
+      <workItem from="1741178453817" duration="43000" />
+      <workItem from="1741180734963" duration="9000" />
+      <workItem from="1741253440492" duration="15256000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />
