@@ -35,14 +35,19 @@ for p, num_samples in zip(
     # a1.plot(pred1.T, pred1.Y)
     # a2.plot(pred2.T, pred2.Y, c='tab:orange')
 
-    a1.plot(mock.lc.T, mock.lc.Y, c=c0, lw=0.5, zorder=-1000)
-    a2.plot(mock.lc.T + mock.lag, mock.lc.Y, c=c0, lw=0.5, zorder=-1000)
+    a1.plot(mock.lc.T, mock.lc.Y, c=c0, lw=0.5, zorder=-6, label = 'True Signal')
+    a2.plot(mock.lc.T + mock.lag, mock.lc.Y, c=c0, lw=0.5, zorder=-6)
+
     a1.fill_between(pred1.T, pred1.Y - pred1.E, pred1.Y + pred1.E, alpha=0.25, color=c1,
                     label="Constrained Lightcurve, Continuum")
     a2.fill_between(pred2.T, pred2.Y - pred2.E, pred2.Y + pred2.E, alpha=0.25, color=c2,
                     label="Constrained Lightcurve, Response")
     a1.fill_between(pred1.T, pred1.Y - 2 * pred1.E, pred1.Y + 2 * pred1.E, alpha=0.125, color=c1)
     a2.fill_between(pred2.T, pred2.Y - 2 * pred2.E, pred2.Y + 2 * pred2.E, alpha=0.125, color=c2)
+
+    r = 0.1
+    a1.fill_between(pred1.T, pred1.Y - 2 * pred1.E - r, pred1.Y + 2 * pred1.E + r, alpha=1.0, color='w', zorder=-9)
+    a2.fill_between(pred2.T, pred2.Y - 2 * pred2.E - r, pred2.Y + 2 * pred2.E + r, alpha=1.0, color='w', zorder=-9)
 
     f.supxlabel("Time (Days)")
     f.supylabel("Signal (Arb Units)")
@@ -59,7 +64,7 @@ for p, num_samples in zip(
                 a.axvspan((i + 1 / 2 - 1 / 2) * mock.season * 2, (i + 1 - 1 / 2) * mock.season * 2,
                           ymin=0, ymax=1, alpha=0.125, color='royalblue',
                           zorder=-10,
-                          label= None)
+                          label=None)
             a.legend()
 
     a1.set_xlim(0, 2000)

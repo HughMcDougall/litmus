@@ -33,6 +33,7 @@ from tinygp import GaussianProcess
 
 from litmus.gp_working import *
 from litmus._utils import *
+from litmus.logging import logger
 
 import contextlib
 
@@ -67,19 +68,29 @@ _default_config = {
 # ============================================
 # Base Class
 
-class stats_model(object):
+class stats_model(logger):
     '''
     Base class for bayesian generative models. Includes a series of utilities for evaluating likelihoods, gradients etc,
     as well as various
 
-    Todo:
-        - Change prior volume calc to be a function call for flexibility
-        - Add kwarg support to model_function and model calls to be more flexible / allow for different prior types
-        - Fix the _scan method to use jaxopt and be jitted / vmapped
-        - Add Hessian & Grad functions
+    On init, takes dict `prior_ranges' of the uniform boundaries of the parameter priors, or a single (float/int)
+    value if the value is fixed,
+    e.g.
+    stats_model(prior_ranges = {
+        'lag': [0, 1000],
+        'amp': 1.0
+        })
+    Also takes logging arg from the litmus.logging.logger object.
     '''
 
-    def __init__(self, prior_ranges=None, out_stream=sys.stdout, err_stream=sys.stderr):
+    def __init__(self, prior_ranges=None,
+                 out_stream=sys.stdout,
+                 err_stream=sys.stderr,
+                 verbose=True,
+                 debug=True,
+                 ):
+
+        logger.__init__(self, out_stream=out_stream, err_steam=err_stream, verbose=verbose, debug=debug)
 
         self._protected_keys = []
 
@@ -146,46 +157,14 @@ class stats_model(object):
 
         ## --------------------------------------
 
-    # ----------------------
-    # Error message printing
-    def msg_err(self, *x: str, end='\n', delim=' '):
-        """
-        Messages for when something has broken or been called incorrectly
-        """
-        if True:
-            for a in x:
-                print(a, file=self.err_stream, end=delim)
-
-        print('', end=end, file=self.err_stream)
-        return
-
-    def msg_run(self, *x: str, end='\n', delim=' '):
-        """
-        Standard messages about when things are running
-        """
-        if self.verbose:
-            for a in x:
-                print(a, file=self.out_stream, end=delim)
-
-        print('', end=end, file=self.out_stream)
-        return
-
-    def msg_debug(self, *x: str, end='\n', delim=' '):
-        """
-        Explicit messages to help debug when things are behaving strangely
-        """
-        if self.debug:
-            for a in x:
-                print(a, file=self.out_stream, end=delim)
-
-        print('', end=end, file=self.out_stream, )
-        return
-
     def set_priors(self, prior_ranges: dict):
         '''
         Sets the stats model prior ranges for uniform priors. Does some sanity checking to avoid negative priors
-        :param prior_ranges:
-        :return: 
+        e.g.
+        stats_model(prior_ranges = {
+            'lag': [0, 1000],
+            'amp': 1.0
+            })
         '''
 
         badkeys = [key for key in prior_ranges.keys() if key not in self._default_prior_ranges.keys()]
@@ -221,14 +200,14 @@ class stats_model(object):
     # MODEL FUNCTIONS
     def prior(self):
         '''
-        A NumPyro callable prior
+        A NumPyro callable prior, returns the values of the parameters
         '''
         lag = numpyro.sample('lag', dist.Uniform(self.prior_ranges['lag'][0], self.prior_ranges['lag'][1]))
         return (lag)
 
     def model_function(self, data):
         '''
-        A NumPyro callable function
+        A NumPyro callable function. Does not return
         '''
         lag = self.prior()
 
@@ -238,7 +217,12 @@ class stats_model(object):
         of sorted dictionary
         :param lc_1: First lightcurve object
         :param lc_2: Second lightcurve object
-        :return:
+        :return: Varies from model to model, by default will be a keyed dict:
+            {'T': Time values of observations series,
+             'Y': Signal strength values of observations series,
+             'E': Uncertainty values of values in Y,
+             'bands': int array identifying which lightcurve (0,1) that the observations belong to
+            }
         '''
 
         T = jnp.array([*lc_1.T, *lc_2.T])
@@ -289,6 +273,10 @@ class stats_model(object):
         return out
 
     def uncon_grad_lag(self, params):
+        '''
+        Returns the log-jacobian correction for the constrained / unconstrained correction for the lag parameter
+        Assumes a uniform distribution for the lag prior
+        '''
 
         from numpyro.infer.util import transform_fn
 
@@ -310,13 +298,15 @@ class stats_model(object):
 
     def paramnames(self):
         '''
-        Returns the names of all model parameters. Purely for brevity.
+        Returns the names of all model parameters. Purely for brevity of code.
+        Returns as list
         '''
         return (list(self.prior_ranges.keys()))
 
     def fixed_params(self):
         '''
-        Returns the names of all model parameters. Purely for brevity.
+        Returns the names of all fixed model parameters. Purely for brevity.
+        Returns as list
         '''
         is_fixed = {key: np.ptp(self.prior_ranges[key]) == 0 for key in self.prior_ranges.keys()}
         out = [key for key in is_fixed.keys() if is_fixed[key]]
@@ -324,7 +314,8 @@ class stats_model(object):
 
     def free_params(self):
         '''
-        Returns the names of all model parameters. Purely for brevity.
+        Returns the names of all free model parameters. Purely for brevity of code.
+        Returns as list
         '''
         is_fixed = {key: np.ptp(self.prior_ranges[key]) == 0 for key in self.prior_ranges.keys()}
         out = [key for key in is_fixed.keys() if not is_fixed[key]]
@@ -332,8 +323,8 @@ class stats_model(object):
 
     def dim(self):
         '''
-        Quick and easy call for the number of model parameters
-        :return:
+        Quick and easy call for the number of model parameters.
+        Returns as int
         '''
         return len(self.free_params())
 
@@ -382,6 +373,13 @@ class stats_model(object):
     # --------------------------------
     # Wrapped Function Evaluations
     def log_density(self, params, data, use_vmap=False):
+        """
+        Returns the log density of the joint distribution at some constrained space position 'params' and conditioned
+        on some 'data'. data must match the output of the model's lc_to_data(), and params is either a keyed dict of
+        parameter values or a key dict of arrays of values.
+        Returns as array of floats
+        use_vmap currently not implemented with no side effect
+        """
 
         if isiter_dict(params):
             N = dict_dim(params)[1]
@@ -395,7 +393,13 @@ class stats_model(object):
         return out
 
     def log_likelihood(self, params, data, use_vmap=False):
-
+        """
+        Returns the log likelihood at some constrained space position 'params' and conditioned
+        on some 'data'. data must match the output of the model's lc_to_data(), and params is either a keyed dict of
+        parameter values or a key dict of arrays of values.
+        Returns as array of floats
+        use_vmap currently not implemented with no side effect
+        """
         if isiter_dict(params):
             N = dict_dim(params)[1]
             out = np.zeros(N)
@@ -408,6 +412,13 @@ class stats_model(object):
         return out
 
     def log_density_uncon(self, params, data, use_vmap=False):
+        """
+        Returns the log density of the joint distribution at some unconstrained space position 'params' and conditioned
+        on some 'data'. data must match the output of the model's lc_to_data(), and params is either a keyed dict of
+        parameter values or a key dict of arrays of values.
+        Returns as array of floats
+        use_vmap currently not implemented with no side effect
+        """
 
         if isiter_dict(params):
             N = dict_dim(params)[1]
@@ -421,6 +432,13 @@ class stats_model(object):
         return out
 
     def log_prior(self, params, data=None, use_vmap=False):
+        """
+        Returns the log density of the prior  at some constrained space position 'params'
+        Params is either a keyed dict of parameter values or a key dict of arrays of values.
+        Returns as array of floats
+        use_vmap currently not implemented with no side effect
+        """
+
         if isiter_dict(params):
             N = dict_dim(params)[1]
             out = np.zeros(N)
@@ -431,11 +449,16 @@ class stats_model(object):
             out = self._log_prior_jit(params)
 
         return out
-
     # --------------------------------
     # Wrapped Grad evaluations
-    # todo - fix these and work keys in
     def log_density_grad(self, params, data, use_vmap=False, keys=None):
+        """
+        Returns the gradient of the log density of the joint distribution at some constrained space position 'params',
+        conditionded on some 'data' matching the format of the model's lc_to_data() output.
+        Params is either a keyed dict of parameter values or a key dict of arrays of values.
+        Returns as keyed dict of grads along each axsi or keyed dict of array of similar values
+        use_vmap currently not implemented with no side effect
+        """
 
         if isiter_dict(params):
             m, N = dict_dim(params)
@@ -451,6 +474,13 @@ class stats_model(object):
         return out
 
     def log_density_uncon_grad(self, params, data, use_vmap=False, keys=None, asdict=False):
+        """
+        Returns the gradient of the log density of the joint distribution at some unconstrained space position 'params',
+        conditionded on some 'data' matching the format of the model's lc_to_data() output.
+        Params is either a keyed dict of parameter values or a key dict of arrays of values.
+        Returns as keyed dict of grads along each axsi or keyed dict of array of similar values
+        use_vmap currently not implemented with no side effect
+        """
 
         if isiter_dict(params):
             m, N = dict_dim(params)
@@ -466,6 +496,12 @@ class stats_model(object):
         return out
 
     def log_prior_grad(self, params, data=None, use_vmap=False, keys=None):
+        """
+        Returns the gradient of the log prior of the prior at some constrained space position 'params'
+        Params is either a keyed dict of parameter values or a key dict of arrays of values.
+        Returns as keyed dict of grads along each axsi or keyed dict of array of similar values
+        use_vmap currently not implemented with no side effect
+        """
 
         if isiter(params):
             m, N = dict_dim(params)
@@ -481,6 +517,14 @@ class stats_model(object):
     # --------------------------------
     # Wrapped Hessian evaluations
     def log_density_hess(self, params, data, use_vmap=False, keys=None):
+        """
+        Returns the hessian matrix of the log joint distribution at some constrained space position 'params',
+        conditioned on some 'data' matching the output of the model's lc_to_data() output.
+        Params is either a keyed dict of parameter values or a key dict of arrays of values.
+        parameter 'keys' is the params to slice and sort the hessian matrices.
+        Returns in order / dimension: [num param sites, num keys, num keys]
+        use_vmap currently not implemented with no side effect
+        """
 
         if keys is None: keys = params.keys()
 
@@ -505,6 +549,14 @@ class stats_model(object):
         return out
 
     def log_density_uncon_hess(self, params, data, use_vmap=False, keys=None):
+        """
+        Returns the hessian matrix of the log joint distribution at some unconstrained space position 'params',
+        conditioned on some 'data' matching the output of the model's lc_to_data() output.
+        Params is either a keyed dict of parameter values or a key dict of arrays of values.
+        parameter 'keys' is the params to slice and sort the hessian matrices.
+        Returns in order / dimension: [num param sites, num keys, num keys]
+        use_vmap currently not implemented with no side effect
+        """
 
         if keys is None: keys = params.keys()
 
@@ -529,6 +581,13 @@ class stats_model(object):
         return out
 
     def log_prior_hess(self, params, data=None, use_vmap=False, keys=None):
+        """
+        Returns the hessian matrix of the log prior of the prior at some constrained space position 'params'
+        Params is either a keyed dict of parameter values or a key dict of arrays of values.
+        parameter 'keys' is the params to slice and sort the hessian matrices.
+        Returns in order / dimension: [num param sites, num keys, num keys]
+        use_vmap currently not implemented with no side effect
+        """
 
         if keys is None: keys = params.keys()
 
@@ -1012,7 +1071,7 @@ class stats_model(object):
 
         else:
             I = np.random.choice(range(len_params), num_samples, replace=True)
-            loc_1_all = np.tile(loc_1, (num_samples,1)) * 0
+            loc_1_all = np.tile(loc_1, (num_samples, 1)) * 0
             loc_2_all = loc_1_all.copy()
 
             for k, p_sample in enumerate([dict_divide(params)[i] for i in I]):

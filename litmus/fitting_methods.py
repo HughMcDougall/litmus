@@ -10,6 +10,8 @@ import importlib.util
 import sys
 from typing import Callable
 
+from litmus.logging import logger
+
 import jaxopt
 import numpyro
 import numpy as np
@@ -45,24 +47,24 @@ from litmus.lin_scatter import linscatter, expscatter
 # ============================================
 
 # Base fitting procedure class
-class fitting_procedure(object):
+class fitting_procedure(logger):
     """
     Generic class for lag fitting procedures. Contains parent methods for setting properties
     """
 
     def __init__(self, stat_model: stats_model,
-                 out_stream=sys.stdout, err_stream=sys.stderr,
-                 verbose=True, debug=True, **fit_params):
+                 out_stream=sys.stdout,
+                 err_stream=sys.stderr,
+                 verbose=True,
+                 debug=True,
+                 **fit_params):
 
         if not hasattr(self, "_default_params"):
             self._default_params = {}
 
         self.stat_model = stat_model
 
-        self.debug = debug
-        self.verbose = verbose
-        self.out_stream = out_stream
-        self.err_stream = err_stream
+        logger.__init__(self)
 
         self.name = "Base Fitting Procedure"
 
@@ -147,41 +149,6 @@ class fitting_procedure(object):
         Performs pre-fit preparation calcs. Should only be called if not self.is_ready()
         """
         self.is_ready = True
-
-    # ----------------------
-    # Error message printing
-    def msg_err(self, *x: str, end='\n', delim=' '):
-        """
-        Messages for when something has broken or been called incorrectly
-        """
-        if True:
-            for a in x:
-                print(a, file=self.err_stream, end=delim)
-
-        print('', end=end, file=self.err_stream)
-        return
-
-    def msg_run(self, *x: str, end='\n', delim=' '):
-        """
-        Standard messages about when things are running
-        """
-        if self.verbose:
-            for a in x:
-                print(a, file=self.out_stream, end=delim)
-
-        print('', end=end, file=self.out_stream)
-        return
-
-    def msg_debug(self, *x: str, end='\n', delim=' '):
-        """
-        Explicit messages to help debug when things are behaving strangely
-        """
-        if self.debug:
-            for a in x:
-                print(a, file=self.out_stream, end=delim)
-
-        print('', end=end, file=self.out_stream, )
-        return
 
     # ----------------------
     # Main methods
@@ -984,7 +951,8 @@ class hessian_scan(fitting_procedure):
                 density = np.exp(log_density_all - log_density_all.max())
 
                 # Linearly interpolate the density profile
-                log_density_terp = np.interp(lag_terp, log_density_all - log_density_all.max(), density, left=log_density_all[0], right=log_density_all[-1])
+                log_density_terp = np.interp(lag_terp, log_density_all - log_density_all.max(), density,
+                                             left=log_density_all[0], right=log_density_all[-1])
                 density_terp = np.exp(log_density_terp)
                 density_terp /= density_terp.sum()
 

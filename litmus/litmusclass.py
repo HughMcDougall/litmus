@@ -27,25 +27,22 @@ from litmus.fitting_methods import fitting_procedure
 from litmus.lightcurve import lightcurve
 from litmus._utils import *
 
+from litmus.logging import logger
+
 
 # =========================================================
 # LITMUS (Fit Handler)
 # =========================================================
 
-class LITMUS(object):
+class LITMUS(logger):
     '''
     A front-facing UI class for interfacing with the fitting procedures.
     '''
 
+
     def __init__(self, fitproc: fitting_procedure = None):
 
-        # ----------------------------
-
-        self.out_stream = sys.stdout
-        self.err_stream = sys.stderr
-        self.verbose = True
-        self.debug = False
-
+        logger.__init__(self)
         # ----------------------------
 
         if fitproc is None:
@@ -280,41 +277,6 @@ class LITMUS(object):
         if dir is not None:
             plt.savefig(dir)
 
-        return
-
-    # ----------------------
-    # Error message printing
-    def msg_err(self, *x: str, end='\n', delim=' '):
-        '''
-        Messages for when something has broken or been called incorrectly
-        '''
-        if True:
-            for a in x:
-                print(a, file=self.err_stream, end=delim)
-
-        print(end, end='')
-        return
-
-    def msg_run(self, *x: str, end='\n', delim=' '):
-        '''
-        Standard messages about when things are running
-        '''
-        if self.verbose:
-            for a in x:
-                print(a, file=self.out_stream, end=delim)
-
-        print(end, end='')
-        return
-
-    def msg_verbose(self, *x: str, end='\n', delim=' '):
-        '''
-        Explicit messages to help debug when things are behaving strangely
-        '''
-        if self.debug:
-            for a in x:
-                print(a, file=self.out_stream, end=delim)
-
-        print(end, end='')
         return
 
 

@@ -8,7 +8,7 @@ import os, sys
 
 from litmus import *
 
-#sys.path.append("./litmus/examples")
+#sys.path.append("./litmus/testing")
 #----------------------------------------
 
 print("Run all fine!")
