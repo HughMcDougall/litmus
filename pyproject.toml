@@ -1,7 +1,7 @@
 
 [project]
 name = "LITMUS"
-version = "0.2.0"
+version = "1.0.0"
 authors = [
   { name="Hugh McDougall", email="hughmcdougallemail@gmail.com" },
 ]
@@ -10,15 +10,16 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   'jax==0.4.31',
-  'jaxlib',
-  'jaxopt',
-  'numpyro',
-  'tinygp',
-  'matplotlib',
-  'numpy',
-  'scikit-learn',
-  'scipy',
-  'chainconsumer',
+  'jaxlib>=0.4.31',
+  'jaxopt>=0.8.3',
+  'numpyro>=0.15.3',
+  'tinygp>=0.3.0',
+  'matplotlib>=3.9.2',
+  'numpy>=1.26.4',
+  'scikit-learn>1.5.2',
+  'scipy>=1.14.1',
+  'chainconsumer>=1.1.2',
+  'typing>=2.50'
 ]
 classifiers=[
     "Programming Language :: Python :: 3",

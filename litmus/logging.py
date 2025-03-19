@@ -1,7 +1,7 @@
 '''
 logging.py
 
-Hi I'm beloved character actor Walton Loggins
+Collection of logging functions in a handy inheritable class, to make it easier to edit later in one place
 '''
 
 import sys
