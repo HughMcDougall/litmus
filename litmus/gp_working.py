@@ -1,4 +1,4 @@
-'''
+"""
 gp_working.py
 
 Contains all interfacing with the tinyGP gaussian process modelling package
@@ -9,7 +9,7 @@ Multi-band kernel adapated from:
     https://arxiv.org/abs/2209.08940
 
 HM 2024
-'''
+"""
 
 # ============================================
 # IMPORTS
@@ -22,6 +22,8 @@ import jax.numpy as jnp
 
 import tinygp
 from tinygp import GaussianProcess
+from typing import Any
+from nptyping import NDArray
 
 from litmus._utils import *
 from litmus.lightcurve import lightcurve
@@ -29,41 +31,42 @@ from litmus.lightcurve import lightcurve
 
 # ============================================
 # Likelihood function working
-def mean_func(means, Y):
-    '''
+def mean_func(means, Y) -> NDArray([Any], float):
+    """
     DEPRECATED - means are subtracted in the model now
     Utitlity function to take array of constants and return as gp-friendly functions
 
-    '''
+    """
     t, band = Y
     return (means[band])
 
 
 @tinygp.helpers.dataclass
 class Multiband(tinygp.kernels.quasisep.Wrapper):
-    '''
+    """
     Multi-band GP kernel that knows how to scale GP to output amplitudes
-    '''
+    """
     amplitudes: jnp.ndarray
 
-    def coord_to_sortable(self, Y):
-        '''
-        :param X = (t, band)
-        '''
+    def coord_to_sortable(self, Y) -> float:
+        """
+        Extracts the time value from the (time,band) coordinate so the GP can interpret the ordering of points
+        in multiple bands
+        """
         t, band = Y
         return t
 
-    def observation_model(self, Y):
-        '''
-        :param X = (t, band)
-        '''
+    def observation_model(self, Y) -> float:
+        """
+        Scales the prediction for each band by their respective band amplitude in the predicted model
+        """
         t, band = Y
         return self.amplitudes[band] * self.kernel.observation_model(t)
 
 
 def build_gp(T: [float], Y: [float], diag: [[float]], bands: [int], tau: float, amps: [float], means: [float],
              basekernel=tinygp.kernels.quasisep.Exp) -> GaussianProcess:
-    '''
+    """
     Constructs the tinyGP gaussian process for use in numpyro sampling
     TODO: update this documentation. Possibly change to dict input
 
@@ -71,7 +74,7 @@ def build_gp(T: [float], Y: [float], diag: [[float]], bands: [int], tau: float, 
     :param params:      Parameters to build the gp from as dictionary
     :param basekernel:  Base gaussian kernel to use. Defaults to exponential
     :return:            Returns tinygp gp object and jnp.array of data sorted by lag-corrected time
-    '''
+    """
 
     # Create GP kernel with Multiband
     multi_kernel = Multiband(

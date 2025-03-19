@@ -1,11 +1,10 @@
-'''
+"""
 ICCF_working.py
 
 JAX-friendly working for performing the ICCF fit. To be called by a fitting method
 
 todo - refactor / rename these functions
-
-'''
+"""
 
 # =================================================
 
@@ -16,15 +15,10 @@ import jax.numpy as jnp
 # =================================================
 
 def correl_jax(X1, Y1, X2, Y2, Nterp=1024):
-    '''
-    Calculates an interpolated correlation for two data series [X1,Y1] and [X2,Y2]
-    :param X1:
-    :param Y1:
-    :param X2:
-    :param Y2:
-    :param Nterp:
-    :return:
-    '''
+    """
+    Calculates a linearly interpolated correlation value for two data series {X1,Y1} and
+    {X2,Y2}, with Nterp interpolation points
+    """
 
     # Find X values that are common to both arrays
     Xmin = jnp.max(jnp.array([jnp.min(X1), jnp.min(X2)]))
@@ -50,9 +44,9 @@ correl_jax_jitted = jax.jit(correl_jax, static_argnames=["Nterp"])
 #::::::::
 
 def correlfunc_jax(lag: float, X1: [float], Y1: [float], X2: [float], Y2: [float], Nterp=1024) -> [float]:
-    '''
+    """
     Like correl_jax, but with signal 2 delayed by some lag
-    '''
+    """
     return (
         correl_jax(X1, Y1, X2 - lag, Y2, Nterp)
     )
@@ -65,9 +59,9 @@ correlfunc_jax_vmapped.__doc__ += "Accepts array of lags for 'lag' param"
 #::::::::
 
 def correl_func_boot_jax(seed, lags, X1, Y1, X2, Y2, E1, E2, Nterp=1024, N1=2, N2=2):
-    '''
+    """
     Finds the best fit lag for a single bootstrapped (sub-sampled & jittered) linterp correlation function
-    '''
+    """
     key = jax.random.key(seed)
 
     I1 = jax.random.choice(key=key, a=jnp.arange(X1.size), shape=(N1,), replace=False)
@@ -152,8 +146,8 @@ if __name__ == "__main__":
     #::::::::::::::::::::
     print("ICCF RESULTS:")
     res_mean, res_std = jax_samples.mean(), jax_samples.std()
-    res_p1, res_med, res_p2 = [np.percentile(jax_samples, p) for p in [14,50,86]]
-    if res_med>true_lag:
+    res_p1, res_med, res_p2 = [np.percentile(jax_samples, p) for p in [14, 50, 86]]
+    if res_med > true_lag:
         z_med = (res_med - true_lag) / (res_p2 - res_med)
     else:
         z_med = (true_lag - res_med) / (res_med - res_p1)
@@ -163,7 +157,7 @@ if __name__ == "__main__":
         res_mean, res_std, true_lag, abs(true_lag - res_mean) / res_std))
     print("Median Statistics:")
     print("Lag = %.2f + %.2f, -%.2f, consistent with true lag of %.2f at %.2f sigma" % (
-        res_med, res_p2-res_med, res_med-res_p1, true_lag, z_med))
+        res_med, res_p2 - res_med, res_med - res_p1, true_lag, z_med))
 
     #::::::::::::::::::::
     # Plot Results
@@ -181,11 +175,9 @@ if __name__ == "__main__":
     plt.axvline(res_mean - res_std, c='tab:red', ls=':')
     plt.axvline(res_mean + res_std, c='tab:red', ls=':')
 
-
     plt.axvline(res_med, c='tab:blue', ls='--', label="ICCF Med $\pm 1 \sigma$")
     plt.axvline(res_p1, c='tab:blue', ls=':')
     plt.axvline(res_p2, c='tab:blue', ls=':')
-
 
     plt.ylim(0, 1.5 / range.ptp() * 6)
     plt.xlim(*range)

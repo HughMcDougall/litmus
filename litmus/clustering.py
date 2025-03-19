@@ -1,6 +1,8 @@
 '''
 Placeholder file for running clustering algorithms
 
+todo - THIS FILE DEPRECATED
+
 Currently not in use as of 14/8/24
 
 -HM

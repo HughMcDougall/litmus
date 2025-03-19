@@ -16,19 +16,24 @@ import numpy as np
 from scipy import optimize
 import matplotlib.pyplot as plt
 
+from nptyping import NDArray
+from typing import Any, Self
+
 
 # ============================================
 # LIGHT CURVE
 # ============================================
 
 class lightcurve(object):
-    '''
-    A wrapper class for lightcurves. Construct /w array-like inputs for time, signal and error (optional)
-    like:   lightcurve(T,Y,E)
+    """
+    A wrapper class for lightcurves. Construct /w array-like inputs for time, signal and error (optional) like:
+       lightcurve(T, Y, E)
+    or:
+        lightcurve(T, Y)
+    Which yields E=0 for all {T,Y}
 
     Supports array-like addition and float-like addition / multiplication
-
-    '''
+    """
 
     # ----------
 
@@ -48,7 +53,7 @@ class lightcurve(object):
     # ----------
     # Array-like
 
-    def __len__(self):
+    def __len__(self) -> int:
         return (len(self.T))
 
     def __getitem__(self, key):
@@ -114,10 +119,16 @@ class lightcurve(object):
     # ----------
     # Dict-Like
 
-    def keys(self):
+    def keys(self) -> [str, str, str]:
+        """
+        Returns the string-like names of the lightcurve's attributes
+        """
         return (["T", "Y", "E"])
 
-    def values(self):
+    def values(self) -> (NDArray([Any]), NDArray([Any]), NDArray([Any])):
+        """
+        Returns the lightcurves' value series' in the order of keys
+        """
         return ([self[key] for key in self.keys()])
 
     # ----------
@@ -135,7 +146,7 @@ class lightcurve(object):
             raise Warning("Tried to set nonexistant lightcurve attribute %s" % key)
         '''
 
-    def normalize(self):
+    def normalize(self) -> Self:
         '''
         Esimates the mean and amplitude of the lighturve assuming uncorrelated measurements
         Returns a lightcurve object with this normalization
@@ -181,7 +192,7 @@ class lightcurve(object):
 
         return (out)
 
-    def unnormalize(self):
+    def unnormalize(self) -> Self:
         '''
         Reverses the effects of lightcurve.normalize().
         Returns a lightcurve object with mean and amplitude prior to normalize()
@@ -194,9 +205,9 @@ class lightcurve(object):
         out.normalized = False
         return (out)
 
-    def delayed_copy(self, lag=0.0, Tmin=None, Tmax=None):
+    def delayed_copy(self, lag=0.0, Tmin=None, Tmax=None) -> Self:
         '''
-        Returns a copy sub-sampled to only datapoints in the domain T in [Tmin,Tmax]
+        Returns a copy sub-sampled to only datapoints in the domain T in [Tmin,Tmax] and offset by lag
         '''
         if Tmin is None: Tmin = self.T.min()
         if Tmax is None: Tmax = self.T.max()
@@ -207,17 +218,11 @@ class lightcurve(object):
                            E=self.E[I]
                            ))
 
-    def trimmed_copy(self, Tmin=None, Tmax=None):
+    def trimmed_copy(self, Tmin=None, Tmax=None) -> Self:
         '''
         Returns a copy sub-sampled to only datapoints in the domain T in [Tmin,Tmax]
         '''
         return self.delayed_copy(0, Tmin, Tmax)
-
-    def bootstrap(self, i, subsample_frac = np.exp(-1)):
-        '''
-        Returns an enumerator that returns bootstrapped and subsampled lightcurve objects
-        '''
-        return
 
     def __getattr__(self, item):
         if item == "N":
@@ -228,10 +233,13 @@ class lightcurve(object):
     def __iter__(self):
         return (lightcurve_iter(self.T, self.Y, self.E))
 
-    def plot(self, axis=None, show=True, **kwargs):
-        '''
-        :return:
-        '''
+    def plot(self, axis=None, show=True, **kwargs) -> None:
+        """
+        Plots an errorbar series to a matplotlib axis.
+        If show=True, will plt.show() after plotting.
+        If axis is None, will create a new figure.
+        Pass in any plotting kwargs for plt.errorbar at **kwargs
+        """
         if axis is None:
             plt.figure()
             axis = plt.gca()
@@ -246,11 +254,16 @@ class lightcurve(object):
 
 
 class lightcurve_iter(lightcurve):
-    '''
-    An extension of the lightcurve class that support bootstrapping
-    '''
+    """
+    An extension of the lightcurve class that support bootstrapping.
+    Call like lightcurve_iter(base_lightcurve, r, Evary)
 
-    def __init__(self, T, Y, E=None, r=np.exp(-1), Evary=True):
+    Where 'r' is the subsampling fraction (default 1/e per bootstrapping)
+    Evary is a sign to indicate whether we want to also vary measurements within errorbars
+    """
+
+    def __init__(self, base_lc: lightcurve, r: float = np.exp(-1), Evary: bool = True):
+        T, Y, E = base_lc.values()
         super().__init__(T, Y, E)
         self.r = r
         self.Evary = Evary
@@ -262,11 +275,15 @@ class lightcurve_iter(lightcurve):
 
         self.subsample()
 
-    def __next__(self):
+    def __next__(self) -> Self:
         self.subsample()
         return (self)
 
-    def subsample(self):
+    def subsample(self) -> None:
+        """
+        Subsamples and (if self.Evary==True) shimmies the Y values within measurement uncertainty
+        Updates self values
+        """
         n = int(self._N * self.r)
         I = np.random.choice(np.arange(self._N), n, replace=False)
         self.T, self.Y, self.E = self._T[I], self._Y[I], self._E[I]

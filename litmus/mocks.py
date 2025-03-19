@@ -1,14 +1,17 @@
-'''
+"""
 Some handy sets of mock data for use in testing
 
 HM Apr 2024
-'''
+"""
 
 # ============================================
 # IMPORTS
 
 from copy import deepcopy as copy
 import types
+from typing import Any, Self, Union
+from nptyping import NDArray
+import matplotlib
 
 import numpy as np
 import pylab as pl
@@ -25,24 +28,32 @@ from litmus.lightcurve import lightcurve
 
 # ===================================================
 
-def mock_cadence(maxtime, seed=0, cadence=7, cadence_var=1, season=180, season_var=14, N=1024):
-    '''
+def mock_cadence(maxtime, seed: int = 0, cadence: float = 7, cadence_var: float = 1, season: float = 180,
+                 season_var: float = 14):
+    """
     Returns time series X values for a mock signal
-    :param maxtime:
-    :param cadence:
-    :param cadence_var:
-    :param season:
-    :param season_var:
-    :param N:
+    :param seed: Seed for randomization
+    :param maxtime: Length of observation window (default 180 days)
+    :param cadence: Average cadence of observations
+    :param cadence_var: Standard deviation of the cadence
+    :param season: Average length of the observation season (default 180 days)
+    :param season_var: Standard deviation of the season length (default 14 days)
+    :param N: Number of observations used prior to trimming
 
     returns as array of sample times
-    '''
+    """
 
     np.random.seed(seed)
 
     # Generate Measurements
-    diffs = np.random.randn(N) * cadence_var / np.sqrt(2) + cadence
-    T = np.cumsum(diffs)
+    N = 1024
+    while True:
+        diffs = np.random.randn(N) * cadence_var / np.sqrt(2) + cadence
+        T = np.cumsum(diffs)
+        if T.max() <= maxtime:
+            N *= 2
+        else:
+            continue
     T = T[np.where((T < (maxtime * 2)))[0]]
     T += np.random.randn(len(T)) * cadence_var / np.sqrt(2)
 
@@ -67,36 +78,34 @@ def mock_cadence(maxtime, seed=0, cadence=7, cadence_var=1, season=180, season_v
     return (T)
 
 
-def subsample(T, Y, Tsample):
-    '''
-    Linearly interpolates between X and Y and returns at positions Xsample
-    '''
+def subsample(T, Y, Tsample) -> NDArray([Any]):
+    """
+    Linearly interpolates between X and Y and returns interped Y's at positions Xsample
+    """
     out = np.interp(Tsample, T, Y)
     return (out)
 
 
-def outly(Y, q):
-    '''
-    outly(Y,q):
+def outly(Y, q) -> NDArray([Any]):
+    """
     Returns a copy of Y with fraction 'q' elements replaced with
     unit - normally distributed outliers
-    '''
+    """
     I = np.random.rand(len(Y)) < q
     Y[I] = np.random.randn() * len(I)
     return (Y)
 
 
-def gp_realization(T, err=0.0, tau=400.0,
-                   basekernel=tinygp.kernels.quasisep.Exp,
-                   seed=None):
+def gp_realization(T, err: Union[float, NDArray([Any])] = 0.0, tau: float = 400.0,
+                   basekernel: tinygp.kernels.quasisep = tinygp.kernels.quasisep.Exp,
+                   seed=None) -> lightcurve:
     '''
     Generates a gaussian process at times T and errors err
 
-    :param T:
-    :param errmag:
-    :param tau:
-    :param basekernel:
-    :param T_true:
+    :param T: Time of observations
+    :param err: Measurements uncertainty at observations. Must be float or array of same length as T
+    :param tau: Timescale of the kernel
+    :param basekernel: Kernel of the GP. Any tinyGP quasisep kernel
     :param seed:
 
     Returns as lightcurve object
@@ -121,7 +130,7 @@ def gp_realization(T, err=0.0, tau=400.0,
 # ================================================
 
 class mock(object):
-    '''
+    """
     Handy class for making mock data. When calling with _init_,
         defaultkwargs = {'tau':             400.0,
                          'cadence':         [7, 30],
@@ -134,7 +143,7 @@ class mock(object):
                          'E':               [0.01, 0.1],
                          'E_var':           [0.0, 0.0]
                          }
-    '''
+    """
 
     def __init__(self, seed=0, **kwargs):
         defaultkwargs = {'tau': 400.0,
@@ -168,24 +177,24 @@ class mock(object):
         self.generate(seed=seed)
         return (self.copy(seed))
 
-    def generate_true(self, seed: int = 0):
-        '''
+    def generate_true(self, seed: int = 0) -> (NDArray([Any]), NDArray([Any])):
+        """
         Generates an underlying true DRW signal and stores in the self attribute self.lc
         :param seed: seed for random generation
         :return: Array tuple (T,Y), underlying curve extending to maxtime + 2 * lag
-        '''
+        """
         T = np.linspace(0.0, self.maxtime + self.lag * 2, self.N)
         Y = gp_realization(T, tau=self.tau, seed=seed).Y
         self.lc = lightcurve(T, Y)  # .trim(Tmin=0, Tmax=self.maxtime)
         return (T, Y)
 
-    def generate(self, seed: int = 0):
-        '''
+    def generate(self, seed: int = 0) -> (lightcurve, lightcurve):
+        """
         Generates a mock and sampled light-curve including a delayed response and stores in the self-attributes
         self.lc_1 and self.lc_2. Also returns as tuple (lc, lc_1, lc_2)
         :param seed: seed for random generation
         :return: lightcurve object
-        '''
+        """
 
         T, Y = self.generate_true(seed=seed)
 
@@ -207,41 +216,40 @@ class mock(object):
 
         return (self.lc_1, self.lc_2)
 
-    def copy(self, seed=None, **kwargs):
-        '''
+    def copy(self, seed: int = None, **kwargs) -> Self:
+        """
         Returns a copy of the mock while over-writing certain params.
-        :param seed:
-        :param kwargs:
-        :return:
-        '''
+        :param seed: int seed for random generation
+        :param kwargs: kwargs to pass to the new lightcurve object, will overwrite self.kwargs in the copy
+        :return: A copy of self with kwargs and seed changed accordingly
+        """
         if seed is None:
             seed = self.seed
 
         out = mock(seed=seed, **(self.args | kwargs))
         return (out)
 
-    def swap_response(self, other):
-        '''
+    def swap_response(self, other: lightcurve) -> None:
+        """
         Swaps the response lightcurves between this mock and its target.
         Over-writes target and self
-        '''
+        """
 
         self.lc_2, other.lc_2 = other.lc_2, self.lc_2
         self.lc, other.lc = None, None
         return
 
-
-
     # ------------------------------
     # TEST UTILS
-    def plot(self, axis=None, true_args={}, series_args={}, show=True):
-        '''
+    def plot(self, axis: matplotlib.axes.Axes = None, true_args: dict = {}, series_args: dict = {},
+             show: bool = True) -> matplotlib.figure.Figure:
+        """
         Plots the lightcurves and subsamples
         :param axis: matplotlib axis to plot to. If none will create new
         :param true_args: matplotlib plotting kwargs for the true underlying lightcurve
         :param series_args: matplotlib plotting kwargs for the observations
         :return: Plot axis
-        '''
+        """
 
         # -----------------
         # Make / get axis
@@ -268,7 +276,8 @@ class mock(object):
                 true_args_2[key] = true_args[key]
 
         if self.lc is not None:
-            lc_true_1, lc_true_2 = self.lc.delayed_copy(0, 0, self.maxtime), self.lc.delayed_copy(self.lag, 0, self.maxtime)
+            lc_true_1, lc_true_2 = self.lc.delayed_copy(0, 0, self.maxtime), self.lc.delayed_copy(self.lag, 0,
+                                                                                                  self.maxtime)
 
             axis.plot(lc_true_1.T, lc_true_1.Y, **true_args_1)
             axis.plot(lc_true_2.T, lc_true_2.Y, **true_args_2)
@@ -306,7 +315,8 @@ class mock(object):
         if show: plt.show()
         return axis.get_figure()
 
-    def corrected_plot(self, params={}, axis=None, true_args={}, series_args={}, show=False):
+    def corrected_plot(self, params: dict = {}, axis: matplotlib.axis.Axis = None, true_args: dict = {},
+                       series_args: dict = {}, show: bool = False) -> matplotlib.figure.Figure:
         params = self.params() | params
         corrected = self.copy()
 
@@ -342,7 +352,10 @@ class mock(object):
 # CASE A - WELL OBSERVED SMOOTH CURVES
 
 
-def determ_gen(self, seed=0):
+def determ_gen(self, seed=0) -> (NDArray([Any]), NDArray([Any])):
+    """
+    Replaces the GP generation for the mock_A example to replace it with a nice gaussian curve
+    """
     f = lambda x: np.exp(-((x - 1000) / 2 / (64)) ** 2 / 2)
     X = np.linspace(0.0, self.maxtime + self.lag * 2, self.N)
     Y = f(X)

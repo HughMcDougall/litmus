@@ -13,6 +13,9 @@ import pandas as pd
 
 from chainconsumer import ChainConsumer, Chain, ChainConfig, PlotConfig
 
+import matplotlib
+from typing import Union, Self, Any
+
 from pandas import DataFrame
 
 import numpy as np
@@ -35,10 +38,9 @@ from litmus.logging import logger
 # =========================================================
 
 class LITMUS(logger):
-    '''
+    """
     A front-facing UI class for interfacing with the fitting procedures.
-    '''
-
+    """
 
     def __init__(self, fitproc: fitting_procedure = None):
 
@@ -82,17 +84,18 @@ class LITMUS(logger):
             super().__setattr__("samples", self.fitproc.get_samples(value))
 
     def add_lightcurve(self, lc: lightcurve):
-        '''
+        """
         Add a lightcurve 'lc' to the LITMUS object
-        '''
+        """
         self.lightcurves.append(lc)
         return
 
-    def remove_lightcurve(self, i: int):
-        '''
+    def remove_lightcurve(self, i: int) -> None:
+        """
         Remove lightcurve of index 'i' from the LITMUS object
-        '''
+        """
         N = len(self.lightcurves)
+
         if i < N:
             del self.lightcurves[i]
         else:
@@ -102,19 +105,19 @@ class LITMUS(logger):
     # ----------------------
     # Running / interface /w fitting methods
     def prefit(self, i=0, j=1):
-        '''
+        """
         Performs the full fit for the chosen stats model and fitting method.
-        '''
+        """
 
         lc_1, lc_2 = self.lightcurves[i], self.lightcurves[j]
         self.data = self.model.lc_to_data(lc_1, lc_2)
 
         self.fitproc.prefit(lc_1, lc_2)
 
-    def fit(self, i=0, j=1):
-        '''
+    def fit(self, i=0, j=1) -> None:
+        """
         Performs the full fit for the chosen stats model and fitting method.
-        '''
+        """
 
         lc_1, lc_2 = self.lightcurves[i], self.lightcurves[j]
         self.data = self.model.lc_to_data(lc_1, lc_2)
@@ -124,17 +127,12 @@ class LITMUS(logger):
         self.samples = self.fitproc.get_samples(self.Nsamples)
         self.C.add_chain(Chain(samples=DataFrame.from_dict(self.samples), name="Lightcurves %i-%i" % (i, j)))
 
-    def save_chain(self, path=None, headings=True):
-
-        '''
-        methods = ["numpy"]
-
-        if method not in methods:
-            err_msg = "Tried to use save_chain() with bad methd %s. Allowable methods are:" %method
-            for method in methods: err_msg +="%s, " %x
-            self.msg_err(err_msg)
-        '''
-
+    def save_chain(self, path: str = None, headings: bool = True) -> None:
+        """
+        Saves the litmus's output chains to a .csv file at "path"
+        If headings=True (default) then the names of the parameters will be written to the first row of the tile
+        #todo - this needs updating
+        """
         if path is None:
             path = "./%s_%s.csv" % (self.model.name, self.fitproc.name)
             if path[-4:] != ".csv": path += ".csv"
@@ -147,7 +145,10 @@ class LITMUS(logger):
             # Write rows
             writer.writerows(rows)
 
-    def read_chain(self, path, header=None):
+    def read_chain(self, path: str, header: [str] | None = None):
+        """
+        #todo needs updating
+        """
         # Reading the CSV into a DataFrame
         df = pd.read_csv(path)
 
@@ -180,7 +181,8 @@ class LITMUS(logger):
         self.msg_err("plot_lightcurve() not yet implemented")
         return
 
-    def plot_parameters(self, Nsamples: int = None, CC_kwargs={}, show=True, prior_extents=False, dir=None):
+    def plot_parameters(self, Nsamples: int = None, CC_kwargs: dict = {}, show: bool = True,
+                        prior_extents: bool = False, dir: str | None = None):
         '''
         Creates a nicely formatted chainconsumer plot of the parameters
         Returns the chainconsumer plot figure
@@ -220,11 +222,11 @@ class LITMUS(logger):
 
         return fig
 
-    def lag_plot(self, Nsamples: int = None, show=True, extras=True, dir=None, prior=False):
-        '''
+    def lag_plot(self, Nsamples: int = None, show=True, extras=True, dir=None, prior=False)->matplotlib.figure.Figure:
+        """
         Creates a nicely formatted chainconsumer plot of the parameters
-        Returns the ChainConsumer object
-        '''
+        Returns the matplotlib figure
+        """
         if 'lag' not in self.model.free_params():
             self.msg_err("Can't plot lags for a model without lags.")
             return
@@ -268,14 +270,18 @@ class LITMUS(logger):
         if show: fig.show()
         return (fig)
 
-    def diagnostic_plots(self, dir=None):
+    def diagnostic_plots(self, dir: str | None = None, **plotargs):
+        """
+        Generates a diagnostic plot window
+        If dir!=None, will plt.savefig to the filepath 'dir' with **kwargs
+        """
         if hasattr(self.fitproc, "diagnostics"):
             self.fitproc.diagnostics()
         else:
             self.msg_err("diagnostic_plots() not yet implemented for fitting method %s" % (self.fitproc.name))
 
         if dir is not None:
-            plt.savefig(dir)
+            plt.savefig(dir, **plotargs)
 
         return
 
