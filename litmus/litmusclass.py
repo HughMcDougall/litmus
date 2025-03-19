@@ -4,6 +4,13 @@ litmus.py
 Contains the main litmus object class, which acts as a user-friendly interface with the models statistical models
 and fitting procedure. In future versions, this will also give access to the GUI.
 
+
+todo
+    - This entire class to be re-done to take multiple models instead of multiple lightcurves
+    - Possibly add hdf5 saving to chain output
+    - Maybe add save_litmus() /w pickling?
+    - Need to have better handling of the "fitting method inherit" feature, especially with refactor / redo
+    -
 '''
 # ============================================
 # IMPORTS
@@ -177,16 +184,37 @@ class LITMUS(logger):
 
     # Plotting
 
-    def plot_lightcurves(self):
-        self.msg_err("plot_lightcurve() not yet implemented")
-        return
+    def plot_lightcurves(self, model_no=0, Nsamples: int = 1, Tspan: None | [float, float] = None, Nplot: int = 1024,
+                         dir: str | None = None, show: bool = True) -> matplotlib.figure.Figure():
+        """
+        Plots the interpolated lightcurves for one of the fitted models
+        :param model_no: Which model to plot the lightcurves for
+        :parameter Nsamples: Number of posterior samples to draw from when plotting
+        :parameter Tspan: Span of time values to plot over. If None, will use the max / min times of lc_1 and lc_2
+        :parameter Nplot: Number of points in the interpolated lightcurve
+        :parameter dir: If not None, will save to this filepath
+        :parameter show: If True, will plt.show() the plot
+        """
 
-    def plot_parameters(self, Nsamples: int = None, CC_kwargs: dict = {}, show: bool = True,
-                        prior_extents: bool = False, dir: str | None = None):
-        '''
+        self.msg_err("plot_lightcurve() not yet implemented")
+        fig = plt.figure()
+        return fig
+
+    def plot_parameters(self, model_no: int | None = None, Nsamples: int = None, CC_kwargs: dict = {},
+                        show: bool = True,
+                        prior_extents: bool = False, dir: str | None = None) -> matplotlib.figure.Figure:
+        """
         Creates a nicely formatted chainconsumer plot of the parameters
-        Returns the chainconsumer plot figure
-        '''
+        :param model_no: Which model to plot the lightcurves for. If None, will plot for all
+        :param Nsamples: Number of posterior samples to draw from when plotting
+        :parameter CC_kwargs: Keyword arguments to pass to the chainconsumer constructor
+        :parameter show: If True, will show the plot
+        :parameter prior_extents: If True, will use the model prior range for the axes limits (Defaults to false if multiple models used)
+        :parameter dir: If not None, will save to this filepath
+        Returns the matplotlib figure
+
+        # todo - refactor for multi-model implementation
+        """
 
         if Nsamples is not None and Nsamples != self.Nsamples:
             C = ChainConsumer()
@@ -222,9 +250,16 @@ class LITMUS(logger):
 
         return fig
 
-    def lag_plot(self, Nsamples: int = None, show=True, extras=True, dir=None, prior=False)->matplotlib.figure.Figure:
+    def lag_plot(self, Nsamples: int = None, show: bool = True, extras: bool = True, prior_extents=False,
+                 dir: str | None = None, ) -> matplotlib.figure.Figure:
         """
-        Creates a nicely formatted chainconsumer plot of the parameters
+        Creates a nicely formatted chainconsumer plot of the marginalized lag plot
+        :param Nsamples: Number of posterior samples to draw from when plotting
+        :parameter show: If True, will show the plot
+        :parameter extras: If True, will add any fitting method specific extras to the plot
+        :parameter dir: If not None, will save to this filepath
+        :parameter prior_extents: If True, will use the model prior range for the axes limits (Defaults to false if multiple models used)
+
         Returns the matplotlib figure
         """
         if 'lag' not in self.model.free_params():
@@ -241,6 +276,7 @@ class LITMUS(logger):
         _config = PlotConfig(extents=self.model.prior_ranges, summarise=True)
         C.plotter.set_config(_config)
         fig = C.plotter.plot_distributions(columns=['lag'], figsize=(8, 4))
+        if prior_extents: fig.axes[0].set_xlim(*self.model.prior_ranges['lag'])
         fig.axes[0].set_ylim(*fig.axes[0].get_ylim())
         fig.tight_layout()
 
@@ -270,9 +306,12 @@ class LITMUS(logger):
         if show: fig.show()
         return (fig)
 
-    def diagnostic_plots(self, dir: str | None = None, **plotargs):
+    def diagnostic_plots(self, dir: str | None = None, show: bool = False, **kwargs):
         """
         Generates a diagnostic plot window
+        :param dir: If not None, will save to this filepath
+        :param show: If True, will show the plot
+
         If dir!=None, will plt.savefig to the filepath 'dir' with **kwargs
         """
         if hasattr(self.fitproc, "diagnostics"):
@@ -281,7 +320,9 @@ class LITMUS(logger):
             self.msg_err("diagnostic_plots() not yet implemented for fitting method %s" % (self.fitproc.name))
 
         if dir is not None:
-            plt.savefig(dir, **plotargs)
+            plt.savefig(dir, **kwargs)
+
+        if show: plt.show()
 
         return
 

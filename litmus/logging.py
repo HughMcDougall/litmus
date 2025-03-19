@@ -13,11 +13,11 @@ class logger:
     Somewhat a placeholder atm
     """
 
-    def __init__(self, name, out_stream=sys.stdout, err_steam=sys.stderr, verbose: bool = True, debug: bool = False):
+    def __init__(self, out_stream=sys.stdout, err_stream=sys.stderr, verbose: bool = True, debug: bool = False):
         # ----------------------------
 
         self.out_stream = out_stream
-        self.err_stream = err_steam
+        self.err_stream = err_stream
         self.verbose = verbose
         self.debug = debug
 

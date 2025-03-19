@@ -59,6 +59,12 @@ class fitting_procedure(logger):
                  debug=True,
                  **fit_params):
 
+        logger.__init__(out_stream=out_stream,
+                        err_stream=err_stream,
+                        verbose=verbose,
+                        debug=debug,
+                        )
+
         if not hasattr(self, "_default_params"):
             self._default_params = {}
 
@@ -80,12 +86,11 @@ class fitting_procedure(logger):
         self._data = None
 
     # ----------------------
-    '''
-    Trying to set or get anything with a key in `fitting_params` or `results` will re-direct straight 
-    to the corresponding dict entry.
-    '''
-
     def __getattribute__(self, key):
+        """
+        Trying to set or get anything with a key in `fitting_params` or `results` will re-direct straight
+        to the corresponding dict entry.
+        """
         if key not in ["_default_params", "fitting_params"] \
                 and hasattr(self, "_default_params") \
                 and hasattr(self, "fitting_params") \
@@ -95,6 +100,10 @@ class fitting_procedure(logger):
             return super().__getattribute__(key)
 
     def __setattr__(self, key, value):
+        """
+        Trying to set or get anything with a key in `fitting_params` or `results` will re-direct straight
+        to the corresponding dict entry.
+        """
         if key not in ["_default_params", "fitting_params"] \
                 and hasattr(self, "_default_params") \
                 and hasattr(self, "fitting_params") \
@@ -108,7 +117,7 @@ class fitting_procedure(logger):
 
     # ----------------------
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Clears all memory and resets params to defaults
         """
@@ -118,7 +127,7 @@ class fitting_procedure(logger):
 
         return
 
-    def set_config(self, **fit_params):
+    def set_config(self, **fit_params) -> None:
         """
         Configure fitting parameters for fitting_method() object
         Accepts any parameters present with a name in fitting_method.fitting_params
@@ -144,7 +153,7 @@ class fitting_procedure(logger):
             self.msg_err("Tried to configure bad keys:", *badkeys, delim='\t')
         return
 
-    def readyup(self):
+    def readyup(self) -> None:
         """
         Performs pre-fit preparation calcs. Should only be called if not self.is_ready()
         """
@@ -153,7 +162,7 @@ class fitting_procedure(logger):
     # ----------------------
     # Main methods
 
-    def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+    def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None) -> None:
         """
         Fit lags
         :param lc_1: Lightcurve 1 (Main)
@@ -163,7 +172,7 @@ class fitting_procedure(logger):
 
         self.has_prefit = True
 
-    def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+    def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None) -> None:
         """
         Fit lags
         :param lc_1: Lightcurve 1 (Main)
@@ -265,9 +274,10 @@ class fitting_procedure(logger):
 
 class ICCF(fitting_procedure):
     """
-    Fit lags using interpolated cross correlation function
+    Fit lags using interpolated cross correlation function in the style of pyCCF.
+    Note that this is not a Bayesian fitter and gives only approximate measures of the lag
     todo
-        - Add p value, false positive and evidence estimates
+        - Add p value, false positive and evidence estimates (?)
     """
 
     def __init__(self, stat_model: stats_model,
@@ -375,7 +385,7 @@ class ICCF(fitting_procedure):
 class prior_sampling(fitting_procedure):
     """
     Randomly samples from the prior and weights with importance sampling.
-    The crudest available sampler. For test purposes only.
+    The crudest available sampler. For test purposes only, not suggested for actual use.
     """
 
     def __init__(self, stat_model: stats_model,
@@ -485,8 +495,8 @@ class prior_sampling(fitting_procedure):
 
 class nested_sampling(fitting_procedure):
     """
-    Access to nested sampling. NOT FULLY IMPLEMENTED
-    In version 1.0.0 this will use either jaxns or pypolychord to perform direct nested sampling.
+    Fits the Bayesian model with Nested Sampling by using JAXNS. Highly accurate evidence / posterior distributions,
+    but can be slow for models with more than a few parameters. Use only if hessian_scan and SVI_scan fail.
     """
 
     def __init__(self, stat_model: stats_model,
@@ -1261,10 +1271,12 @@ class hessian_scan(fitting_procedure):
         if show: plt.show()
         return f
 
-    def _get_slices(self, *args):
-        '''
+    def _get_slices(self, *args: [str, ]) -> dict:
+        """
         Summarizes the currently good scan peaks & lag slices
-        Combined in one function for utility
+        Combined in one function for ease of access.
+        Any entries in *args (list of strings) will be returned in a keyed dict
+        Available keys and their corresponding attribute names in the class are:
             'lags': lags_forint,
             'logZ': logZ_forint,
             'dlogZ': logZ_uncert_forint,
@@ -1272,7 +1284,7 @@ class hessian_scan(fitting_procedure):
             'covars': covars,
             'densities': densities,
             'grads': grads,
-        '''
+        """
 
         good_tol = self.log_evidences_uncert <= self.opt_tol
         good_tgrad = abs(self.diagnostic_tgrads) <= np.median(abs(self.diagnostic_tgrads)) * 10
@@ -1492,10 +1504,11 @@ class hessian_scan(fitting_procedure):
 
 # -----------------------------------
 class SVI_scan(hessian_scan):
-    '''
+    """
     An alternative to hessian_scan that fits each slice with stochastic variational
-    inference instead of the laplace approximation. May be slower.
-    '''
+    inference instead of the laplace approximation. Typically slower, but more robust against numerical failure in
+    low SNR signals and gives more accurate evidence estimates.
+    """
 
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
@@ -1768,6 +1781,15 @@ class SVI_scan(hessian_scan):
 
 # ------------------------------------------------------
 class JAVELIKE(fitting_procedure):
+    """
+    A direct MCMC implementation using the AEIS in the style of JAVELIN
+    Note that, because NumPyro fits in the unconstrained domain while JAVELIN fits in the constrained domain,
+    the behaviour of the two will be slightly different near the prior boundaries.
+
+    Note that this is for example / comparison only, and _should not be used for actual fitting_ as it cannot handle
+    the multimodal distributions of seasonal lightcurves
+    """
+
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
