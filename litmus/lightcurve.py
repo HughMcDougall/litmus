@@ -1,10 +1,10 @@
-'''
+"""
 lightcurve.py
 
 A handy object clas for lightcurves
 
 HM 2024
-'''
+"""
 
 # ============================================
 # IMPORTS
@@ -16,9 +16,7 @@ import numpy as np
 from scipy import optimize
 import matplotlib.pyplot as plt
 
-from nptyping import NDArray
-from typing import Any, Self
-
+from litmus._types import *
 
 # ============================================
 # LIGHT CURVE
@@ -54,31 +52,31 @@ class lightcurve(object):
     # Array-like
 
     def __len__(self) -> int:
-        return (len(self.T))
+        return len(self.T)
 
     def __getitem__(self, key):
 
         if isinstance(key, slice):
-            return (self._data[key, :])
+            return self._data[key, :]
 
         elif isinstance(key, int):
-            return (self._data[key, :])
+            return self._data[key, :]
 
         else:
             if key == "T":
-                return (self.T)
+                return self.T
             elif key == "Y":
-                return (self.Y)
+                return self.Y
             elif key == "E":
-                return (self.E)
+                return self.E
             else:
-                return (None)
+                return None
 
     def __str__(self):
-        return (self._data.__str__())
+        return self._data.__str__()
 
     def __repr__(self):
-        return ("Lightcurve len %i" % len(self))
+        return "Lightcurve len %i" % len(self)
 
     def __add__(self, other):
         try:
@@ -90,10 +88,10 @@ class lightcurve(object):
         out = copy(self)
         out.Y += add
         out.normalized = False
-        return (out)
+        return out
 
     def __sub__(self, other):
-        return (self + other * -1)
+        return self + other * -1
 
     def __mul__(self, other):
         try:
@@ -106,15 +104,15 @@ class lightcurve(object):
         out.Y *= mult
         out.E *= mult
         out.normalized = False
-        return (out)
+        return out
 
     def __truediv__(self, other):
-        return (self * (1 / other))
+        return self * (1 / other)
 
     def __abs__(self):
         out = copy(self)
         out.Y = abs(self.Y)
-        return (out)
+        return out
 
     # ----------
     # Dict-Like
@@ -123,13 +121,13 @@ class lightcurve(object):
         """
         Returns the string-like names of the lightcurve's attributes
         """
-        return (["T", "Y", "E"])
+        return ["T", "Y", "E"]
 
-    def values(self) -> (NDArray([Any]), NDArray([Any]), NDArray([Any])):
+    def values(self) -> (ArrayN, ArrayN, ArrayN):
         """
         Returns the lightcurves' value series' in the order of keys
         """
-        return ([self[key] for key in self.keys()])
+        return [self[key] for key in self.keys()]
 
     # ----------
 
@@ -147,17 +145,17 @@ class lightcurve(object):
         '''
 
     def normalize(self) -> Self:
-        '''
+        """
         Esimates the mean and amplitude of the lighturve assuming uncorrelated measurements
         Returns a lightcurve object with this normalization
-        '''
+        """
 
-        if self.normalized: return (self)
+        if self.normalized: return self
 
         # Check if have errorbars
         no_errs = False
         E = self.E
-        if max(E == 0):
+        if max(E)== 0:
             no_errs = True
             E = np.ones_like(self.E)
 
@@ -190,25 +188,25 @@ class lightcurve(object):
 
         out.normalized = True
 
-        return (out)
+        return out
 
     def unnormalize(self) -> Self:
-        '''
+        """
         Reverses the effects of lightcurve.normalize().
         Returns a lightcurve object with mean and amplitude prior to normalize()
-        '''
+        """
         out = copy(self)
         out *= self._norm_amp
         out += self._norm_mean
         out._norm_amp = 1.0
         out._norm_mean = 0.0
         out.normalized = False
-        return (out)
+        return out
 
     def delayed_copy(self, lag=0.0, Tmin=None, Tmax=None) -> Self:
-        '''
-        Returns a copy sub-sampled to only datapoints in the domain T in [Tmin,Tmax] and offset by lag
-        '''
+        """
+        Returns a copy subsampled to only datapoints in the domain T in [Tmin,Tmax] and offset by lag
+        """
         if Tmin is None: Tmin = self.T.min()
         if Tmax is None: Tmax = self.T.max()
         I = np.where((self.T + lag > Tmin) * (self.T + lag < Tmax))[0]
@@ -219,19 +217,19 @@ class lightcurve(object):
                            ))
 
     def trimmed_copy(self, Tmin=None, Tmax=None) -> Self:
-        '''
-        Returns a copy sub-sampled to only datapoints in the domain T in [Tmin,Tmax]
-        '''
+        """
+        Returns a copy subsampled to only datapoints in the domain T in [Tmin,Tmax]
+        """
         return self.delayed_copy(0, Tmin, Tmax)
 
     def __getattr__(self, item):
         if item == "N":
-            return (self.T.size)
+            return self.T.size
         else:
             super().__getattribute__(item)
 
     def __iter__(self):
-        return (lightcurve_iter(self.T, self.Y, self.E))
+        return lightcurve_iter(self)
 
     def plot(self, axis=None, show=True, **kwargs) -> None:
         """
@@ -243,14 +241,14 @@ class lightcurve(object):
         if axis is None:
             plt.figure()
             axis = plt.gca()
-        axis.errorbar(self.T, self.Y, self.E, fmt='none', **kwargs)
-        if axis == None:
             axis.set_xlabel("T")
             axis.set_Ylabel("Y")
+        axis.errorbar(self.T, self.Y, self.E, fmt='none', **kwargs)
+
         if show: plt.show()
 
     def copy(self):
-        return (copy(self))
+        return copy(self)
 
 
 class lightcurve_iter(lightcurve):
@@ -277,7 +275,7 @@ class lightcurve_iter(lightcurve):
 
     def __next__(self) -> Self:
         self.subsample()
-        return (self)
+        return self
 
     def subsample(self) -> None:
         """
@@ -293,7 +291,6 @@ class lightcurve_iter(lightcurve):
 # =========================================================
 # TESTING
 if __name__ == "__main__":
-    print(":)")
     T = np.linspace(0, 4 * np.pi, 128)
     Y = np.sin(T) * np.sqrt(2)
     E = (np.random.poisson(100, size=len(T)) / 100) * 1
@@ -314,4 +311,4 @@ if __name__ == "__main__":
     a2.errorbar(lc_calib.T, lc_calib.Y, lc_calib.E, fmt='none', capsize=2)
     plt.show()
 
-    lightcurve_iter(T, Y, E)
+    lightcurve_iter(lightcurve(T, Y, E))

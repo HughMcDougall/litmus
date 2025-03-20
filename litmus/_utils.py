@@ -22,36 +22,6 @@ from scipy.special import jnp_zeros
 # PRINTING UTILITIES
 # ============================================
 
-'''
-@contextmanager
-def suppress_stdout():
-    with open(os.devnull, "w") as devnull:
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
-
-        sys.stdout = devnull
-        sys.stderr = devnull
-        try:
-            yield
-        finally:
-            sys.stdout.close()
-            sys.stderr.close()
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
-
-
-@contextmanager
-class suppress_stdout:
-    def __enter__(self):
-        self._original_stdout = copy(sys.stdout)
-        sys.stdout = open(os.devnull, 'w')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.stdout.close()
-        sys.stdout = self._original_stdout
-'''
-
-
 @contextmanager
 def suppress_stdout():
     # Duplicate the original stdout file descriptor to restore later
@@ -69,30 +39,6 @@ def suppress_stdout():
             os.close(original_stdout_fd)
 
 
-# TODO - Remove this redundant code when swapping to optimistix
-'''
-class SuppressStdout:
-    def __init__(self):
-        # Duplicate the original stdout file descriptor
-        self.original_stdout_fd = os.dup(sys.stdout.fileno())
-        self.devnull = open(os.devnull, 'w')
-        self.is_suppressed = False
-
-    def on(self):
-        if not self.is_suppressed:
-            # Open devnull and redirect stdout to it
-            os.dup2(self.devnull.fileno(), sys.stdout.fileno())
-            self.is_suppressed = True
-
-    def off(self):
-        if self.is_suppressed:
-            # Restore original stdout from the duplicated file descriptor
-            os.dup2(self.original_stdout_fd, sys.stdout.fileno())
-            self.devnull.close()
-            self.is_suppressed = False
-
-sso = SuppressStdout()
-'''
 
 
 # ============================================
@@ -155,6 +101,8 @@ def dict_pack(DICT: dict, keys=None, recursive=True, H=None, d0={}) -> np.array:
     nokeys = True if keys is None else 0
     keys = keys if keys is not None else DICT.keys()
 
+    if d0 is {}: d0 = {key:0 for key in keys}
+
     for key in keys:
         if key in DICT.keys() and key not in d0.keys(): d0 |= {key: 0.0}
 
@@ -162,7 +110,10 @@ def dict_pack(DICT: dict, keys=None, recursive=True, H=None, d0={}) -> np.array:
         out = np.array(
             [dict_pack(DICT[key] - d0[key], keys=keys if not nokeys else None, recursive=recursive) for key in keys])
     else:
-        out = np.array([DICT[key] - d0[key] for key in keys])
+        if isiter(DICT[list(keys)[0]]):
+            out = np.array([[DICT[key][i] - d0[key] for i in range(dict_dim(DICT)[1])] for key in keys])
+        else:
+            out = np.array([DICT[key] - d0[key] for key in keys])
 
     return (out)
 

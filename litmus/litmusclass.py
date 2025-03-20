@@ -4,7 +4,6 @@ litmus.py
 Contains the main litmus object class, which acts as a user-friendly interface with the models statistical models
 and fitting procedure. In future versions, this will also give access to the GUI.
 
-
 todo
     - This entire class to be re-done to take multiple models instead of multiple lightcurves
     - Possibly add hdf5 saving to chain output
@@ -12,6 +11,7 @@ todo
     - Need to have better handling of the "fitting method inherit" feature, especially with refactor / redo
     -
 '''
+
 # ============================================
 # IMPORTS
 import sys
@@ -21,7 +21,7 @@ import pandas as pd
 from chainconsumer import ChainConsumer, Chain, ChainConfig, PlotConfig
 
 import matplotlib
-from typing import Union, Self, Any
+from litmus._types import *
 
 from pandas import DataFrame
 
@@ -152,7 +152,7 @@ class LITMUS(logger):
             # Write rows
             writer.writerows(rows)
 
-    def read_chain(self, path: str, header: [str] | None = None):
+    def read_chain(self, path: str, header: Iterable[str] | None = None):
         """
         #todo needs updating
         """
@@ -184,7 +184,7 @@ class LITMUS(logger):
 
     # Plotting
 
-    def plot_lightcurves(self, model_no=0, Nsamples: int = 1, Tspan: None | [float, float] = None, Nplot: int = 1024,
+    def plot_lightcurves(self, model_no: int =0, Nsamples: int = 1, Tspan: None | list[float, float] = None, Nplot: int = 1024,
                          dir: str | None = None, show: bool = True) -> matplotlib.figure.Figure():
         """
         Plots the interpolated lightcurves for one of the fitted models

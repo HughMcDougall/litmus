@@ -8,20 +8,20 @@ HM Apr 2024
 # IMPORTS
 
 from copy import deepcopy as copy
-import types
-from typing import Any, Self, Union
-from nptyping import NDArray
+
 import matplotlib
 
 import numpy as np
 import pylab as pl
 import matplotlib.pyplot as plt
+from litmus.logging import logger
 
 import jax
 
 import tinygp
 from tinygp import GaussianProcess
 
+from litmus._types import *
 from litmus._utils import randint, isiter
 from litmus.lightcurve import lightcurve
 
@@ -29,7 +29,7 @@ from litmus.lightcurve import lightcurve
 # ===================================================
 
 def mock_cadence(maxtime, seed: int = 0, cadence: float = 7, cadence_var: float = 1, season: float = 180,
-                 season_var: float = 14):
+                 season_var: float = 14, N: int = 1024):
     """
     Returns time series X values for a mock signal
     :param seed: Seed for randomization
@@ -38,22 +38,23 @@ def mock_cadence(maxtime, seed: int = 0, cadence: float = 7, cadence_var: float 
     :param cadence_var: Standard deviation of the cadence
     :param season: Average length of the observation season (default 180 days)
     :param season_var: Standard deviation of the season length (default 14 days)
-    :param N: Number of observations used prior to trimming
+    :param N: Number of observations used prior to trimming. This is auto-tuned and is deprecated
 
     returns as array of sample times
     """
 
     np.random.seed(seed)
 
+    assert N>0, "Invalid N. Must be <=0"
+
     # Generate Measurements
-    N = 1024
     while True:
         diffs = np.random.randn(N) * cadence_var / np.sqrt(2) + cadence
         T = np.cumsum(diffs)
         if T.max() <= maxtime:
             N *= 2
         else:
-            continue
+            break
     T = T[np.where((T < (maxtime * 2)))[0]]
     T += np.random.randn(len(T)) * cadence_var / np.sqrt(2)
 
@@ -78,7 +79,7 @@ def mock_cadence(maxtime, seed: int = 0, cadence: float = 7, cadence_var: float 
     return (T)
 
 
-def subsample(T, Y, Tsample) -> NDArray([Any]):
+def subsample(T, Y, Tsample) -> ArrayN:
     """
     Linearly interpolates between X and Y and returns interped Y's at positions Xsample
     """
@@ -86,7 +87,7 @@ def subsample(T, Y, Tsample) -> NDArray([Any]):
     return (out)
 
 
-def outly(Y, q) -> NDArray([Any]):
+def outly(Y, q) -> ArrayN:
     """
     Returns a copy of Y with fraction 'q' elements replaced with
     unit - normally distributed outliers
@@ -96,7 +97,7 @@ def outly(Y, q) -> NDArray([Any]):
     return (Y)
 
 
-def gp_realization(T, err: Union[float, NDArray([Any])] = 0.0, tau: float = 400.0,
+def gp_realization(T, err: Union[float, ArrayN] = 0.0, tau: float = 400.0,
                    basekernel: tinygp.kernels.quasisep = tinygp.kernels.quasisep.Exp,
                    seed=None) -> lightcurve:
     '''
@@ -129,7 +130,7 @@ def gp_realization(T, err: Union[float, NDArray([Any])] = 0.0, tau: float = 400.
 
 # ================================================
 
-class mock(object):
+class mock(logger):
     """
     Handy class for making mock data. When calling with _init_,
         defaultkwargs = {'tau':             400.0,
@@ -158,6 +159,8 @@ class mock(object):
                          'E_var': [0.0, 0.0]
                          }
 
+        logger.__init__(self)
+
         self.seed = seed
         self.lc, self.lc_1, self.lc_2 = None, None, None
         self.lag = 0.0
@@ -177,7 +180,7 @@ class mock(object):
         self.generate(seed=seed)
         return (self.copy(seed))
 
-    def generate_true(self, seed: int = 0) -> (NDArray([Any]), NDArray([Any])):
+    def generate_true(self, seed: int = 0) -> (ArrayN, ArrayN):
         """
         Generates an underlying true DRW signal and stores in the self attribute self.lc
         :param seed: seed for random generation
@@ -352,7 +355,7 @@ class mock(object):
 # CASE A - WELL OBSERVED SMOOTH CURVES
 
 
-def determ_gen(self, seed=0) -> (NDArray([Any]), NDArray([Any])):
+def determ_gen(self, seed=0) -> (ArrayN, ArrayN):
     """
     Replaces the GP generation for the mock_A example to replace it with a nice gaussian curve
     """
@@ -365,7 +368,7 @@ def determ_gen(self, seed=0) -> (NDArray([Any]), NDArray([Any])):
 
 # Change the way mock A generates a time series
 mock_A = mock(season=None, lag=300)
-mock_A.generate_true = types.MethodType(determ_gen, mock_A)
+mock_A.generate_true = MethodType(determ_gen, mock_A)
 mock_A()
 
 mock_A_01, mock_A_02, lag_A = mock_A.lc_1, mock_A.lc_2, mock_A.lag
@@ -386,29 +389,3 @@ mock_C_00 = mock_C.lc
 mock_C_01 = mock_C.lc_1
 mock_C_02 = mock_C.lc_2
 lag_C = mock_C.lag
-
-# ================================================
-if __name__ == "__main__":
-    for x in mock_A, mock_B, mock_C:
-        plt.figure()
-        plt.title("Seasonal GP, lag = %.2f" % x.lag)
-
-        x.plot(axis=plt.gca())
-
-        plt.legend()
-        plt.xlabel("Time (Days)")
-        plt.ylabel("Signal Strength")
-        plt.axhline(0.0, ls='--', c='k', zorder=-10)
-        plt.axhline(1.0, ls=':', c='k', zorder=-10)
-        plt.axhline(-1.0, ls=':', c='k', zorder=-10)
-
-        plt.grid()
-        plt.show()
-
-        # ------------------
-        plt.figure()
-        x.corrected_plot(x.params(), axis=plt.gca(), true_args={'alpha': [0.15, 0.0]})
-        plt.title("Corrected_plot for lag = %.2f" % x.lag)
-        plt.grid()
-
-        plt.show()

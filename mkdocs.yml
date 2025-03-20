@@ -1,0 +1,58 @@
+site_name: LITMUS
+site_url: https://github.com/HughMcDougall/litmus/
+site_author: Hugh McDougall
+
+edit_uri: ""
+repo_name: HughMcDougall/litmus/
+repo_url: https://github.com/HughMcDougall/litmus/
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - search.suggest
+    - search.highlight
+    - search.tabs.link
+    - navigation.expand
+    - toc.follow
+    - navigation.tracking
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+plugins:
+  autorefs: {}
+  mkdocstrings:
+    handlers:
+      python:
+        paths: [.]
+        import:
+          - https://docs.python.org/3/objects.inv
+          - https://docs.pydantic.dev/latest/objects.inv
+        options:
+          members_order: source
+          separate_signature: true
+          filters: ["!^_"]
+          show_root_heading: true
+          show_if_no_docstring: true
+          show_signature_annotations: true
+  search: {}
+
+
+
+nav:
+  - Home: index.md
+  - Usage: doctest.md

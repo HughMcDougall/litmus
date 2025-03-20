@@ -26,12 +26,13 @@ from typing import Any
 from nptyping import NDArray
 
 from litmus._utils import *
+from litmus._types import *
 from litmus.lightcurve import lightcurve
 
 
 # ============================================
 # Likelihood function working
-def mean_func(means, Y) -> NDArray([Any], float):
+def mean_func(means, Y) -> ArrayN:
     """
     DEPRECATED - means are subtracted in the model now
     Utitlity function to take array of constants and return as gp-friendly functions
@@ -64,16 +65,20 @@ class Multiband(tinygp.kernels.quasisep.Wrapper):
         return self.amplitudes[band] * self.kernel.observation_model(t)
 
 
-def build_gp(T: [float], Y: [float], diag: [[float]], bands: [int], tau: float, amps: [float], means: [float],
+def build_gp(T: ArrayN, Y: ArrayN, diag: ArrayNxN, bands: ArrayN, tau: float,
+             amps: tuple[float, float], means: tuple[float, float],
              basekernel=tinygp.kernels.quasisep.Exp) -> GaussianProcess:
     """
-    Constructs the tinyGP gaussian process for use in numpyro sampling
-    TODO: update this documentation. Possibly change to dict input
+    Builds a tinygp two-band kernel for predictions
 
-    :param data:        Banded lc as dictionary of form {T,Y,E,bands}
-    :param params:      Parameters to build the gp from as dictionary
-    :param basekernel:  Base gaussian kernel to use. Defaults to exponential
-    :return:            Returns tinygp gp object and jnp.array of data sorted by lag-corrected time
+    :parameter T: Time values for the GP
+    :parameter Y: Y values for the GP (No effect)
+    :parameter diag: Variance matrix (square uncertainties) of the GP
+    :parameter bands: The bands that the different entries in the time series correspond to
+    :parameter tau: Timescale of the GP
+    :parameter amps: Amplitudes of the GP
+    :parameter means:
+    :parameter basekernel:
     """
 
     # Create GP kernel with Multiband
@@ -95,6 +100,6 @@ def build_gp(T: [float], Y: [float], diag: [[float]], bands: [int], tau: float, 
     return (gp)
 
 
-#-------------------
-if __name__=="__main__":
+# -------------------
+if __name__ == "__main__":
     print(":)")
