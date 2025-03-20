@@ -15,7 +15,7 @@ import litmus.gp_working
 import litmus.models
 import litmus.ICCF_working
 import litmus.fitting_methods
-import litmus.clustering
+import litmus._ss.clustering
 import litmus.mocks
 import litmus.logging
 

@@ -98,8 +98,3 @@ def build_gp(T: ArrayN, Y: ArrayN, diag: ArrayNxN, bands: ArrayN, tau: float,
         mean=meanf
     )
     return (gp)
-
-
-# -------------------
-if __name__ == "__main__":
-    print(":)")

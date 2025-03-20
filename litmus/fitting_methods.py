@@ -35,7 +35,7 @@ if has_polychord:
 # ------
 # Internal
 import litmus._utils as _utils
-import litmus.clustering as clustering
+import litmus._ss.clustering as clustering
 from litmus.ICCF_working import *
 
 from litmus.models import quickprior

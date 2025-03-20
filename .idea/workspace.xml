@@ -9,24 +9,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
-      <change afterPath="$PROJECT_DIR$/litmus/_types.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/module_test/fitting_methods_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/module_test/lin_scatter_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/module_test/mocks_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/_ss/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/gp_working.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/gp_working.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/lightcurve.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/lightcurve.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/lin_scatter.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/lin_scatter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/litmusclass.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/litmusclass.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/mocks.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/mocks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
-    </list>
+    <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -249,7 +232,7 @@
       <workItem from="1742346249033" duration="2546000" />
       <workItem from="1742348894421" duration="12730000" />
       <workItem from="1742454937717" duration="1178000" />
-      <workItem from="1742456129879" duration="1424000" />
+      <workItem from="1742456129879" duration="1760000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />
