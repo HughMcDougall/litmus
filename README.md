@@ -20,9 +20,6 @@ This project is still very much in the early stages. If you have any questions, 
 
 ## Installation
 
-In its current pre-release state,
-`LITMUS` is a bit fragile in its installation thanks to making use of some packages that are still in active developement. At time of writing (30/10/24) this is still changing.
-
 ### Simple Installation
 
 First make sure you have a recent version of python running (`3.10`-`3.12`)

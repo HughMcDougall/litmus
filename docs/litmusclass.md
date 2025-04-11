@@ -1,0 +1,3 @@
+# `litmus.litmusclass`
+
+::: litmus.litmusclass

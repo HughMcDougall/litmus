@@ -1,0 +1,30 @@
+/* Apply background color only to methods */
+code.doc-symbol-method,
+acode.doc-symbol-method,
+.docstring, .doc-contents{
+    margin-left: 1.5em;
+	margin-right: 0.5em;
+	padding-left: 0.25em;
+	padding-right: 0.25em;
+	padding-bottom: 0.25em;
+	padding-top: 0.25em;
+    border-radius: 0px;
+    margin-bottom: 1.5em;
+	background-color: var(--fg--col);
+	
+}
+
+.doc-heading-class {
+  margin-top: 2.0em;
+}
+
+
+
+:root, :host,
+[data-md-color-scheme="default"] {
+	--fg--col: #F3B1891a;
+}
+
+[data-md-color-scheme="slate"] {
+	--fg--col: #d2a8ff1a;
+}

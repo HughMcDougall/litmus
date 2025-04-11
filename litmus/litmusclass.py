@@ -4,7 +4,6 @@ litmus.py
 Contains the main litmus object class, which acts as a user-friendly interface with the models statistical models
 and fitting procedure. In future versions, this will also give access to the GUI.
 
-
 todo
     - This entire class to be re-done to take multiple models instead of multiple lightcurves
     - Possibly add hdf5 saving to chain output
@@ -12,6 +11,7 @@ todo
     - Need to have better handling of the "fitting method inherit" feature, especially with refactor / redo
     -
 '''
+
 # ============================================
 # IMPORTS
 import sys
@@ -21,7 +21,7 @@ import pandas as pd
 from chainconsumer import ChainConsumer, Chain, ChainConfig, PlotConfig
 
 import matplotlib
-from typing import Union, Self, Any
+from litmus._types import *
 
 from pandas import DataFrame
 
@@ -152,7 +152,7 @@ class LITMUS(logger):
             # Write rows
             writer.writerows(rows)
 
-    def read_chain(self, path: str, header: [str] | None = None):
+    def read_chain(self, path: str, header: Iterable[str] | None = None):
         """
         #todo needs updating
         """
@@ -184,7 +184,7 @@ class LITMUS(logger):
 
     # Plotting
 
-    def plot_lightcurves(self, model_no=0, Nsamples: int = 1, Tspan: None | [float, float] = None, Nplot: int = 1024,
+    def plot_lightcurves(self, model_no: int =0, Nsamples: int = 1, Tspan: None | list[float, float] = None, Nplot: int = 1024,
                          dir: str | None = None, show: bool = True) -> matplotlib.figure.Figure():
         """
         Plots the interpolated lightcurves for one of the fitted models
@@ -325,62 +325,3 @@ class LITMUS(logger):
         if show: plt.show()
 
         return
-
-
-if __name__ == "__main__":
-    import numpy as np
-    import matplotlib.pyplot as plt
-
-    import matplotlib
-
-    matplotlib.use('module://backend_interagg')
-
-    #::::::::::::::::::::
-    # Mock Data
-    from mocks import *
-
-    # mymock = mymock.copy(E=[0.05,0.1], lag=300)
-    mymock = mock(cadence=[7, 30], E=[0.15, 1.0], season=180, lag=180 * 3, tau=200.0)
-    # mymock=mock_B
-    mymock.plot()
-    mymock(10)
-    plt.show()
-
-    lag_true = mymock.lag
-
-    test_model = models.GP_simple()
-    test_model.set_priors(mock.params())
-
-    seed_params = {}
-
-    #::::::::::::::::::::
-    # Make Litmus Object
-    fitting_method = fitting_methods.hessian_scan(stat_model=test_model,
-                                                  Nlags=24,
-                                                  init_samples=5_000,
-                                                  grid_bunching=0.8,
-                                                  optimizer_args={'tol': 1E-3,
-                                                                  'maxiter': 512,
-                                                                  'increase_factor': 1.2,
-                                                                  },
-                                                  reverse=False,
-                                                  ELBO_Nsteps=300,
-                                                  ELBO_Nsteps_init=200,
-                                                  ELBO_particles=24,
-                                                  ELBO_optimstep=0.014,
-                                                  seed_params=seed_params,
-                                                  debug=True
-                                                  )
-
-    test_litmus = LITMUS(fitting_method)
-
-    test_litmus.add_lightcurve(mymock.lc_1)
-    test_litmus.add_lightcurve(mymock.lc_2)
-
-    print("\t Fitting Start")
-    test_litmus.fit()
-    print("\t Fitting complete")
-
-    test_litmus.plot_parameters()
-    test_litmus.lag_plot()
-    test_litmus.diagnostic_plots()

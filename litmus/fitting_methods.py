@@ -12,36 +12,42 @@ from typing import Callable
 
 from litmus.logging import logger
 
+import jax
+
 import jaxopt
 import numpyro
 import numpy as np
 import matplotlib.pyplot as plt
-
+import jax.numpy as jnp
 # ------
 # Samplers, stats etc
 
-has_jaxns = importlib.util.find_spec('jaxns') is not None
-has_polychord = importlib.util.find_spec('pypolychord') is not None
-if has_jaxns:
+_has_jaxns = importlib.util.find_spec('jaxns') is not None
+_has_polychord = importlib.util.find_spec('pypolychord') is not None
+if _has_jaxns:
     try:
         import tensorflow_probability.substrates.jax.distributions as tfpd
         import jaxns
     except:
-        has_jaxns = False
+        _has_jaxns = False
         print("Warning! Something likely wrong in jaxns install or with numpyro integration", file=sys.stderr)
-if has_polychord:
+if _has_polychord:
     pass
 
 # ------
 # Internal
 import litmus._utils as _utils
-import litmus.clustering as clustering
-from litmus.ICCF_working import *
+# import litmus._ss.clustering as clustering
+import litmus.ICCF_working as iccf
 
 from litmus.models import quickprior
 from litmus.models import stats_model
 from litmus.lightcurve import lightcurve
 from litmus.lin_scatter import linscatter, expscatter
+
+# ============================================
+__all__ = ["fitting_procedure", "prior_sampling", "nested_sampling", "hessian_scan", "SVI_scan",
+           "JAVELIKE"]  # Only these will be documented
 
 
 # ============================================
@@ -59,7 +65,8 @@ class fitting_procedure(logger):
                  debug=True,
                  **fit_params):
 
-        logger.__init__(out_stream=out_stream,
+        logger.__init__(self,
+                        out_stream=out_stream,
                         err_stream=err_stream,
                         verbose=verbose,
                         debug=debug,
@@ -69,8 +76,6 @@ class fitting_procedure(logger):
             self._default_params = {}
 
         self.stat_model = stat_model
-
-        logger.__init__(self)
 
         self.name = "Base Fitting Procedure"
 
@@ -335,11 +340,11 @@ class ICCF(fitting_procedure):
         X2, Y2, E2 = lc_2.T, lc_2.Y, lc_2.E
 
         # Get interpolated correlation for all un-bootstrapped data
-        self.correls = correlfunc_jax_vmapped(self.lags, X1, Y1, X2, Y2, self.Nterp)
+        self.correls = iccf.correlfunc_jax_vmapped(self.lags, X1, Y1, X2, Y2, self.Nterp)
 
         # Do bootstrap fitting
         lagrange = jnp.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags)
-        jax_samples = correl_func_boot_jax_wrapper_nomap(lagrange, X1, Y1, X2, Y2, E1, E2,
+        jax_samples = iccf.correl_func_boot_jax_wrapper_nomap(lagrange, X1, Y1, X2, Y2, E1, E2,
                                                          Nterp=self.Nterp,
                                                          Nboot=self.Nboot)
 
@@ -1880,72 +1885,3 @@ class JAVELIKE(fitting_procedure):
             I = np.random.choice(np.arange(M), N, replace=True)
             samps = {key: samps[key][I] for key in samps.keys()}
         return (samps)
-
-
-# =====================================================
-if __name__ == "__main__":
-    import mocks
-
-    import matplotlib.pyplot as plt
-    from models import dummy_statmodel
-
-    #::::::::::::::::::::
-
-    mock = mocks.mock(seed=2, lag=100, season=0)
-    mock01 = mock.lc_1
-    mock02 = mock.lc_2
-    lag_true = mock.lag
-
-    mock().plot()
-    #::::::::::::::::::::
-    test_statmodel = dummy_statmodel()
-
-    # ICCF Test
-    print("Doing ICCF Testing:")
-    test_ICCF = ICCF(Nboot=128, Nterp=1024, Nlags=1024, stat_model=test_statmodel, debug=True)
-    print("\tDoing Fit")
-    test_ICCF.fit(mock01, mock02)
-    print("\tFit done")
-
-    ICCF_samples = test_ICCF.get_samples()['lag']
-    print("\tICCF Results , dT = %.2f +/- %.2f compared to true lag of %.2f"
-          % (ICCF_samples.mean(), ICCF_samples.std(), lag_true)
-          )
-
-    plt.figure()
-    plt.hist(ICCF_samples, histtype='step', bins=24)
-    plt.axvline(lag_true, ls='--', c='k', label="True Lag")
-    plt.axvline(ICCF_samples.mean(), ls='--', c='r', label="Mean Lag")
-    plt.axvline(ICCF_samples.mean() + ICCF_samples.std(), ls=':', c='r')
-    plt.axvline(ICCF_samples.mean() - ICCF_samples.std(), ls=':', c='r')
-    plt.title("ICCF Results")
-    plt.legend()
-    plt.grid()
-    plt.show()
-
-    # ---------------------
-    # Prior Sampling
-
-    print("Doing PriorSampling Testing:")
-    test_prior_sampler = prior_sampling(stat_model=test_statmodel)
-    print("\tDoing Fit")
-    test_prior_sampler.fit(lc_1=mock01, lc_2=mock02, seed=0)
-    print("\tFit done")
-
-    test_samples = test_prior_sampler.get_samples(512, importance_sampling=True)
-    print("\tPriorSampling Results , dT = %.2f +/- %.2f compared to true lag of %.2f"
-          % (test_samples['lag'].mean(), test_samples['lag'].std(), test_statmodel.lag_peak)
-          )
-
-    plt.figure()
-    plt.title("Prior Sampling")
-    plt.hist(test_samples['lag'], histtype='step', density=True)
-    plt.axvline(test_statmodel.lag_peak, ls='--', c='k')
-    plt.axvline(test_samples['lag'].mean(), ls='--', c='r')
-    plt.axvline(test_samples['lag'].mean() + test_samples['lag'].std(), ls=':', c='r')
-    plt.axvline(test_samples['lag'].mean() - test_samples['lag'].std(), ls=':', c='r')
-    plt.ylabel("Posterior Density")
-    plt.xlabel("Lag")
-    plt.grid()
-    plt.tight_layout()
-    plt.show()

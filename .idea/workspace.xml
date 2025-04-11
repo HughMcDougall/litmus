@@ -1,14 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AnalysisUIOptions">
+    <option name="SPLITTER_PROPORTION" value="0.29591078" />
+    <option name="ANALYZE_INJECTED_CODE" value="false" />
+    <option name="SCOPE_TYPE" value="3" />
+  </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
+      <change afterPath="$PROJECT_DIR$/examples/hence.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/index.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/index.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/litmusclass.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/litmusclass.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/logging.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/logging.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mkdocs.yml" beforeDir="false" afterPath="$PROJECT_DIR$/mkdocs.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/404.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/404.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/doctest/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/doctest/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/objects.inv" beforeDir="false" afterPath="$PROJECT_DIR$/site/objects.inv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/search/search_index.json" beforeDir="false" afterPath="$PROJECT_DIR$/site/search/search_index.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/sitemap.xml" beforeDir="false" afterPath="$PROJECT_DIR$/site/sitemap.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/sitemap.xml.gz" beforeDir="false" afterPath="$PROJECT_DIR$/site/sitemap.xml.gz" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -18,8 +32,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Jupyter Notebook" />
         <option value="Python Script" />
+        <option value="Jupyter Notebook" />
       </list>
     </option>
   </component>
@@ -38,6 +52,9 @@
     &quot;accountId&quot;: &quot;5c35c998-9fdf-459b-8e5b-e0a940c40bf8&quot;
   }
 }</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
@@ -49,63 +66,68 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.1D_lag_posterior.executor": "Run",
-    "Python.ICCF_working.executor": "Run",
-    "Python.JAVELIKE_test.executor": "Run",
-    "Python.NS_direct_test.executor": "Run",
-    "Python.NS_test.executor": "Run",
-    "Python._utils.executor": "Run",
-    "Python.dual_moons.executor": "Run",
-    "Python.fitting_methods.executor": "Run",
-    "Python.gaussian_shells.executor": "Run",
-    "Python.grid_plot.executor": "Run",
-    "Python.high_SNR_test.executor": "Run",
-    "Python.integ_compare.executor": "Run",
-    "Python.integ_test_01.executor": "Run",
-    "Python.jaxns_test.executor": "Run",
-    "Python.lightcurve.executor": "Run",
-    "Python.lightcurve_gentest.executor": "Run",
-    "Python.lin_scatter.executor": "Run",
-    "Python.litmus_class_example.executor": "Run",
-    "Python.litmus_test.executor": "Run",
-    "Python.litmusclass.executor": "Run",
-    "Python.logging.executor": "Run",
-    "Python.mocks.executor": "Run",
-    "Python.models.executor": "Run",
-    "Python.null_test.executor": "Run",
-    "Python.scan_test.executor": "Run",
-    "Python.subsample_example.executor": "Run",
-    "Python.test.executor": "Run",
-    "Python.test_01.executor": "Run",
-    "Python.test_hessianscan.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "dev",
-    "javascript.add.imports.on.the.completion": "false",
-    "javascript.show.imports.popup": "false",
-    "last_opened_file_path": "C:/Work/litmus/examples",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "typescript.add.imports.on.the.completion": "false",
-    "typescript.show.imports.popup": "false",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.1D_lag_posterior.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ICCF_working.executor&quot;: &quot;Run&quot;,
+    &quot;Python.JAVELIKE_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.NS_direct_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.NS_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python._types.executor&quot;: &quot;Run&quot;,
+    &quot;Python._utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.dual_moons.executor&quot;: &quot;Run&quot;,
+    &quot;Python.fitting_methods.executor&quot;: &quot;Run&quot;,
+    &quot;Python.fitting_methods_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.gaussian_shells.executor&quot;: &quot;Run&quot;,
+    &quot;Python.gp_working.executor&quot;: &quot;Run&quot;,
+    &quot;Python.grid_plot.executor&quot;: &quot;Run&quot;,
+    &quot;Python.high_SNR_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.integ_compare.executor&quot;: &quot;Run&quot;,
+    &quot;Python.integ_test_01.executor&quot;: &quot;Run&quot;,
+    &quot;Python.jaxns_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.lightcurve.executor&quot;: &quot;Run&quot;,
+    &quot;Python.lightcurve_gentest.executor&quot;: &quot;Run&quot;,
+    &quot;Python.lin_scatter.executor&quot;: &quot;Run&quot;,
+    &quot;Python.litmus_class_example.executor&quot;: &quot;Run&quot;,
+    &quot;Python.litmus_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.litmusclass.executor&quot;: &quot;Run&quot;,
+    &quot;Python.logging.executor&quot;: &quot;Run&quot;,
+    &quot;Python.mocks.executor&quot;: &quot;Run&quot;,
+    &quot;Python.mocks_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.models.executor&quot;: &quot;Run&quot;,
+    &quot;Python.null_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.scan_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.subsample_example.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_01.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_hessianscan.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
+    &quot;javascript.add.imports.on.the.completion&quot;: &quot;false&quot;,
+    &quot;javascript.show.imports.popup&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Work/litmus/examples&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;typescript.add.imports.on.the.completion&quot;: &quot;false&quot;,
+    &quot;typescript.show.imports.popup&quot;: &quot;false&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Work\litmus\examples" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Work\litmus\litmus\_ss" />
       <recent name="C:\Work\litmus\litmus" />
       <recent name="C:\Work\litmus\examples\jaxns_testing" />
       <recent name="C:\Work\litmus\examples" />
       <recent name="C:\Work\litmus\examples\polychord_tests" />
-      <recent name="C:\Work\litmus\examples\clusters" />
     </key>
   </component>
   <component name="RunManager">
@@ -222,7 +244,11 @@
       <workItem from="1742185250581" duration="5602000" />
       <workItem from="1742268372856" duration="3277000" />
       <workItem from="1742346249033" duration="2546000" />
-      <workItem from="1742348894421" duration="7508000" />
+      <workItem from="1742348894421" duration="12730000" />
+      <workItem from="1742454937717" duration="1178000" />
+      <workItem from="1742456129879" duration="3297000" />
+      <workItem from="1744333288646" duration="649000" />
+      <workItem from="1744334908556" duration="1819000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />

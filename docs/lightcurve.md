@@ -1,0 +1,3 @@
+# `litmus.lightcurve`
+
+::: litmus.lightcurve

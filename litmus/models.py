@@ -9,9 +9,6 @@ HM 24
 
 import warnings
 
-from typing import Any
-from nptyping import NDArray
-
 import matplotlib.pyplot as plt
 
 warnings.filterwarnings("ignore")
@@ -36,6 +33,7 @@ from tinygp import GaussianProcess
 
 from litmus.gp_working import *
 from litmus._utils import *
+from litmus._types import *
 from litmus.logging import logger
 
 import contextlib
@@ -72,7 +70,7 @@ _default_config = {
 
 class stats_model(logger):
     '''
-    Base class for bayesian generative models. Includes a series of utilities for evaluating likelihoods, gradients etc,
+    Base class for bayesian generative models. Includes a series of utilities for evaluating likelihoods, gradients etc.,
     as well as various
 
     On init, takes dict `prior_ranges' of the uniform boundaries of the parameter priors, or a single (float/int)
@@ -92,7 +90,7 @@ class stats_model(logger):
                  debug=True,
                  ):
 
-        logger.__init__(self, out_stream=out_stream, err_steam=err_stream, verbose=verbose, debug=debug)
+        logger.__init__(self, out_stream=out_stream, err_stream=err_stream, verbose=verbose, debug=debug)
 
         self._protected_keys = []
 
@@ -247,7 +245,7 @@ class stats_model(logger):
 
     # --------------------------------
     # Parameter transforms and other utils
-    def to_uncon(self, params) -> {str: NDArray([Any], float)}:
+    def to_uncon(self, params) -> dict[str, float]:
         '''
         Converts model parametes from "real" constrained domain values into HMC friendly unconstrained values.
         Inputs and outputs as keyed dict.
@@ -255,7 +253,7 @@ class stats_model(logger):
         out = numpyro.infer.util.unconstrain_fn(self.prior, params=params, model_args=(), model_kwargs={})
         return (out)
 
-    def to_con(self, params) -> {str: NDArray([Any], float)}:
+    def to_con(self, params) -> dict[str, float]:
         '''
         Converts model parametes back into "real" constrained domain values.
         Inputs and outputs as keyed dict.
@@ -375,7 +373,7 @@ class stats_model(logger):
 
     # --------------------------------
     # Wrapped Function Evaluations
-    def log_density(self, params, data, use_vmap=False) -> NDArray([Any], float):
+    def log_density(self, params, data, use_vmap=False) -> ArrayN:
         """
         Returns the log density of the joint distribution at some constrained space position 'params' and conditioned
         on some 'data'. data must match the output of the model's lc_to_data(), and params is either a keyed dict of
@@ -395,7 +393,7 @@ class stats_model(logger):
 
         return out
 
-    def log_likelihood(self, params, data, use_vmap=False) -> NDArray([Any], float):
+    def log_likelihood(self, params, data, use_vmap=False) -> ArrayN:
         """
         Returns the log likelihood at some constrained space position 'params' and conditioned
         on some 'data'. data must match the output of the model's lc_to_data(), and params is either a keyed dict of
@@ -414,7 +412,7 @@ class stats_model(logger):
 
         return out
 
-    def log_density_uncon(self, params, data, use_vmap=False) -> NDArray([Any], float):
+    def log_density_uncon(self, params, data, use_vmap=False) -> ArrayN:
         """
         Returns the log density of the joint distribution at some unconstrained space position 'params' and conditioned
         on some 'data'. data must match the output of the model's lc_to_data(), and params is either a keyed dict of
@@ -434,7 +432,7 @@ class stats_model(logger):
 
         return out
 
-    def log_prior(self, params, data=None, use_vmap=False) -> NDArray([Any], float):
+    def log_prior(self, params, data=None, use_vmap=False) -> ArrayN:
         """
         Returns the log density of the prior  at some constrained space position 'params'
         Params is either a keyed dict of parameter values or a key dict of arrays of values.
@@ -455,7 +453,7 @@ class stats_model(logger):
 
     # --------------------------------
     # Wrapped Grad evaluations
-    def log_density_grad(self, params, data, use_vmap=False, keys=None) -> {str: NDArray([Any], float)}:
+    def log_density_grad(self, params, data, use_vmap=False, keys=None) -> dict[str, float]:
         """
         Returns the gradient of the log density of the joint distribution at some constrained space position 'params',
         conditionded on some 'data' matching the format of the model's lc_to_data() output.
@@ -477,7 +475,7 @@ class stats_model(logger):
 
         return out
 
-    def log_density_uncon_grad(self, params, data, use_vmap=False, keys=None, asdict=False):
+    def log_density_uncon_grad(self, params, data, use_vmap=False, keys=None, asdict=False) -> float:
         """
         Returns the gradient of the log density of the joint distribution at some unconstrained space position 'params',
         conditionded on some 'data' matching the format of the model's lc_to_data() output.
@@ -499,7 +497,7 @@ class stats_model(logger):
 
         return out
 
-    def log_prior_grad(self, params, data=None, use_vmap=False, keys=None) -> {str: NDArray([Any], float)}:
+    def log_prior_grad(self, params, data=None, use_vmap=False, keys=None) -> dict[str, float]:
         """
         Returns the gradient of the log prior of the prior at some constrained space position 'params'
         Params is either a keyed dict of parameter values or a key dict of arrays of values.
@@ -520,7 +518,7 @@ class stats_model(logger):
 
     # --------------------------------
     # Wrapped Hessian evaluations
-    def log_density_hess(self, params, data, use_vmap=False, keys=None) -> NDArray([Any, Any, Any]):
+    def log_density_hess(self, params, data, use_vmap=False, keys=None) -> ArrayNxMxM:
         """
         Returns the hessian matrix of the log joint distribution at some constrained space position 'params',
         conditioned on some 'data' matching the output of the model's lc_to_data() output.
@@ -552,7 +550,7 @@ class stats_model(logger):
 
         return out
 
-    def log_density_uncon_hess(self, params, data, use_vmap=False, keys=None) -> NDArray([Any, Any, Any]):
+    def log_density_uncon_hess(self, params, data, use_vmap=False, keys=None) -> ArrayNxMxM:
         """
         Returns the hessian matrix of the log joint distribution at some unconstrained space position 'params',
         conditioned on some 'data' matching the output of the model's lc_to_data() output.
@@ -584,7 +582,7 @@ class stats_model(logger):
 
         return out
 
-    def log_prior_hess(self, params, data=None, use_vmap=False, keys=None) -> NDArray([Any, Any, Any]):
+    def log_prior_hess(self, params, data=None, use_vmap=False, keys=None) -> ArrayNxMxM:
         """
         Returns the hessian matrix of the log prior of the prior at some constrained space position 'params'
         Params is either a keyed dict of parameter values or a key dict of arrays of values.
@@ -733,7 +731,8 @@ class stats_model(logger):
         else:
             return (solver, runsolver)
 
-    def scan(self, start_params, data, optim_params=None, use_vmap=False, optim_kwargs={}, precondition='diag') -> dict:
+    def scan(self, start_params, data, optim_params=None, use_vmap=False, optim_kwargs={}, precondition='diag') -> dict[
+        str, float]:
         '''
         Beginning at position 'start_params', optimize parameters in 'optim_params' to find maximum.
 
@@ -936,9 +935,12 @@ class stats_model(logger):
         '''
         At some point 'params' in parameter space, gets the hessian in unconstrained space and uses to estimate the
         model information relative to the prior
+        # todo - finish documentation
+        :param integrate_axes:
         :param data:
         :param params:
         :param use_vmap:
+        :param constrained:
         :return:
         '''
 
@@ -1010,6 +1012,7 @@ class stats_model(logger):
         '''
         Blind sampling from the prior without conditioning. Returns model parameters only
         :param num_samples: Number of realizations to generate
+        :param seed: seed for random generation
         :return:
         '''
 
@@ -1029,6 +1032,7 @@ class stats_model(logger):
     def realization(self, data=None, num_samples: int = 1, seed: int = None):
         '''
         Generates realizations of the observables by blindly sampling from the prior
+        :data: data to condition the lightcurve on
         :param num_samples: Number of realizations to generate
         :return:
         '''
@@ -1042,12 +1046,11 @@ class stats_model(logger):
         params = pred(rng_key=jax.random.PRNGKey(seed), data=data)
         return (params)
 
-    def _gen_lightcurve(self, data, params: dict, Tpred) -> (NDArray([Any]), NDArray([Any]), NDArray([Any, Any]),
-                                                             NDArray([Any, Any]),):
+    def _gen_lightcurve(self, data, params: dict, Tpred) -> (ArrayN, ArrayN, ArrayNxN, ArrayNxN):
         '''
         At times Tpred and for parameters params and conditioned on some data, predict the signal mean and covariance.
         Returns like (loc_1, loc_2, covar_1,covar_2)
-        This is a hidden function, to actually generate call in make_lightcurves)
+        This is a hidden function, to actually generate call in make_lightcurves()
         '''
 
         loc_1 = np.zeros_like(Tpred)
@@ -1166,7 +1169,7 @@ class GP_simple(stats_model):
         self.basekernel = kwargs['basekernel'] if 'basekernel' in kwargs.keys() else tinygp.kernels.quasisep.Exp
 
     # --------------------
-    def prior(self) -> [float, float, float, float, float, float]:
+    def prior(self) -> list[float, float, float, float, float, float]:
         # Sample distributions
         lag = quickprior(self, 'lag')
 
@@ -1202,8 +1205,7 @@ class GP_simple(stats_model):
         numpyro.sample("Y", gp.numpyro_dist(), obs=Y[I])
 
     # -----------------------
-    def _gen_lightcurve(self, data, params: dict, Tpred) -> (NDArray([Any]), NDArray([Any]), NDArray([Any, Any]),
-                                                             NDArray([Any, Any]),):
+    def _gen_lightcurve(self, data, params: dict, Tpred) -> (ArrayN, ArrayN, ArrayNxN, ArrayNxN):
         # Unpack params
         lag, logtau, logamp, rel_amp, mean, rel_mean = [params[key] for key in
                                                         ['lag', 'logtau', 'logamp', 'rel_amp', 'mean', 'rel_mean']]
@@ -1230,7 +1232,7 @@ class GP_simple(stats_model):
 
         return loc1, loc2, var1, var2
 
-    def find_seed(self, data, guesses=None, fixed={}) -> (dict, float):
+    def find_seed(self, data, guesses=None, fixed={}) -> (float, dict[str, float]):
 
         # -------------------------
         # Setup
@@ -1452,8 +1454,7 @@ class GP_simple_null(GP_simple):
         numpyro.sample("Y1", gp1.numpyro_dist(), obs=Y1)
         numpyro.sample("Y2", gp2.numpyro_dist(), obs=Y2)
 
-    def _gen_lightcurve(self, data, params: dict, Tpred) -> (NDArray([Any]), NDArray([Any]), NDArray([Any, Any]),
-                                                             NDArray([Any, Any]),):
+    def _gen_lightcurve(self, data, params: dict, Tpred) -> (ArrayN, ArrayN, ArrayNxN, ArrayNxN):
         # Unpack params
         logtau, logamp, rel_amp, mean, rel_mean = [params[key] for key in
                                                    ['logtau', 'logamp', 'rel_amp', 'mean', 'rel_mean']]
@@ -1512,8 +1513,7 @@ class whitenoise_null(GP_simple_null):
                            dist.Normal(mean + rel_mean, jnp.sqrt((amp * rel_amp) ** 2 + E2 ** 2)),
                            obs=Y2)
 
-    def _gen_lightcurve(self, data, params: dict, Tpred) -> (NDArray([Any]), NDArray([Any]), NDArray([Any, Any]),
-                                                             NDArray([Any, Any]),):
+    def _gen_lightcurve(self, data, params: dict, Tpred) -> (ArrayN, ArrayN, ArrayNxN, ArrayNxN):
         # Unpack params
         logtau, logamp, rel_amp, mean, rel_mean = [params[key] for key in
                                                    ['logtau', 'logamp', 'rel_amp', 'mean', 'rel_mean']]
