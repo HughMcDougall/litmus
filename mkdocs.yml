@@ -32,7 +32,7 @@ theme:
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
-
+extra_css: [custom.css]
 plugins:
   autorefs: {}
   mkdocstrings:
@@ -44,15 +44,43 @@ plugins:
           - https://docs.pydantic.dev/latest/objects.inv
         options:
           members_order: source
-          separate_signature: true
-          filters: ["!^_"]
-          show_root_heading: true
-          show_if_no_docstring: true
+          group_by_category: true
+          separate_signature: false
+          show_inherited_members: false
+          filters:
+              - "!^_"               # Hide private members
+          show_root_heading: false
+          show_if_no_docstring: false
           show_signature_annotations: true
+          show_source: true       # Do not show source code link
+          show_signature: true     # Show function/method signatures
+          show_root_full_path: false
+          show_object_full_path: false
+          indent: 4
+          docstring_style: sphinx  # or "numpy", "restructuredtext"
+          show_bases: true
+          show_symbol_type_heading: true
+          merge_init_into_class: true
+          heading_level: 4
+          show_code_examples: false  # Disable example blocks (if parsed)
+          
+          preserve_docstring_spacing: true
+          use_docstring_inheritance: true
   search: {}
 
 
 
 nav:
   - Home: index.md
-  - Usage: doctest.md
+  - Code Docs:
+      - fittingmethods: fitting_methods.md
+      - lightcurve: lightcurve.md
+      - litmusclass: litmusclass.md
+      - logging: logging.md
+      - mocks: mocks.md
+      - models: models.md
+      - lin_scatter: lin_scatter.md
+      - GP_working: GP_working.md
+      - utilities: _utils.md
+  - Examples:
+      - Home: index.md

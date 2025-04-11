@@ -70,7 +70,7 @@ _default_config = {
 
 class stats_model(logger):
     '''
-    Base class for bayesian generative models. Includes a series of utilities for evaluating likelihoods, gradients etc,
+    Base class for bayesian generative models. Includes a series of utilities for evaluating likelihoods, gradients etc.,
     as well as various
 
     On init, takes dict `prior_ranges' of the uniform boundaries of the parameter priors, or a single (float/int)
@@ -90,7 +90,7 @@ class stats_model(logger):
                  debug=True,
                  ):
 
-        logger.__init__(self, out_stream=out_stream, err_steam=err_stream, verbose=verbose, debug=debug)
+        logger.__init__(self, out_stream=out_stream, err_stream=err_stream, verbose=verbose, debug=debug)
 
         self._protected_keys = []
 
@@ -935,9 +935,12 @@ class stats_model(logger):
         '''
         At some point 'params' in parameter space, gets the hessian in unconstrained space and uses to estimate the
         model information relative to the prior
+        # todo - finish documentation
+        :param integrate_axes:
         :param data:
         :param params:
         :param use_vmap:
+        :param constrained:
         :return:
         '''
 
@@ -1009,6 +1012,7 @@ class stats_model(logger):
         '''
         Blind sampling from the prior without conditioning. Returns model parameters only
         :param num_samples: Number of realizations to generate
+        :param seed: seed for random generation
         :return:
         '''
 
@@ -1028,6 +1032,7 @@ class stats_model(logger):
     def realization(self, data=None, num_samples: int = 1, seed: int = None):
         '''
         Generates realizations of the observables by blindly sampling from the prior
+        :data: data to condition the lightcurve on
         :param num_samples: Number of realizations to generate
         :return:
         '''
@@ -1045,7 +1050,7 @@ class stats_model(logger):
         '''
         At times Tpred and for parameters params and conditioned on some data, predict the signal mean and covariance.
         Returns like (loc_1, loc_2, covar_1,covar_2)
-        This is a hidden function, to actually generate call in make_lightcurves)
+        This is a hidden function, to actually generate call in make_lightcurves()
         '''
 
         loc_1 = np.zeros_like(Tpred)
@@ -1227,7 +1232,7 @@ class GP_simple(stats_model):
 
         return loc1, loc2, var1, var2
 
-    def find_seed(self, data, guesses=None, fixed={}) -> (float, dict[str,float]):
+    def find_seed(self, data, guesses=None, fixed={}) -> (float, dict[str, float]):
 
         # -------------------------
         # Setup

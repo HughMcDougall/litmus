@@ -1,3 +1,3 @@
-# Welcome to MkDocs
+# `litmus.fitting_methods`
 
 ::: litmus.fitting_methods

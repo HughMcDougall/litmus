@@ -1,17 +1,19 @@
-# Welcome to MkDocs
+_HUGH MCDOUGALL 2024_
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+-----
 
-## Commands
+-----
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+# LITMUS Documentation
 
-## Project layout
+<u>**L**ag **I**nference **T**hrough the **M**ixed **U**se of **S**amplers</u>
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+LITMUS is an in-progress program that uses modern statistical techniques, like nested sampling and stochastic variational inference, in combination with cutting edge programming tools like the just-in-time compilation framework
+`jax` and its bayesian modelling package
+`NumPyro`, to perform the messy task of lag recovery in AGN reverberation mapping.
+
+![LITMUS](../logo.png)
+
+This project is still very much in the early stages. If you have any questions, contact the author directly at [hughmcdougallemail@gmail.com](mailto:hughmcdougallemail@gmail.com).
+
+-----
