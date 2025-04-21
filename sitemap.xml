@@ -2,42 +2,46 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://github.com/HughMcDougall/litmus/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
     </url>
     <url>
          <loc>https://github.com/HughMcDougall/litmus/GP_working/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
     </url>
     <url>
          <loc>https://github.com/HughMcDougall/litmus/_utils/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
     </url>
     <url>
          <loc>https://github.com/HughMcDougall/litmus/fitting_methods/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://github.com/HughMcDougall/litmus/gettingstarted/</loc>
+         <lastmod>2025-04-21</lastmod>
     </url>
     <url>
          <loc>https://github.com/HughMcDougall/litmus/lightcurve/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
     </url>
     <url>
          <loc>https://github.com/HughMcDougall/litmus/lin_scatter/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
     </url>
     <url>
          <loc>https://github.com/HughMcDougall/litmus/litmusclass/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
     </url>
     <url>
          <loc>https://github.com/HughMcDougall/litmus/logging/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
     </url>
     <url>
          <loc>https://github.com/HughMcDougall/litmus/mocks/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
     </url>
     <url>
          <loc>https://github.com/HughMcDougall/litmus/models/</loc>
-         <lastmod>2025-04-11</lastmod>
+         <lastmod>2025-04-21</lastmod>
     </url>
 </urlset>
