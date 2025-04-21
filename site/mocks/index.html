@@ -956,6 +956,8 @@
 
     <div class="doc doc-contents ">
 
+        <p>Instead of a GP this mock has a clear bell-curve like hump. This works as a generous test-case of lag recovery methods</p>
+
     </div>
 
 </div>
@@ -976,6 +978,8 @@
 
     <div class="doc doc-contents ">
 
+        <p>A standard oz-des like seasonal GP</p>
+
     </div>
 
 </div>
@@ -995,6 +999,8 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>A mock with no seasonal windowing</p>
 
     </div>
 
@@ -1058,6 +1064,38 @@
             <td>
               <div class="doc-md-description">
                 <p>Timescale of the GP to be simulated</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>cadence</code>
+            </td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Mean cadence of the signals, either both or [signal 1, signal 2]. Defaults to [7 days, 30 days].</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>cadence_var</code>
+            </td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>std of cadence of the signals, either both or [signal 1, signal 2]. Defaults to [1 day, 5 days].</p>
               </div>
             </td>
             <td>
@@ -1144,6 +1182,38 @@
                 <em>required</em>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>E</code>
+            </td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Mean measurement error for the signals, either both or [signal 1, signal 2]. Defaults to 1% and 10%.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>E_var</code>
+            </td>
+            <td>
+                  <code>float</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Std of measurement error for the signals, either both or [signal 1, signal 2]. Defaults to 0%</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -1200,15 +1270,15 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    :param seed: seed for randomization</span>
 <span class="sd">    :param float tau: Timescale of the GP to be simulated</span>
-<span class="sd">    :param float or [float, float] cadence: Mean cadence of the signals, either both or [signal 1, signal 2]. Defaults to [7 days, 30 days].</span>
-<span class="sd">    :param float or [float, float] cadence_var: std of cadence of the signals, either both or [signal 1, signal 2]. Defaults to [1 day, 5 days].</span>
+<span class="sd">    :param float cadence: Mean cadence of the signals, either both or [signal 1, signal 2]. Defaults to [7 days, 30 days].</span>
+<span class="sd">    :param float cadence_var: std of cadence of the signals, either both or [signal 1, signal 2]. Defaults to [1 day, 5 days].</span>
 <span class="sd">    :param float season: Average season length. Defaults to 180 days.</span>
 <span class="sd">    :param float season_var: std of season length. Defaults to 14 days.</span>
 <span class="sd">    :param int N: Number of datapoints for the underlying realisation. Defaults to 2048.</span>
 <span class="sd">    :param float maxtime: Max time of the underlying simulation. Defaults to 5 years.</span>
 <span class="sd">    :param float lag: Lag for signal 2. Defaults to 30 days.</span>
-<span class="sd">    :param float or [float,float] E: Mean measurement error for the signals, either both or [signal 1, signal 2]. Defaults to 1% and 10%.</span>
-<span class="sd">    :param float of [float,float] E_var: Std of measurement error for the signals, either both or [signal 1, signal 2]. Defaults to 0%</span>
+<span class="sd">    :param float E: Mean measurement error for the signals, either both or [signal 1, signal 2]. Defaults to 1% and 10%.</span>
+<span class="sd">    :param float E_var: Std of measurement error for the signals, either both or [signal 1, signal 2]. Defaults to 0%</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">defaultkwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;tau&#39;</span><span class="p">:</span> <span class="mf">400.0</span><span class="p">,</span>
                      <span class="s1">&#39;cadence&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">30</span><span class="p">],</span>
@@ -2253,6 +2323,21 @@ Over-writes target and self</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
+                <code>maxtime</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Length of simulation</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>seed</code>
             </td>
             <td>
@@ -2265,21 +2350,6 @@ Over-writes target and self</p>
             </td>
             <td>
                   <code>0</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>maxtime</code>
-            </td>
-            <td>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Length of observation window (default 180 days)</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -2442,8 +2512,8 @@ Over-writes target and self</p>
                  <span class="n">season_var</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">14</span><span class="p">,</span> <span class="n">N</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns time series X values for a mock signal</span>
+<span class="sd">    :param maxtime: Length of simulation</span>
 <span class="sd">    :param seed: Seed for randomization</span>
-<span class="sd">    :param maxtime: Length of observation window (default 180 days)</span>
 <span class="sd">    :param cadence: Average cadence of observations</span>
 <span class="sd">    :param cadence_var: Standard deviation of the cadence</span>
 <span class="sd">    :param season: Average length of the observation season (default 180 days)</span>
