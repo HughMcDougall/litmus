@@ -4,13 +4,13 @@ from nptyping import NDArray
 
 
 def linscatter(X: np.array, Y: np.array, N: int) -> np.ndarray[Any, np.float64]:
-    '''
+    """
     For some time series {X,Y}, returns N samples that are distributed along X with linear interpolation
     :param X: X values
     :param Y: Y values
     :param N: Number of samples
     :return: 1D numpy array of samples along X
-    '''
+    """
 
     dx = np.array([X[0] - X[1], X[2] - X[1]])
     dy = np.array([Y[0] - Y[1], Y[2] - Y[1]])
@@ -38,13 +38,13 @@ def linscatter(X: np.array, Y: np.array, N: int) -> np.ndarray[Any, np.float64]:
 
 
 def expscatter(X: np.array, Y: np.array, N) -> np.ndarray[Any, np.float64]:
-    '''
+    """
     For some time series {X,Y}, returns N samples that are distributed along X with log-linear interpolation
     :param X: X values
     :param Y: Y values
     :param N: Number of samples
     :return: 1D numpy array of samples along X
-    '''
+    """
 
     dx = np.array([X[0] - X[1], X[2] - X[1]])
     dy = np.array([Y[0] - Y[1], Y[2] - Y[1]])

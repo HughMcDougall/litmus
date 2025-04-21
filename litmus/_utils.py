@@ -1,8 +1,8 @@
-'''
+"""
 _utils.py
 Handy internal utilities for brevity and convenience.
 Nothing in here is accesible in the public _init_ file
-'''
+"""
 
 # ============================================
 # IMPORTS
@@ -15,6 +15,8 @@ import jax
 from contextlib import contextmanager
 import sys, os
 from copy import copy
+
+import litmus._types as _types
 
 from scipy.special import jnp_zeros
 
@@ -46,9 +48,9 @@ def suppress_stdout():
 # ============================================
 
 def isiter(x: any) -> bool:
-    '''
+    """
     Checks to see if an object is itterable
-    '''
+    """
     if type(x) == dict:
         return len(x[list(x.keys())[0]]) > 1
     try:
@@ -60,9 +62,9 @@ def isiter(x: any) -> bool:
 
 
 def isiter_dict(DICT: dict) -> bool:
-    '''
+    """
     like isiter but for a dictionary. Checks only the first element in DICT.keys
-    '''
+    """
 
     key = list(DICT.keys())[0]
     if isiter(DICT[key]):
@@ -72,9 +74,9 @@ def isiter_dict(DICT: dict) -> bool:
 
 
 def dict_dim(DICT: dict) -> (int, int):
-    '''
+    """
     Checks the first element of a dictionary and returns its length
-    '''
+    """
 
     if isiter_dict(DICT):
         firstkey = list(DICT.keys())[0]
@@ -86,7 +88,7 @@ def dict_dim(DICT: dict) -> (int, int):
 # -------------
 
 def dict_pack(DICT: dict, keys=None, recursive=True, H=None, d0={}) -> np.array:
-    '''
+    """
     Packs a dictionary into an array format
     :param DICT: the dict to unpack
     :param keys: the order in which to index the keyed elements. If none, will use DICT.keys(). Can be partial
@@ -96,7 +98,7 @@ def dict_pack(DICT: dict, keys=None, recursive=True, H=None, d0={}) -> np.array:
     :return: (nkeys x len_array) np.arrayobject
 
     X = H (d-d0)
-    '''
+    """
 
     nokeys = True if keys is None else 0
     keys = keys if keys is not None else DICT.keys()
@@ -144,8 +146,12 @@ def dict_unpack(X: np.array, keys: [str], recursive=True, Hinv=None, x0=None) ->
 
 def dict_sortby(A: dict, B: dict, match_only=True) -> dict:
     """
-    Sorts dict A to match keys of dict B. If match_only, returns only for keys common to both.
-    Else, append un-sorted entries to end
+    Sorts dict A to match keys of dict B.
+
+    :param A: Dict to be sorted
+    :param B: Dict whose keys are will provide the ordering
+    :param match_only: If true, returns only for keys common to both A and B. Else, append un-sorted entries to end
+    :return: {key: A[key] for key in B if key in A}
     """
     out = {key: A[key] for key in B if key in A}
     if not match_only:
@@ -154,12 +160,12 @@ def dict_sortby(A: dict, B: dict, match_only=True) -> dict:
 
 
 def dict_extend(A: dict, B: dict = None) -> dict:
-    '''
+    """
     Extends all single-length entries of a dict to match the length of a non-singular element
     :param A: Dictionary whose elements are to be extended
     :param B: (optional) the array to extend by, equivalent to dict_extend(A|B)
-    :return:
-    '''
+    :return: Dict A with any singleton elements extended to the longest entry in A or B
+    """
 
     out = A.copy()
     if B is not None: out |= B
@@ -181,9 +187,12 @@ def dict_extend(A: dict, B: dict = None) -> dict:
 
 
 def dict_combine(X: [dict]) -> {str: [float]}:
-    '''
-    Combines an array, list etc of dictionary into a dictionary of arrays
-    '''
+    """
+    Combines an array, list etc. of dictionaries into a dictionary of arrays
+
+    :param X: 1D Iterable of dicts
+    :return: Dict of 1D iterables
+    """
 
     N = len(X)
     keys = X[0].keys()
@@ -196,9 +205,12 @@ def dict_combine(X: [dict]) -> {str: [float]}:
 
 
 def dict_divide(X: dict) -> [dict]:
-    '''
-    Splits dict of arrays into array of dicts
-    '''
+    """
+    Splits dict of arrays into array of dicts. Opposite of dict_combine
+
+    :param X: Dict of 1D iterables
+    :return: 1D Iterable of dicts
+    """
 
     keys = list(X.keys())
     N = len(X[keys[0]])
@@ -209,6 +221,13 @@ def dict_divide(X: dict) -> [dict]:
 
 
 def dict_split(X: dict, keys: [str]) -> (dict, dict):
+    """
+    Splits a dict in two based on keys
+
+    :param X: Dict to be split into A,B
+    :param keys: Keys to be present in A, but not in B
+    :return: tuple of dicts (A,B)
+    """
     assert type(X) is dict, "input to dict_split() must be of type dict"
     assert isiter(keys) and type(keys[0])==str, "in dict_split() keys must be list of strings"
     A = {key: X[key] for key in keys}
@@ -220,8 +239,8 @@ def dict_split(X: dict, keys: [str]) -> (dict, dict):
 # FUNCTION UTILITIES
 # ============================================
 def pack_function(func, packed_keys: ['str'], fixed_values: dict = {}, invert: bool = False, jit: bool = False,
-                  H: np.array = None, d0: dict = {}):
-    '''
+                  H: np.array = None, d0: dict = {}) -> _types.FunctionType:
+    """
     Re-arranges a function that takes dict arguments to tak array-like arguments instead, so as to be autograd friendly
     Takes a function f(D:dict, *arg, **kwargs) and returns f(X, D2, *args, **kwargs), D2 is all elements of D not
     listed in 'packed_keys' or fixed_values.
@@ -232,8 +251,8 @@ def pack_function(func, packed_keys: ['str'], fixed_values: dict = {}, invert: b
     :param invert:  If true, will 'flip' the function upside down
     :param jit: If true, will 'jit' the function
     :param H: (optional) scaling matrix to reparameterize H with
-    :param x0: (optional) If given, will center the reparameterized  function at x0
-    '''
+    :param d0: (optional) If given, will center the reparameterized  function at x0
+    """
 
     if H is not None:
         assert H.shape[0] == len(packed_keys), "Scaling matrix H must be same length as packed_keys"
@@ -266,5 +285,8 @@ def pack_function(func, packed_keys: ['str'], fixed_values: dict = {}, invert: b
 # RANDOMIZATION UTILITIES
 # ============================================
 def randint():
+    """
+    Quick utility to generate a random integer
+    """
     return (np.random.randint(0, sys.maxsize // 1024))
 

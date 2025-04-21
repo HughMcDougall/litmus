@@ -1,8 +1,8 @@
-'''
+"""
 Contains fitting procedures to be executed by the litmus class object
 
 HM 24
-'''
+"""
 
 import importlib.util
 # ============================================
@@ -10,6 +10,7 @@ import importlib.util
 import sys
 from typing import Callable
 
+import litmus.models
 from litmus.logging import logger
 
 import jax
@@ -19,6 +20,7 @@ import numpyro
 import numpy as np
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
+
 # ------
 # Samplers, stats etc
 
@@ -37,6 +39,7 @@ if _has_polychord:
 # ------
 # Internal
 import litmus._utils as _utils
+import litmus._types as _types
 # import litmus._ss.clustering as clustering
 import litmus.ICCF_working as iccf
 
@@ -64,6 +67,13 @@ class fitting_procedure(logger):
                  verbose=True,
                  debug=True,
                  **fit_params):
+        """
+        fitting_procedures extend the logger class and inherit all __init__ args. See the logger documentation for details
+
+        The only required argument is the stat_model to perform fitting for. All other fitting parameters (listed below) can be passed as keyword arguments at init, or via .set_config(), or reset to default values with .reset().
+
+        :param stats_model stat_model: Statistics model to fit for
+        """
 
         logger.__init__(self,
                         out_stream=out_stream,
@@ -75,18 +85,25 @@ class fitting_procedure(logger):
         if not hasattr(self, "_default_params"):
             self._default_params = {}
 
-        self.stat_model = stat_model
-
+        # --------------------
+        # Attributes
+        self.stat_model: litmus.models.stats_model = stat_model
+        """Stats model to do fitting for"""
         self.name = "Base Fitting Procedure"
-
+        """Name for string printing"""
         self.is_ready = False
+        """Flag to see if pre-pre-fitting has been done"""
         self.has_prefit = False
+        """Flag to see if pre-fitting has been done"""
         self.has_run = False
-
+        """Flag to see if fitting procedure has run to completion"""
         self.fitting_params = {} | self._default_params
-        self.set_config(**(self._default_params | fit_params))
-
+        """A keyed dict of tuning parameters for the fitting method"""
         self.seed = _utils.randint() if "seed" not in fit_params.keys() else fit_params['seed']
+        """Int seed for any randomized elements in the fitting method"""
+        # --------------------
+
+        self.set_config(**(self._default_params | fit_params))
         self._tempseed = self.seed
         self._data = None
 
@@ -169,7 +186,7 @@ class fitting_procedure(logger):
 
     def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None) -> None:
         """
-        Fit lags
+        Performs any tasks required after setup but prior to actual fitting
         :param lc_1: Lightcurve 1 (Main)
         :param lc_2: Lightcurve 2 (Response)
         :param seed: A random seed for feeding to the fitting process. If none, will select randomly
@@ -179,7 +196,7 @@ class fitting_procedure(logger):
 
     def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None) -> None:
         """
-        Fit lags
+        Performs the lag recovery method for this fitting procedure. If not prefit, will run prefit()
         :param lc_1: Lightcurve 1 (Main)
         :param lc_2: Lightcurve 2 (Response)
         :param seed: A random seed for feeding to the fitting process. If none, will select randomly
@@ -203,13 +220,13 @@ class fitting_procedure(logger):
         return
 
     def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
-        '''
-        Returns MCMC-like posterior samples
+        """
+        Returns MCMC-like posterior samples if fit() has been run
         :param N: Number of samples to return. If None, return all
         :param seed: Random seed for any stochastic elements
         :param importance_sampling: If true, will weight the results by
-        :return:
-        '''
+        :return: keyed dict of samples in the constrained domain
+        """
 
         if not self.is_ready: self.readyup()
         if isinstance(seed, int):
@@ -223,8 +240,9 @@ class fitting_procedure(logger):
     def get_evidence(self, seed: int = None, return_type='linear') -> [float, float, float]:
         """
         Returns the estimated evidence for the fit model.
-        if return_type = 'linear', returns as array-like [Z,-dZ-,dZ+]
-        if return_type = 'log', returns as array-like [logZ,-dlogZ-,dlogZ+]
+        :param seed: int seed for random number generation
+        :param return_type: if 'linear', returns as array-like [Z, -dZ-, dZ+]. If 'log', returns as array-like [logZ, -dlogZ-, dlogZ+]
+        :return: len 3 array of type [mu, -E-, E+]
         """
 
         assert return_type in ['linear', 'log'], "Return type must be 'linear' or 'log'"
@@ -244,6 +262,8 @@ class fitting_procedure(logger):
     def get_information(self, seed: int = None) -> [float, float, float]:
         """
         Returns an estimate of the information (KL divergence relative to prior). Returns as array-like [I,dI-,dI+]
+        :param seed: int seed for random number generation
+        :return: len 3 array of type [mu, -E-, E+]
         """
 
         if not self.is_ready: self.readyup()
@@ -260,6 +280,7 @@ class fitting_procedure(logger):
     def get_peaks(self, seed=None):
         """
         Returns the maximum posterior position in parameter space
+        :param seed: int seed for random number generation
         """
 
         if not self.is_ready: self.readyup()
@@ -273,6 +294,26 @@ class fitting_procedure(logger):
 
             return {}, np.array([])
 
+    def diagnostics(self, plot=True) -> _types.Figure:
+        """
+        Generates some plots to check if the solver has converged
+        :param plot: If True, run plt.show()
+        :return: generated matplotlib figure
+        """
+
+        if self.__class__.diagnostics == fitting_procedure.diagnostics:
+            self.msg_err("Fitting \"%s\" method does not have method .diagnostics() implemented" % self.name)
+
+    def diagnostic_lagplot(self, plot=True) -> _types.Figure:
+        """
+        Generates diagnostic plots specifically for lags
+        :param plot: If True, run plt.show()
+        :return: generated matplotlib figure
+        """
+
+        if self.__class__.diagnostic_lagplot == fitting_procedure.diagnostic_lagplot:
+            self.msg_err("Fitting \"%s\" method does not have method .diagnostic_lagplot() implemented" % self.name)
+
 
 # ============================================
 # ICCF fitting procedure
@@ -281,6 +322,7 @@ class ICCF(fitting_procedure):
     """
     Fit lags using interpolated cross correlation function in the style of pyCCF.
     Note that this is not a Bayesian fitter and gives only approximate measures of the lag
+
     todo
         - Add p value, false positive and evidence estimates (?)
     """
@@ -288,6 +330,13 @@ class ICCF(fitting_procedure):
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
+
+        """
+        :param stats_model stat_model: Statistics model to fit for
+        :param int Nboot: Number of bootstraps in ICCF
+        :param int Nterp: Number of points to interpolate with in ICCF correlation evals
+        :param int Nlags: Number of lags to test with.
+        """
 
         args_in = {**locals(), **fit_params}
         del args_in['self']
@@ -305,14 +354,21 @@ class ICCF(fitting_procedure):
 
         super().__init__(**args_in)
 
+        # --------------------
+        # Attributes
         self.name = "ICCF Fitting Procedure"
-        self.lags = np.zeros(self.Nterp)
 
-        # -----------------------------------
+        self.lags = np.zeros(self.Nterp)
+        """Array of lags to test at"""
         self.samples = np.zeros(self.Nboot)
-        self.correl_curve = np.zeros(self.Nterp)
+        """The bootstrapped samples of the best fit lag"""
+        self.correls = np.zeros(self.Nterp)
+        """Un-bootstrapped correlation function"""
         self.lag_mean = 0.0
+        """Mean of bootstrapped best fit lags"""
         self.lag_err = 0.0
+        """Std err of bootstrapped bestfit lags"""
+        # --------------------
 
     # -------------------------
     def set_config(self, **fit_params):
@@ -320,11 +376,11 @@ class ICCF(fitting_procedure):
 
     def readyup(self):
         super().readyup()
-        '''
+        """
         # self.lags = jnp.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags)
         self.lags = np.random.randn(self.Nlags) * self.stat_model.prior_ranges['lag'].ptp() + \
                     self.stat_model.prior_ranges['lag'][0]
-        '''
+        """
         self.is_ready = True
         self.has_prefit = False
 
@@ -345,8 +401,8 @@ class ICCF(fitting_procedure):
         # Do bootstrap fitting
         lagrange = jnp.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags)
         jax_samples = iccf.correl_func_boot_jax_wrapper_nomap(lagrange, X1, Y1, X2, Y2, E1, E2,
-                                                         Nterp=self.Nterp,
-                                                         Nboot=self.Nboot)
+                                                              Nterp=self.Nterp,
+                                                              Nboot=self.Nboot)
 
         # Store Results
         self.samples = jax_samples
@@ -380,7 +436,7 @@ class ICCF(fitting_procedure):
         seed = self._tempseed
         # --------------
         out = self.lags[np.argmax(self.correls)]
-        return ({'lag': np.array([out])})
+        return {'lag': np.array([out])}
 
 
 # ============================================
@@ -397,6 +453,12 @@ class prior_sampling(fitting_procedure):
                  out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
 
+        """
+        :param stats_model stat_model: Statistics model to fit for
+        :param stats_model stat_model: Statistics model to fit for
+        :param int Nsamples: Number of samples to draw from the prior. Defaults to 4096.
+        """
+
         # ------------------------------------
         args_in = {**locals(), **fit_params}
         del args_in['self']
@@ -410,13 +472,22 @@ class prior_sampling(fitting_procedure):
         }
 
         super().__init__(**args_in)
-        # ------------------------------------
+        # --------------------
+        # Attributes
 
         self.name = "Prior Sampling Fitting Procedure"
 
-        self.samples = np.zeros(self.Nsamples)
+        self.samples = {key: np.zeros(self.Nsamples) for key in self.stat_model.paramnames()}
+        """Samples drawn from the prior"""
+        self.log_prior = np.zeros(self.Nsamples)
+        """Log prior densities of the samples"""
         self.log_likes = np.zeros(self.Nsamples)
+        """Log likelihood of the samples"""
+        self.log_density = np.zeros(self.Nsamples)
+        """Log joint density of the samples"""
         self.weights = np.zeros(self.Nsamples)
+        """Normalized weights for drawing the samples"""
+        # --------------------
 
     # --------------
     def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
@@ -434,7 +505,6 @@ class prior_sampling(fitting_procedure):
         likes = np.exp(log_likes)
 
         # Store results
-
         self.log_prior = log_prior
         self.log_likes = log_likes
         self.log_density = log_density
@@ -492,7 +562,7 @@ class prior_sampling(fitting_procedure):
         info = info_partial.mean() * self.stat_model.prior_volume
         uncert = info_partial.std() / np.sqrt(self.Nsamples) * self.stat_model.prior_volume
 
-        return (np.array([info, -uncert, uncert]))
+        return np.array([info, -uncert, uncert])
 
 
 # ============================================
@@ -507,6 +577,14 @@ class nested_sampling(fitting_procedure):
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
+        """
+        :param stats_model stat_model: Statistics model to fit for
+        :param int num_live_points: Number of live points to use in nested sampling fitting. Defaults to 500.
+        :param int max_samples: Maximum samples before terminating the run. Defaults to 10_000.
+        :param int num_parallel_samplers: Number of parallel samplers to fit with. Defaults to 1.
+        :param float evidence_uncert: Termination condition for evidence uncertainty. Default to 1E-3.
+        :param float live_evidence_frac: Termination condition for live fraction of evidence remaining. Defaults to log(1 + 1e-3).
+        """
 
         args_in = {**locals(), **fit_params}
         del args_in['self']
@@ -525,17 +603,21 @@ class nested_sampling(fitting_procedure):
 
         super().__init__(**args_in)
 
-        self.name = "Nested Sampling Fitting Procedure"
-
-        self.sampler = None
-
         self._jaxnsmodel = None
         self._jaxnsresults = None
         self._jaxnstermination = None
         self._jaxnsresults = None
 
+        # --------------------
+        # Attributes
+        self.name = "Nested Sampling Fitting Procedure"
+        self.sampler = None
+        """The JAXNS nested sampler object"""
         self.logevidence = jnp.zeros(3)
+        """JAXNS log evidence"""
         self.priorvolume = 0.0
+        """Prior volume for correcting from unit cube to actual density"""
+        # --------------------
 
     def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
         # ---------------------
@@ -634,10 +716,10 @@ class nested_sampling(fitting_procedure):
         return (out)
 
     def get_evidence(self, seed: int = None, return_type='linear') -> [float, float, float]:
-        '''
+        """
         Returns the -1, 0 and +1 sigma values for model evidence from nested sampling.
         This represents an estimate of numerical uncertainty
-        '''
+        """
 
         if seed is None: seed = _utils.randint()
 
@@ -654,18 +736,21 @@ class nested_sampling(fitting_procedure):
             out -= np.array([0, out[0], out[0]])
         elif return_type == 'log':
             out = np.array([l, -l_e, l_e])
+        else:
+            self.msg_err(
+                "Warning! Tried to call get_evidence in %s with bad return_type. Should be 'log' or 'linear'" % self.name)
+            out = [0.0, 0.0, 0.0]
 
         return out
 
     def get_information(self, seed: int = None) -> [float, float, float]:
-        '''
+        """
         Use the Nested Sampling shells to estimate the model information relative to prior
-        '''
+        """
         # todo - this is outmoded
 
         if seed is None: seed = _utils.randint()
 
-        NS = self.sampler
         samples, logweights = self._jaxnsresults.samples, self._jaxnsresults.log_dp_mean
 
         weights = np.exp(logweights)
@@ -679,7 +764,7 @@ class nested_sampling(fitting_procedure):
         partial_info = np.random.choice((log_density - prior_values), len(log_density), p=weights)
         uncert = partial_info.std() / np.sqrt(len(log_density))
 
-        return (np.array(info, uncert, uncert))
+        return np.array(info, uncert, uncert)
 
     def get_peaks(self, seed: int = None) -> ({str: [float]}, float):
 
@@ -719,16 +804,47 @@ class nested_sampling(fitting_procedure):
 
         return (peak_locations, peaklikes)
 
-    def diagnostics(self):
+    def diagnostics(self, show=True) -> _types.Figure:
+
+        # todo fix this to make the show work properly
         jaxns.plot_diagnostics(self._jaxnsresults)
-        return
+        return plt.gcf()
 
 
 # ------------------------------------------------------
 class hessian_scan(fitting_procedure):
+    """
+    Litmus's main hessian scan fitting procedure.
+    """
+
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
+
+        """
+        :param stats_model stat_model: Statistics model to fit for
+        :param int Nlags': 64
+        :param float opt_tol': 1E-2
+        :param float opt_tol_init': 1E-4
+        :param float step_size': 0.001
+        :param bool constrained_domain': False
+        :param int max_opt_eval': 1_000
+        :param int max_opt_eval_init': 5_000
+        :param float LL_threshold': 100.0
+        :param int init_samples': 5_000
+        :param float grid_bunching': Amount to bunch up points about peaks in grid smoothing, with 0.0 being even spacing and 1.0 being MCMC_like sample spacing. Defaults to 0.5.
+        :param grid_depth': None
+        :param grid_Nterp': None
+        :param float grid_relaxation': 0.1,  # deprecated, remove
+        :param float grid_firstdepth': 2.0
+        :param bool reverse': Defaults to True.
+        :param bool split_lags': Defaults to True.
+        :param dict optimizer_args_init': {}
+        :param dict optimizer_args': {}
+        :param dict seed_params': {}
+        :param str precondition': Type of preconditioning to use in scan. Defaults to 'diag'.
+        :param str interp_scale': Scale to peform grid smoothing interpolation on . Defaults to 'log'.
+        """
         args_in = {**locals(), **fit_params}
         del args_in['self']
         del args_in['__class__']
@@ -772,15 +888,15 @@ class hessian_scan(fitting_procedure):
         self.lags: [float] = np.zeros(self.Nlags)
         self.converged: np.ndarray[bool] = np.zeros_like(self.lags, dtype=bool)
 
-        self.scan_peaks: dict = {None}
-        self.log_evidences: list = None
-        self.log_evidences_uncert: list = None
+        self.scan_peaks: dict = {}
+        self.log_evidences: list = []
+        self.log_evidences_uncert: list = []
 
-        self.diagnostic_hessians: list = None
-        self.diagnostic_densities: list = None
-        self.diagnostic_grads: list = None
-        self.diagnostic_ints: list = None
-        self.diagnostic_tgrads: list = None
+        self.diagnostic_hessians: list = []
+        self.diagnostic_densities: list = []
+        self.diagnostic_grads: list = []
+        self.diagnostic_ints: list = []
+        self.diagnostic_tgrads: list = []
 
         self.params_toscan = self.stat_model.free_params()
         if 'lag' in self.params_toscan: self.params_toscan.remove('lag')
@@ -819,12 +935,12 @@ class hessian_scan(fitting_procedure):
     # Setup Funcs
 
     def estimate_MAP(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
-        '''
+        """
         :param lc_1:
         :param lc_2:
         :param seed:
         :return:
-        '''
+        """
 
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
@@ -913,14 +1029,14 @@ class hessian_scan(fitting_procedure):
             estmap_params = seed_params
         return estmap_params
 
-    def make_grid(self, data, seed_params=None, interp_scale='log'):
+    def make_grid(self, data, seed_params=None, interp_scale='log') -> _types.ArrayN:
         """
-        :param data:
-        :param seed_params:
-        :param interp_scale:
-        :return:
+        Generates a grid of test lags for use in the hessian scan via the grid smoothing algorithm listed in the paper
+        :param data: data to condition the model on
+        :param seed_params: An initial guess for the seed parameters formed by common sense. If None or incomplete, is filled using the statmodels find_seed method.
+        :param interp_scale: What scale to perform interpolation between the test lags at, 'log' or 'linear'
+        :return: Array of lags of len self.Nlags
         """
-        # todo - reformat this and the make_grid for better consistency in drawing from estmap and seed params
 
         assert interp_scale in ['log', 'linear'], "Interp scale was %s, must be in 'log' or 'linear'" % interp_scale
 
@@ -1230,11 +1346,7 @@ class hessian_scan(fitting_procedure):
     # --------------
     # Checks
 
-    def diagnostics(self, plot=True):
-        '''
-        Runs some diagnostics for convergence
-        :return:
-        '''
+    def diagnostics(self, plot=True) -> _types.Figure:
 
         loss = self.log_evidences_uncert
 
@@ -1257,7 +1369,9 @@ class hessian_scan(fitting_procedure):
         plt.grid()
         plt.show()
 
-    def diagnostic_lagplot(self, show=True):
+        return fig
+
+    def diagnostic_lagplot(self, show=True) -> _types.Figure:
         f, (a1, a2) = plt.subplots(2, 1, sharex=True)
 
         lags_forint, logZ_forint, density_forint = self._get_slices('lags', 'logZ', 'densities')
@@ -1518,6 +1632,17 @@ class SVI_scan(hessian_scan):
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
+
+        """
+        Inherits all fitting parameters and their default values from hessian_scan, but gains new parameters
+
+        :param float ELBO_threshold: If a slice log-evidence decreases by this amount or more, consider it a furrow. Defaults to 100.0.
+        :param float ELBO_optimstep: Size of the stochastic optimisation step in adam. Defaults to 5E-3.
+        :param int ELBO_particles: Number of particles for estimating the ELBO at each optimisation step. Defaults to 128.
+        :param int ELBO_Nsteps: Number of steps to take in optimisation of the ELBO for each slice. Defaults to 128.
+        :param int ELBO_Nsteps_init: Number of steps to take in finding the initial slice ELBO / solution. Defaults to 1_000.
+        :param int ELBO_fraction: Fraction of the ELBO run (both slice and initial) to search for minimum variance estimate. Defaults to 0.25.
+        """
         args_in = {**locals(), **fit_params}
         del args_in['self']
         del args_in['__class__']
@@ -1581,9 +1706,9 @@ class SVI_scan(hessian_scan):
         self.msg_debug("\t Constructing slice model")
 
         def slice_function(data, lag):
-            '''
+            """
             This is the conditional model that SVI will map
-            '''
+            """
 
             params = {}
             for key in self.stat_model.free_params():
@@ -1749,9 +1874,9 @@ class SVI_scan(hessian_scan):
 
         mean, uncert = MEANS[UNCERTS.argmin()], UNCERTS.min()
 
-        return (mean, uncert)
+        return mean, uncert
 
-    def diagnostics(self, plot=True):
+    def diagnostics(self, plot=True) -> _types.Figure:
 
         f, (a2, a1) = plt.subplots(2, 1)
 
@@ -1783,6 +1908,8 @@ class SVI_scan(hessian_scan):
 
         if plot: plt.show()
 
+        return f
+
 
 # ------------------------------------------------------
 class JAVELIKE(fitting_procedure):
@@ -1798,6 +1925,13 @@ class JAVELIKE(fitting_procedure):
     def __init__(self, stat_model: stats_model,
                  out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
+
+        """
+        :param float alpha: Size of the stretch in the stretch-move. Defaults to 2.0.
+        :param float num_chains: Num live points in the AEIS ensemble. Defaults to 256.
+        :param float num_samples: Samples per live point in the AEIS chain. Defaults to 200_000 // 256 per chain total (i.e. 200_000 total)
+        :param float num_warmup: Number of warmup samples per chain. Defaults to 5_000.
+        """
         args_in = {**locals(), **fit_params}
         del args_in['self']
         del args_in['__class__']
@@ -1813,8 +1947,11 @@ class JAVELIKE(fitting_procedure):
         }
 
         self.sampler: numpyro.infer.MCMC = None
+        """NumPyro MCMC wrapper"""
         self.kernel: numpyro.infer.AEIS = None
+        """numpyro MCMC sampler kernel to use"""
         self.limited_model: Callable = None
+        """The function to deploy the AEIS against"""
 
         super().__init__(**args_in)
 

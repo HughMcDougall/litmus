@@ -21,7 +21,7 @@ import pandas as pd
 from chainconsumer import ChainConsumer, Chain, ChainConfig, PlotConfig
 
 import matplotlib
-from litmus._types import *
+import litmus._types as _types
 
 from pandas import DataFrame
 
@@ -152,7 +152,7 @@ class LITMUS(logger):
             # Write rows
             writer.writerows(rows)
 
-    def read_chain(self, path: str, header: Iterable[str] | None = None):
+    def read_chain(self, path: str, header: _types.Iterable[str] | None = None):
         """
         #todo needs updating
         """

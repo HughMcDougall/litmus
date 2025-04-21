@@ -16,7 +16,7 @@ import numpy as np
 from scipy import optimize
 import matplotlib.pyplot as plt
 
-from litmus._types import *
+import litmus._types as _types
 
 # ============================================
 # LIGHT CURVE
@@ -123,7 +123,7 @@ class lightcurve(object):
         """
         return ["T", "Y", "E"]
 
-    def values(self) -> (ArrayN, ArrayN, ArrayN):
+    def values(self) -> (_types.ArrayN, _types.ArrayN, _types.ArrayN):
         """
         Returns the lightcurves' value series' in the order of keys
         """
@@ -144,7 +144,7 @@ class lightcurve(object):
             raise Warning("Tried to set nonexistant lightcurve attribute %s" % key)
         '''
 
-    def normalize(self) -> Self:
+    def normalize(self) -> _types.Self:
         """
         Esimates the mean and amplitude of the lighturve assuming uncorrelated measurements
         Returns a lightcurve object with this normalization
@@ -190,7 +190,7 @@ class lightcurve(object):
 
         return out
 
-    def unnormalize(self) -> Self:
+    def unnormalize(self) -> _types.Self:
         """
         Reverses the effects of lightcurve.normalize().
         Returns a lightcurve object with mean and amplitude prior to normalize()
@@ -203,7 +203,7 @@ class lightcurve(object):
         out.normalized = False
         return out
 
-    def delayed_copy(self, lag=0.0, Tmin=None, Tmax=None) -> Self:
+    def delayed_copy(self, lag=0.0, Tmin=None, Tmax=None) -> _types.Self:
         """
         Returns a copy subsampled to only datapoints in the domain T in [Tmin,Tmax] and offset by lag
         """
@@ -216,7 +216,7 @@ class lightcurve(object):
                            E=self.E[I]
                            ))
 
-    def trimmed_copy(self, Tmin=None, Tmax=None) -> Self:
+    def trimmed_copy(self, Tmin=None, Tmax=None) -> _types.Self:
         """
         Returns a copy subsampled to only datapoints in the domain T in [Tmin,Tmax]
         """
@@ -273,7 +273,7 @@ class lightcurve_iter(lightcurve):
 
         self.subsample()
 
-    def __next__(self) -> Self:
+    def __next__(self) -> _types.Self:
         self.subsample()
         return self
 

@@ -21,7 +21,7 @@ import jax
 import tinygp
 from tinygp import GaussianProcess
 
-from litmus._types import *
+import litmus._types as _types
 from litmus._utils import randint, isiter
 from litmus.lightcurve import lightcurve
 
@@ -32,20 +32,20 @@ def mock_cadence(maxtime, seed: int = 0, cadence: float = 7, cadence_var: float 
                  season_var: float = 14, N: int = 1024):
     """
     Returns time series X values for a mock signal
+    :param maxtime: Length of simulation
     :param seed: Seed for randomization
-    :param maxtime: Length of observation window (default 180 days)
     :param cadence: Average cadence of observations
     :param cadence_var: Standard deviation of the cadence
     :param season: Average length of the observation season (default 180 days)
     :param season_var: Standard deviation of the season length (default 14 days)
     :param N: Number of observations used prior to trimming. This is auto-tuned and is deprecated
 
-    returns as array of sample times
+    :return: returns as array of sample times
     """
 
     np.random.seed(seed)
 
-    assert N>0, "Invalid N. Must be <=0"
+    assert N > 0, "Invalid N. Must be <=0"
 
     # Generate Measurements
     while True:
@@ -79,15 +79,21 @@ def mock_cadence(maxtime, seed: int = 0, cadence: float = 7, cadence_var: float 
     return (T)
 
 
-def subsample(T, Y, Tsample) -> ArrayN:
+def subsample(T: _types.ArrayN, Y: _types.ArrayN, Tsample: _types.ArrayN) -> _types.ArrayN:
     """
     Linearly interpolates between X and Y and returns interped Y's at positions Xsample
+
+    :param T: Time values of time series to be interpolated
+    :param Y: Y values of time series to be interpolated
+    :param Tsample: Times to subample at
+    :return: Elements of Y interpolated to times Tsample
+
     """
     out = np.interp(Tsample, T, Y)
     return (out)
 
 
-def outly(Y, q) -> ArrayN:
+def outly(Y, q) -> _types.ArrayN:
     """
     Returns a copy of Y with fraction 'q' elements replaced with
     unit - normally distributed outliers
@@ -97,7 +103,7 @@ def outly(Y, q) -> ArrayN:
     return (Y)
 
 
-def gp_realization(T, err: Union[float, ArrayN] = 0.0, tau: float = 400.0,
+def gp_realization(T, err: _types.Union[float, _types.ArrayN] = 0.0, tau: float = 400.0,
                    basekernel: tinygp.kernels.quasisep = tinygp.kernels.quasisep.Exp,
                    seed=None) -> lightcurve:
     '''
@@ -109,7 +115,7 @@ def gp_realization(T, err: Union[float, ArrayN] = 0.0, tau: float = 400.0,
     :param basekernel: Kernel of the GP. Any tinyGP quasisep kernel
     :param seed:
 
-    Returns as lightcurve object
+    :return: Returns as lightcurve object
     '''
     if seed is None: seed = randint()
 
@@ -132,21 +138,23 @@ def gp_realization(T, err: Union[float, ArrayN] = 0.0, tau: float = 400.0,
 
 class mock(logger):
     """
-    Handy class for making mock data. When calling with _init_,
-        defaultkwargs = {'tau':             400.0,
-                         'cadence':         [7, 30],
-                         'cadence_var':     [1, 5],
-                         'season':          180,
-                         'season_var':      14,
-                         'N':               2048,
-                         'maxtime':         360 * 5,
-                         'lag':             30,
-                         'E':               [0.01, 0.1],
-                         'E_var':           [0.0, 0.0]
-                         }
+    Handy class for making mock data. When calling with _init_, args can be passed as keyword arguments
     """
 
-    def __init__(self, seed=0, **kwargs):
+    def __init__(self, seed: int = 0, **kwargs):
+        """
+        :param seed: seed for randomization
+        :param float tau: Timescale of the GP to be simulated
+        :param float cadence: Mean cadence of the signals, either both or [signal 1, signal 2]. Defaults to [7 days, 30 days].
+        :param float cadence_var: std of cadence of the signals, either both or [signal 1, signal 2]. Defaults to [1 day, 5 days].
+        :param float season: Average season length. Defaults to 180 days.
+        :param float season_var: std of season length. Defaults to 14 days.
+        :param int N: Number of datapoints for the underlying realisation. Defaults to 2048.
+        :param float maxtime: Max time of the underlying simulation. Defaults to 5 years.
+        :param float lag: Lag for signal 2. Defaults to 30 days.
+        :param float E: Mean measurement error for the signals, either both or [signal 1, signal 2]. Defaults to 1% and 10%.
+        :param float E_var: Std of measurement error for the signals, either both or [signal 1, signal 2]. Defaults to 0%
+        """
         defaultkwargs = {'tau': 400.0,
                          'cadence': [7, 30],
                          'cadence_var': [1, 5],
@@ -161,9 +169,9 @@ class mock(logger):
 
         logger.__init__(self)
 
-        self.seed = seed
+        self.seed: int = seed
         self.lc, self.lc_1, self.lc_2 = None, None, None
-        self.lag = 0.0
+        self.lag:float = 0.0
         kwargs = defaultkwargs | kwargs
         self.args = {}
 
@@ -180,7 +188,7 @@ class mock(logger):
         self.generate(seed=seed)
         return (self.copy(seed))
 
-    def generate_true(self, seed: int = 0) -> (ArrayN, ArrayN):
+    def generate_true(self, seed: int = 0) -> (_types.ArrayN, _types.ArrayN):
         """
         Generates an underlying true DRW signal and stores in the self attribute self.lc
         :param seed: seed for random generation
@@ -219,7 +227,7 @@ class mock(logger):
 
         return (self.lc_1, self.lc_2)
 
-    def copy(self, seed: int = None, **kwargs) -> Self:
+    def copy(self, seed: int = None, **kwargs) -> _types.Self:
         """
         Returns a copy of the mock while over-writing certain params.
         :param seed: int seed for random generation
@@ -245,13 +253,14 @@ class mock(logger):
     # ------------------------------
     # TEST UTILS
     def plot(self, axis: matplotlib.axes.Axes = None, true_args: dict = {}, series_args: dict = {},
-             show: bool = True) -> matplotlib.figure.Figure:
+             show: bool = True) -> _types.Figure:
         """
         Plots the lightcurves and subsamples
         :param axis: matplotlib axis to plot to. If none will create new
         :param true_args: matplotlib plotting kwargs for the true underlying lightcurve
         :param series_args: matplotlib plotting kwargs for the observations
-        :return: Plot axis
+        :param show: If true will use plt.show() at the end fo the plot
+        :return: Plot figure
         """
 
         # -----------------
@@ -319,7 +328,15 @@ class mock(logger):
         return axis.get_figure()
 
     def corrected_plot(self, params: dict = {}, axis: matplotlib.axis.Axis = None, true_args: dict = {},
-                       series_args: dict = {}, show: bool = False) -> matplotlib.figure.Figure:
+                       series_args: dict = {}, show: bool = False) -> _types.Figure:
+        """
+        A copy of plot that offsets the displayed signals by self.lag to bring them into alignment.
+        :param axis: matplotlib axis to plot to. If none will create new
+        :param true_args: matplotlib plotting kwargs for the true underlying lightcurve
+        :param series_args: matplotlib plotting kwargs for the observations
+        :param show: If true will use plt.show() at the end fo the plot
+        :return: matplotlib figure
+        """
         params = self.params() | params
         corrected = self.copy()
 
@@ -338,6 +355,10 @@ class mock(logger):
         corrected.plot(axis=axis, true_args=true_args, series_args=series_args, show=show)
 
     def params(self):
+        """
+        Helper utility that returns numpyro-like parameters.
+        :return: Dict of param sites for gp_simple.
+        """
         out = {
             'lag': self.lag,
             'logtau': np.log(self.tau),
@@ -355,7 +376,7 @@ class mock(logger):
 # CASE A - WELL OBSERVED SMOOTH CURVES
 
 
-def determ_gen(self, seed=0) -> (ArrayN, ArrayN):
+def _determ_gen(self, seed=0) -> (_types.ArrayN, _types.ArrayN):
     """
     Replaces the GP generation for the mock_A example to replace it with a nice gaussian curve
     """
@@ -368,24 +389,16 @@ def determ_gen(self, seed=0) -> (ArrayN, ArrayN):
 
 # Change the way mock A generates a time series
 mock_A = mock(season=None, lag=300)
-mock_A.generate_true = MethodType(determ_gen, mock_A)
+"""Instead of a GP this mock has a clear bell-curve like hump. This works as a generous test-case of lag recovery methods"""
+mock_A.generate_true = _types.MethodType(_determ_gen, mock_A)
 mock_A()
-
-mock_A_01, mock_A_02, lag_A = mock_A.lc_1, mock_A.lc_2, mock_A.lag
 
 # ================================================
 # CASE B - SEASONAL GP
 mock_B = mock(lag=256, maxtime=360 * 5, E=[0.01, 0.01], seed=1, season=180)
-mock_B_00 = mock_B.lc
-mock_B_01 = mock_B.lc_1
-mock_B_02 = mock_B.lc_2
-lag_B = mock_B.lag
+"""A standard oz-des like seasonal GP"""
 
 # ================================================
 # CASE C - UN-SEASONAL GP
 mock_C = mock(lag=128, maxtime=360 * 5, E=[0.01, 0.01], season=None)
-
-mock_C_00 = mock_C.lc
-mock_C_01 = mock_C.lc_1
-mock_C_02 = mock_C.lc_2
-lag_C = mock_C.lag
+"""A mock with no seasonal windowing"""

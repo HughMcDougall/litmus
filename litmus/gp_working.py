@@ -25,18 +25,17 @@ from tinygp import GaussianProcess
 from typing import Any
 from nptyping import NDArray
 
-from litmus._utils import *
-from litmus._types import *
+import litmus._utils as _utils
+import litmus._types as _types
 from litmus.lightcurve import lightcurve
 
 
 # ============================================
 # Likelihood function working
-def mean_func(means, Y) -> ArrayN:
+def mean_func(means, Y) -> _types.ArrayN:
     """
     DEPRECATED - means are subtracted in the model now
     Utitlity function to take array of constants and return as gp-friendly functions
-
     """
     t, band = Y
     return (means[band])
@@ -65,9 +64,9 @@ class Multiband(tinygp.kernels.quasisep.Wrapper):
         return self.amplitudes[band] * self.kernel.observation_model(t)
 
 
-def build_gp(T: ArrayN, Y: ArrayN, diag: ArrayNxN, bands: ArrayN, tau: float,
+def build_gp(T: _types.ArrayN, Y: _types.ArrayN, diag: _types.ArrayNxN, bands: _types.ArrayN, tau: float,
              amps: tuple[float, float], means: tuple[float, float],
-             basekernel=tinygp.kernels.quasisep.Exp) -> GaussianProcess:
+             basekernel: tinygp.kernels.quasisep.Quasisep = tinygp.kernels.quasisep.Exp) -> GaussianProcess:
     """
     Builds a tinygp two-band kernel for predictions
 
@@ -79,6 +78,8 @@ def build_gp(T: ArrayN, Y: ArrayN, diag: ArrayNxN, bands: ArrayN, tau: float,
     :parameter amps: Amplitudes of the GP
     :parameter means:
     :parameter basekernel:
+
+    :return: The tinyGP gaussian process object
     """
 
     # Create GP kernel with Multiband

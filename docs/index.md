@@ -12,7 +12,8 @@ LITMUS is an in-progress program that uses modern statistical techniques, like n
 `jax` and its bayesian modelling package
 `NumPyro`, to perform the messy task of lag recovery in AGN reverberation mapping.
 
-![LITMUS](../logo.png)
+
+![LITMUS](assets/logo.png)
 
 This project is still very much in the early stages. If you have any questions, contact the author directly at [hughmcdougallemail@gmail.com](mailto:hughmcdougallemail@gmail.com).
 
