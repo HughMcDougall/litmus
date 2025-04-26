@@ -9,6 +9,8 @@ import numpyro.distributions as dist
 import numpy as np
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
+import litmus.gp_working as gpw
+
 
 # ============================================
 # Custom statmodel example
@@ -35,25 +37,30 @@ class dummy_statmodel(stats_model):
 
     # ----------------------------------
     def prior(self):
-
         lag = quickprior(self, 'lag')
         logtau = quickprior(self, 'logtau')
         logamp = quickprior(self, 'logamp')
 
         return (lag, logtau, logamp)
 
-    def model_function(self, data):
-        lag, logtau, logamp = self.prior()
+    def model_function(self, data) -> None:
+        lag, logtau, logamp, rel_amp, mean, rel_mean, e_calib = self.prior()
 
-        numpyro.sample('test_sample', dist.Normal(lag, 25), obs=self.lag_peak)
-        numpyro.sample('test_sample_2',
-                       dist.MultivariateNormal(
-                           loc=jnp.array([0.25, 0.5]),
-                           covariance_matrix=jnp.array([
-                               [0.25, 0.00],
-                               [0.00, 0.25]
-                           ])),
-                       obs=jnp.array([logtau, logamp])
-                       )
+        T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
 
+        # Conversions to gp-friendly form
+        amp, tau = jnp.exp(logamp), jnp.exp(logtau)
 
+        diag = jnp.square(E)
+
+        delays = jnp.array([0, lag])
+        amps = jnp.array([amp, rel_amp * amp])
+        means = jnp.array([mean, mean + rel_mean])
+
+        T_delayed = T - delays[bands]
+        I = T_delayed.argsort()
+
+        # Build and sample GP
+
+        gp = gpw.build_gp(T_delayed[I], Y[I], diag[I], bands[I], tau, amps, means, basekernel=self.basekernel)
+        numpyro.sample("Y", gp.numpyro_dist(), obs=Y[I])

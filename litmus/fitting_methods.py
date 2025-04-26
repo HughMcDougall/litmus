@@ -65,7 +65,7 @@ class fitting_procedure(logger):
                  out_stream=sys.stdout,
                  err_stream=sys.stderr,
                  verbose=True,
-                 debug=True,
+                 debug=False,
                  **fit_params):
         """
         fitting_procedures extend the logger class and inherit all __init__ args. See the logger documentation for details
@@ -156,7 +156,7 @@ class fitting_procedure(logger):
         Unlisted parameters will be ignored.
         """
 
-        if self.debug: print("Doing config with keys", fit_params.keys())
+        self.msg_debug("Doing config with keys", fit_params.keys())
 
         badkeys = [key for key in fit_params.keys() if key not in self._default_params.keys()]
 
@@ -169,7 +169,7 @@ class fitting_procedure(logger):
 
             self.__setattr__(key, val)
             # self.fitting_params |= {key: val}
-            if self.debug: print("\t set attr", key, file=self.out_stream)
+            self.msg_debug("\t set attr", key)
 
         if len(badkeys) > 0:
             self.msg_err("Tried to configure bad keys:", *badkeys, delim='\t')
@@ -454,7 +454,6 @@ class prior_sampling(fitting_procedure):
                  verbose=True, debug=False, **fit_params):
 
         """
-        :param stats_model stat_model: Statistics model to fit for
         :param stats_model stat_model: Statistics model to fit for
         :param int Nsamples: Number of samples to draw from the prior. Defaults to 4096.
         """
@@ -822,27 +821,26 @@ class hessian_scan(fitting_procedure):
                  verbose=True, debug=False, **fit_params):
 
         """
-        :param stats_model stat_model: Statistics model to fit for
-        :param int Nlags': 64
-        :param float opt_tol': 1E-2
-        :param float opt_tol_init': 1E-4
-        :param float step_size': 0.001
-        :param bool constrained_domain': False
-        :param int max_opt_eval': 1_000
-        :param int max_opt_eval_init': 5_000
-        :param float LL_threshold': 100.0
-        :param int init_samples': 5_000
+        :param stats_model stat_model: Statistics model to fit for.
+        :param int Nlags': Number of lag slices to test. Defaults to 64.
+        :param float opt_tol': Relative evidence uncertainty tolerance for each slice. Defaults to 1E-2.
+        :param float opt_tol_init': Relative uncertainty in MAP optimisation tolerance. Defaults to 1E-4.
+        :param float step_size': Defaults to 0.001.
+        :param bool constrained_domain': Whether to perform fitting / laplace approx in constrained domain. Defaults to False.
+        :param int max_opt_eval': Termination args eval limit for slice optimisation. Defaults to 1_000.
+        :param int max_opt_eval_init': Termination args eval limit for MAP optimisation.Defaults to 5_00.
+        :param float LL_threshold': Amount log-likelihood should decrement by before a slice is considered diverged. Defaults to 100.0.
+        :param int init_samples': Samples to use in finding seed. Defaults to 5_000.
         :param float grid_bunching': Amount to bunch up points about peaks in grid smoothing, with 0.0 being even spacing and 1.0 being MCMC_like sample spacing. Defaults to 0.5.
-        :param grid_depth': None
-        :param grid_Nterp': None
-        :param float grid_relaxation': 0.1,  # deprecated, remove
-        :param float grid_firstdepth': 2.0
-        :param bool reverse': Defaults to True.
-        :param bool split_lags': Defaults to True.
-        :param dict optimizer_args_init': {}
-        :param dict optimizer_args': {}
-        :param dict seed_params': {}
-        :param str precondition': Type of preconditioning to use in scan. Defaults to 'diag'.
+        :param grid_depth': Number of iterations to use in the grid_smoothing. Defaults to 5.
+        :param grid_Nterp': Number of evals in grid_smoothing itterations. Defaults to Nlags.
+        :param float grid_firstdepth': Factor to increase grid_Nterp by for the first pass in grid smoothing. Defaults to 10.0.
+        :param bool reverse': Whether to fit the slices in reverse order. Defaults to True.
+        :param bool split_lags': Whether to attack the lags in order of MAP outwards rather than end to end. Defaults to True.
+        :param dict optimizer_args_init': Args to over-write the jaxopt.BFGS defaults with in the initial MAP optimisation
+        :param dict optimizer_args': Args to over-write the jaxopt.BFGS defaults with in the slice optimisation
+        :param dict seed_params': Initial guess parameters to begin MAP estimation. If incomplete will use supplement with statmodel's .find_seed
+        :param str precondition': Type of preconditioning to use in scan. Should be "cholesky", "eig", "half-eig", "diag" or "none". Defaults to 'diag'.
         :param str interp_scale': Scale to peform grid smoothing interpolation on . Defaults to 'log'.
         """
         args_in = {**locals(), **fit_params}
@@ -864,10 +862,9 @@ class hessian_scan(fitting_procedure):
             'LL_threshold': 100.0,
             'init_samples': 5_000,
             'grid_bunching': 0.5,
-            'grid_depth': None,
+            'grid_depth': 5,
             'grid_Nterp': None,
-            'grid_relaxation': 0.1,  # deprecated, remove
-            'grid_firstdepth': 2.0,
+            'grid_firstdepth': 10.0,
             'reverse': True,
             'split_lags': True,
             'optimizer_args_init': {},
@@ -909,10 +906,8 @@ class hessian_scan(fitting_procedure):
     def readyup(self):
 
         # Get grid properties
-        if self.grid_depth is None:
-            self.grid_depth = int(1 / (1 - self.grid_relaxation) * 5)
         if self.grid_Nterp is None:
-            self.grid_Nterp = self.Nlags * 10
+            self.grid_Nterp = self.Nlags
 
         # Make list of lags for scanning
         self.lags = np.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags + 1, endpoint=False)[1:]
@@ -935,17 +930,10 @@ class hessian_scan(fitting_procedure):
     # Setup Funcs
 
     def estimate_MAP(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
-        """
-        :param lc_1:
-        :param lc_2:
-        :param seed:
-        :return:
-        """
-
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
         # ----------------------------------
-        # Find seed for optimization if not supplies
+        # Find seed for optimization if not supplied
         if self.stat_model.free_params() != self.seed_params.keys():
             seed_params, ll_start = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=self.seed_params)
 
@@ -997,8 +985,9 @@ class hessian_scan(fitting_procedure):
             else:
                 bestlag = estmap_params['lag']
 
+            self.msg_run("Running final optimization...")
             estmap_params = self.stat_model.scan(start_params=estmap_params | {'lag': bestlag},
-                                                 optim_params=['lag'],
+                                                 # optim_params=['lag'],
                                                  data=data,
                                                  optim_kwargs=self.optimizer_args_init,
                                                  precondition=self.precondition
@@ -1759,8 +1748,8 @@ class SVI_scan(hessian_scan):
         diagnostic_losses = []
 
         for i, lag in enumerate(lags_forscan):
-            print(":" * 23)
-            self.msg_run("Doing SVI fit at lag=%.2f ..." % lag)
+
+            self.msg_run(":" * 23, "Doing SVI fit at lag=%.2f ..." % lag)
 
             svi_loop_result = autosvi.run(jax.random.PRNGKey(seed),
                                           self.ELBO_Nsteps,

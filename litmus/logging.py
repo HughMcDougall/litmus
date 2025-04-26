@@ -48,10 +48,10 @@ class logger:
             for a in x:
                 print(a, file=self.out_stream, end=delim)
 
-        print(end, end='')
+            print(end, end='')
         return
 
-    def msg_verbose(self, *x: str, end='\n', delim=' '):
+    def msg_debug(self, *x: str, end='\n', delim=' '):
         """
         Explicit messages to help debug when things are behaving strangely
         """
@@ -59,5 +59,5 @@ class logger:
             for a in x:
                 print(a, file=self.out_stream, end=delim)
 
-        print(end, end='')
+            print(end, end='')
         return

@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 
 import litmus._types as _types
 
+
 # ============================================
 # LIGHT CURVE
 # ============================================
@@ -114,7 +115,8 @@ class lightcurve(object):
         out.Y = abs(self.Y)
         return out
 
-    # ----------
+        # ----------
+
     # Dict-Like
 
     def keys(self) -> [str, str, str]:
@@ -155,7 +157,7 @@ class lightcurve(object):
         # Check if have errorbars
         no_errs = False
         E = self.E
-        if max(E)== 0:
+        if max(E) == 0:
             no_errs = True
             E = np.ones_like(self.E)
 
@@ -222,6 +224,13 @@ class lightcurve(object):
         """
         return self.delayed_copy(0, Tmin, Tmax)
 
+    def concatenate(self, other):
+        T1, T2 = self.T, other.T
+        Y1, Y2 = self.Y, other.Y
+        E1, E2 = self.E, other.E
+        T, Y, E = np.concatenate([T1, T2]), np.concatenate([Y1, Y2]), np.concatenate([E1, E2])
+        return lightcurve(T, Y, E)
+
     def __getattr__(self, item):
         if item == "N":
             return self.T.size
@@ -242,7 +251,7 @@ class lightcurve(object):
             plt.figure()
             axis = plt.gca()
             axis.set_xlabel("T")
-            axis.set_Ylabel("Y")
+            axis.set_ylabel("Y")
         axis.errorbar(self.T, self.Y, self.E, fmt='none', **kwargs)
 
         if show: plt.show()

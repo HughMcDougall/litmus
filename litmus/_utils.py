@@ -13,6 +13,8 @@ import jax.numpy as jnp
 import jax
 
 from contextlib import contextmanager
+from IPython import get_ipython
+from IPython.utils import io
 import sys, os
 from copy import copy
 
@@ -24,6 +26,7 @@ from scipy.special import jnp_zeros
 # PRINTING UTILITIES
 # ============================================
 
+'''
 @contextmanager
 def suppress_stdout():
     # Duplicate the original stdout file descriptor to restore later
@@ -39,9 +42,26 @@ def suppress_stdout():
             os.dup2(original_stdout_fd, sys.stdout.fileno())
             # Close the duplicated file descriptor
             os.close(original_stdout_fd)
+'''
 
 
+@contextmanager
+def suppress_stdout():
+    ipython = get_ipython()
 
+    if ipython and hasattr(ipython, 'kernel'):  # Likely in a Jupyter notebook
+        with io.capture_output() as captured:
+            yield
+    else:
+        # Standard Python environment
+        original_stdout_fd = os.dup(sys.stdout.fileno())
+        with open(os.devnull, 'w') as devnull:
+            os.dup2(devnull.fileno(), sys.stdout.fileno())
+            try:
+                yield
+            finally:
+                os.dup2(original_stdout_fd, sys.stdout.fileno())
+                os.close(original_stdout_fd)
 
 # ============================================
 # DICTIONARY UTILITIES

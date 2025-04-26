@@ -7,24 +7,21 @@ from litmus.mocks import mock_A, mock_B, mock_C
 
 mock = litmus.mocks.mock(lag=180,
                          E=[0.1, 0.25],
-                         tau=200)
+                         tau=400)
 mock.plot()
 
-model = litmus.models.GP_simple()
 lc_1, lc_2 = mock.lc_1, mock.lc_2
 
+model = litmus.models.GP_simple(verbose=True,
+                                prior_ranges=mock.params() | {'lag': [0, 800], 'logtau': [np.log(10), np.log(5000)]})
 data = model.lc_to_data(lc_1, lc_2)
-
 Tpred = np.linspace(-1000, 2500, 512)
-
 # --------------------------------------
 
-for p, num_samples in zip(
-        [mock.params(), dict_extend(mock.params(), {'logtau': np.random.randn(32) * 1.0 + 6.0})],
-        [1]):
+p = mock.params()
+pred1_true, pred2_true = model.make_lightcurves(data, params=p, Tpred=Tpred, num_samples=1)
 
-    pred1, pred2 = model.make_lightcurves(data, params=p, Tpred=Tpred, num_samples=num_samples)
-
+def make_plot(pred1, pred2):
     print("Predictions Clear. Plotting")
     c0 = 'midnightblue'
     c1, c2 = 'navy', 'orchid'
@@ -32,10 +29,8 @@ for p, num_samples in zip(
     f, (a1, a2) = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
     lc_1.plot(axis=a1, show=False, c=c1, capsize=2, label="Measurements")
     lc_2.plot(axis=a2, show=False, c=c2, capsize=2, label="Measurements")
-    # a1.plot(pred1.T, pred1.Y)
-    # a2.plot(pred2.T, pred2.Y, c='tab:orange')
 
-    a1.plot(mock.lc.T, mock.lc.Y, c=c0, lw=0.5, zorder=-6, label = 'True Signal')
+    a1.plot(mock.lc.T, mock.lc.Y, c=c0, lw=0.5, zorder=-6, label='True Signal')
     a2.plot(mock.lc.T + mock.lag, mock.lc.Y, c=c0, lw=0.5, zorder=-6)
 
     a1.fill_between(pred1.T, pred1.Y - pred1.E, pred1.Y + pred1.E, alpha=0.25, color=c1,
@@ -72,5 +67,18 @@ for p, num_samples in zip(
 
     print("Plots done")
 
-    f.savefig("./constrained_lc.pdf", dpi=300)
-    plt.show()
+    return (f)
+
+f = make_plot(pred1_true, pred2_true)
+f.suptitle("Constrained Lightcurves at true values")
+f.tight_layout()
+f.show()
+
+my_fitter = litmus.fitting_methods.SVI_scan(model, verbose=True, debug=False)
+my_fitter.fit(lc_1, lc_2)
+p_varied = my_fitter.get_samples()
+
+lt = litmus.LITMUS(my_fitter)
+lt.lag_plot()
+lt.plot_parameters()
+plt.show()

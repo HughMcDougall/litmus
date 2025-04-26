@@ -18,7 +18,7 @@ import sys
 import csv
 import pandas as pd
 
-from chainconsumer import ChainConsumer, Chain, ChainConfig, PlotConfig
+from chainconsumer import ChainConsumer, Chain, ChainConfig, PlotConfig, Truth
 
 import matplotlib
 import litmus._types as _types
@@ -184,7 +184,8 @@ class LITMUS(logger):
 
     # Plotting
 
-    def plot_lightcurves(self, model_no: int =0, Nsamples: int = 1, Tspan: None | list[float, float] = None, Nplot: int = 1024,
+    def plot_lightcurves(self, model_no: int = 0, Nsamples: int = 1, Tspan: None | list[float, float] = None,
+                         Nplot: int = 1024,
                          dir: str | None = None, show: bool = True) -> matplotlib.figure.Figure():
         """
         Plots the interpolated lightcurves for one of the fitted models
@@ -201,6 +202,7 @@ class LITMUS(logger):
         return fig
 
     def plot_parameters(self, model_no: int | None = None, Nsamples: int = None, CC_kwargs: dict = {},
+                        truth: dict = None, params: [str] = None,
                         show: bool = True,
                         prior_extents: bool = False, dir: str | None = None) -> matplotlib.figure.Figure:
         """
@@ -208,12 +210,12 @@ class LITMUS(logger):
         :param model_no: Which model to plot the lightcurves for. If None, will plot for all
         :param Nsamples: Number of posterior samples to draw from when plotting
         :parameter CC_kwargs: Keyword arguments to pass to the chainconsumer constructor
+        :parameter truth: Dictionary of parameter names to truth values
+        :parameter params: List of parameters to plot
         :parameter show: If True, will show the plot
         :parameter prior_extents: If True, will use the model prior range for the axes limits (Defaults to false if multiple models used)
         :parameter dir: If not None, will save to this filepath
-        Returns the matplotlib figure
-
-        # todo - refactor for multi-model implementation
+        :return: Returns the matplotlib figure
         """
 
         if Nsamples is not None and Nsamples != self.Nsamples:
@@ -230,14 +232,21 @@ class LITMUS(logger):
             _config = PlotConfig(summarise=True,
                                  **CC_kwargs)
         C.plotter.set_config(_config)
-        params_toplot = [param for param in self.model.free_params() if self.samples[param].ptp() != 0]
+        if params is None: params = self.model.free_params()
+        params_toplot = [param for param in self.model.free_params() if
+                         self.samples[param].ptp() != 0 and param in params]
         if len(params_toplot) == 0:
             fig = plt.figure()
             if show: plt.show()
             return fig
 
+        if truth is not None:
+            truth_toplot = {key: val for key, val in zip(truth.keys(), truth.values()) if key in params_toplot}
+            truth = Truth(location=truth_toplot)
+            C.add_truth(truth)
+
         try:
-            fig = C.plotter.plot(columns=params_toplot,
+            fig = C.plotter.plot(columns=params_toplot
                                  )
         except:
             fig = plt.figure()
