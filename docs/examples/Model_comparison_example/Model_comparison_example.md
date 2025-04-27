@@ -10,8 +10,6 @@ import matplotlib.pyplot as plt
 from litmus import *
 ```
 
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
 
 Then define the different models. `model_alt` is our alternative hypothesis, i.e. "_The signal encodes a lag and we have seen it_". The other two models are null hypothesese, with `model_null` being "_there is information in the signal but we did not measure a lag_", and `model_whitenoise` is "_the response signal is so choppy we can't measure anything at all_". For cleanness of the notebook I'm setting al of these to `verbose=False` to suppress their progress messages:
 

@@ -10,72 +10,46 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
-      <change afterPath="$PROJECT_DIR$/examples/Model_comparison_example.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/Custom_statsmodel_example.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/Custom_statsmodel_example.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/JAVELIN_HeScan_Comparison.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/JAVELIN_HeScan_Comparison.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/_mkdocspush.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/examples/Custom_statsmodel_example/Custom_statsmodel_example.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/Custom_statsmodel_example/Custom_statsmodel_example.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/examples/Model_comparison_example/Model_comparison_example.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/Model_comparison_example/Model_comparison_example.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/lightcurve_gentest.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/lightcurve_gentest.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mkdocs.yml" beforeDir="false" afterPath="$PROJECT_DIR$/mkdocs.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/site/404.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/GP_working/index.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/_utils/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/_mkdocstrings.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/images/favicon.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js.map" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ar.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.da.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.de.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.du.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.el.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.es.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fi.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fr.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.he.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hi.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hu.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hy.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.it.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ja.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.jp.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.kn.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ko.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.multi.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.nl.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.no.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.pt.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ro.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ru.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.sa.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.stemmer.support.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.sv.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ta.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.te.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.th.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.tr.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.vi.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.zh.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/tinyseg.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/wordcut.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js.map" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/logo.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/_mkdocstrings.css" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/_mkdocstrings.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.da.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.da.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.de.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.de.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.du.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.du.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.es.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.es.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fi.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fi.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fr.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fr.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hu.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hu.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.it.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.it.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.nl.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.nl.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.no.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.no.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.pt.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.pt.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ro.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ro.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ru.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ru.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.sv.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.sv.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.tr.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.tr.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/tinyseg.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/tinyseg.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/wordcut.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/wordcut.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/site/assets/stylesheets/main.4af4bdda.min.css" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/assets/stylesheets/main.4af4bdda.min.css.map" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/assets/stylesheets/palette.06af60db.min.css" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/assets/stylesheets/palette.06af60db.min.css.map" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/custom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/Custom_statsmodel_example/Custom_statsmodel_example/index.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/output_11_7.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/output_11_8.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/output_3_0.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/output_7_1.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/Model_comparison_example/Model_comparison_example/index.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/lightcurve_gentest/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_11_1.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_14_3.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_14_4.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_15_1.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_3_0.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/fitting_methods/index.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/gettingstarted/index.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/index.html" beforeDir="false" />
@@ -85,7 +59,6 @@
       <change beforePath="$PROJECT_DIR$/site/logging/index.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/mocks/index.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/models/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/objects.inv" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/search/search_index.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/sitemap.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/site/sitemap.xml.gz" beforeDir="false" />
@@ -135,58 +108,58 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.1D_lag_posterior.executor": "Run",
-    "Python.ICCF_working.executor": "Run",
-    "Python.JAVELIKE_test.executor": "Run",
-    "Python.NS_direct_test.executor": "Run",
-    "Python.NS_test.executor": "Run",
-    "Python._types.executor": "Run",
-    "Python._utils.executor": "Run",
-    "Python.dual_moons.executor": "Run",
-    "Python.fitting_methods.executor": "Run",
-    "Python.fitting_methods_test.executor": "Run",
-    "Python.gaussian_shells.executor": "Run",
-    "Python.gp_working.executor": "Run",
-    "Python.grid_plot.executor": "Run",
-    "Python.high_SNR_test.executor": "Run",
-    "Python.integ_compare.executor": "Run",
-    "Python.integ_test_01.executor": "Run",
-    "Python.jaxns_test.executor": "Run",
-    "Python.lightcurve.executor": "Run",
-    "Python.lightcurve_gentest.executor": "Run",
-    "Python.lin_scatter.executor": "Run",
-    "Python.litmus_class_example.executor": "Run",
-    "Python.litmus_test.executor": "Run",
-    "Python.litmusclass.executor": "Run",
-    "Python.logging.executor": "Run",
-    "Python.mocks.executor": "Run",
-    "Python.mocks_test.executor": "Run",
-    "Python.models.executor": "Run",
-    "Python.null_test.executor": "Run",
-    "Python.scan_test.executor": "Run",
-    "Python.subsample_example.executor": "Run",
-    "Python.test.executor": "Run",
-    "Python.test_01.executor": "Run",
-    "Python.test_hessianscan.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "javascript.add.imports.on.the.completion": "false",
-    "javascript.show.imports.popup": "false",
-    "last_opened_file_path": "C:/Work/litmus/examples",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "run.code.analysis.last.selected.profile": "aDefault",
-    "settings.editor.selected.configurable": "preferences.editor",
-    "typescript.add.imports.on.the.completion": "false",
-    "typescript.show.imports.popup": "false",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.1D_lag_posterior.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ICCF_working.executor&quot;: &quot;Run&quot;,
+    &quot;Python.JAVELIKE_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.NS_direct_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.NS_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python._types.executor&quot;: &quot;Run&quot;,
+    &quot;Python._utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.dual_moons.executor&quot;: &quot;Run&quot;,
+    &quot;Python.fitting_methods.executor&quot;: &quot;Run&quot;,
+    &quot;Python.fitting_methods_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.gaussian_shells.executor&quot;: &quot;Run&quot;,
+    &quot;Python.gp_working.executor&quot;: &quot;Run&quot;,
+    &quot;Python.grid_plot.executor&quot;: &quot;Run&quot;,
+    &quot;Python.high_SNR_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.integ_compare.executor&quot;: &quot;Run&quot;,
+    &quot;Python.integ_test_01.executor&quot;: &quot;Run&quot;,
+    &quot;Python.jaxns_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.lightcurve.executor&quot;: &quot;Run&quot;,
+    &quot;Python.lightcurve_gentest.executor&quot;: &quot;Run&quot;,
+    &quot;Python.lin_scatter.executor&quot;: &quot;Run&quot;,
+    &quot;Python.litmus_class_example.executor&quot;: &quot;Run&quot;,
+    &quot;Python.litmus_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.litmusclass.executor&quot;: &quot;Run&quot;,
+    &quot;Python.logging.executor&quot;: &quot;Run&quot;,
+    &quot;Python.mocks.executor&quot;: &quot;Run&quot;,
+    &quot;Python.mocks_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.models.executor&quot;: &quot;Run&quot;,
+    &quot;Python.null_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.scan_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.subsample_example.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_01.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_hessianscan.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;javascript.add.imports.on.the.completion&quot;: &quot;false&quot;,
+    &quot;javascript.show.imports.popup&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Work/litmus/examples&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.editor&quot;,
+    &quot;typescript.add.imports.on.the.completion&quot;: &quot;false&quot;,
+    &quot;typescript.show.imports.popup&quot;: &quot;false&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Work\litmus\examples" />
@@ -323,7 +296,8 @@
       <workItem from="1745209622182" duration="247000" />
       <workItem from="1745211672004" duration="8854000" />
       <workItem from="1745548762652" duration="40000" />
-      <workItem from="1745569573217" duration="37366000" />
+      <workItem from="1745569573217" duration="38422000" />
+      <workItem from="1745725778805" duration="86000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />
@@ -342,17 +316,6 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="commit from pycharm" />
     <option name="LAST_COMMIT_MESSAGE" value="commit from pycharm" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/testing/high_SNR_test.py</url>
-          <line>47</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/litmus$litmus_class_example.coverage" NAME="litmus_class_example Coverage Results" MODIFIED="1730097746502" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/examples" />

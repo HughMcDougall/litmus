@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 import jax.numpy as jnp
 ```
 
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
 
 ## An Imaginary Survey
 First up, we need to actually generate our fake data. Let's imagine a ficticious (but reasonable) scenario like this:
