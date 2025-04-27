@@ -10,58 +10,85 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
-      <change afterPath="$PROJECT_DIR$/examples/Custom_statsmodel_example.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/JAVELIN_HeScan_Comparison.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/Model_comparison_example.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/constrained_lc.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/examples/constrained_lc.pdf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/custom_statsmodel_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/custom_statsmodel_example.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/hence.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/lightcurve_gentest.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/lightcurve_gentest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/Custom_statsmodel_example.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/Custom_statsmodel_example.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/JAVELIN_HeScan_Comparison.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/JAVELIN_HeScan_Comparison.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/lightcurve.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/lightcurve.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/litmusclass.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/litmusclass.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/logging.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/logging.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mkdocs.yml" beforeDir="false" afterPath="$PROJECT_DIR$/mkdocs.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/404.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/404.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/GP_working/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/GP_working/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/_utils/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/_utils/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/_mkdocstrings.css" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/_mkdocstrings.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.da.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.da.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.de.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.de.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.du.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.du.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.es.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.es.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fi.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fi.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fr.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fr.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hu.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hu.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.it.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.it.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.nl.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.nl.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.no.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.no.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.pt.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.pt.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ro.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ro.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ru.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ru.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.sv.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.sv.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.tr.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.tr.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/tinyseg.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/tinyseg.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/wordcut.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/lunr/wordcut.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/fitting_methods/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/fitting_methods/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/gettingstarted/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/gettingstarted/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/lightcurve/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/lightcurve/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/lin_scatter/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/lin_scatter/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/litmusclass/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/litmusclass/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/logging/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/logging/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/mocks/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/mocks/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/models/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/site/models/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/objects.inv" beforeDir="false" afterPath="$PROJECT_DIR$/site/objects.inv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/search/search_index.json" beforeDir="false" afterPath="$PROJECT_DIR$/site/search/search_index.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/sitemap.xml" beforeDir="false" afterPath="$PROJECT_DIR$/site/sitemap.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/site/sitemap.xml.gz" beforeDir="false" afterPath="$PROJECT_DIR$/site/sitemap.xml.gz" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/404.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/GP_working/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/_utils/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/_mkdocstrings.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/images/favicon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/bundle.c8b220af.min.js.map" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ar.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.da.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.de.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.du.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.el.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.es.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fi.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.fr.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.he.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hi.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hu.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.hy.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.it.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ja.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.jp.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.kn.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ko.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.multi.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.nl.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.no.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.pt.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ro.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ru.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.sa.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.stemmer.support.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.sv.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.ta.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.te.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.th.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.tr.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.vi.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/min/lunr.zh.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/tinyseg.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/lunr/wordcut.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/javascripts/workers/search.f8cc74c7.min.js.map" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/logo.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/stylesheets/main.4af4bdda.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/stylesheets/main.4af4bdda.min.css.map" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/stylesheets/palette.06af60db.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/assets/stylesheets/palette.06af60db.min.css.map" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/custom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/output_11_7.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/output_11_8.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/output_3_0.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/JAVELIN_HeScan_Comparison/output_7_1.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/lightcurve_gentest/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_11_1.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_14_3.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_14_4.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_15_1.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/examples/lightcurve_gentest/output_3_0.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/fitting_methods/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/gettingstarted/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/lightcurve/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/lin_scatter/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/litmusclass/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/logging/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/mocks/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/models/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/objects.inv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/search/search_index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/sitemap.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/site/sitemap.xml.gz" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -74,8 +101,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Python Script" />
         <option value="Jupyter Notebook" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
@@ -296,7 +323,7 @@
       <workItem from="1745209622182" duration="247000" />
       <workItem from="1745211672004" duration="8854000" />
       <workItem from="1745548762652" duration="40000" />
-      <workItem from="1745569573217" duration="24132000" />
+      <workItem from="1745569573217" duration="37366000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />

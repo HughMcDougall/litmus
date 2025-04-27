@@ -1045,15 +1045,24 @@ class hessian_scan(fitting_procedure):
         if seed_params.keys() != self.stat_model.paramnames():
             seed_params, llstart = self.stat_model.find_seed(data, guesses=self.init_samples, fixed=seed_params)
 
+        self.msg_debug("Making Grid with interp scale %s" % interp_scale)
         lags = np.linspace(*self.stat_model.prior_ranges['lag'], int(self.Nlags * self.grid_firstdepth) + 1,
                            endpoint=False)[1:]
         lag_terp = np.linspace(*self.stat_model.prior_ranges['lag'], self.grid_Nterp)
 
         log_density_all, lags_all = np.empty(shape=(1,)), np.empty(shape=(1,))
         for i in range(self.grid_depth):
+            self.msg_debug("Pass number:\t %i Any Errors?\t %r" % (
+                i, np.any([*np.isnan(log_density_all), *np.isinf(log_density_all)]))
+                           )
             params = _utils.dict_extend(seed_params, {'lag': lags})
             log_density_all = np.concatenate([log_density_all, self.stat_model.log_density(params, data)])
             lags_all = np.concatenate([lags_all, lags])
+            check = np.isinf(log_density_all) + np.isnan(log_density_all)
+
+            # Check for broken nodes then argsort
+            I = np.where(check == False)[0]
+            log_density_all, lags_all = log_density_all[I], lags_all[I]
             I = lags_all.argsort()
             log_density_all, lags_all = log_density_all[I], lags_all[I]
 
@@ -1073,7 +1082,7 @@ class hessian_scan(fitting_procedure):
                 # Linearly interpolate the density profile
                 log_density_terp = np.interp(lag_terp, log_density_all - log_density_all.max(), density,
                                              left=log_density_all[0], right=log_density_all[-1])
-                density_terp = np.exp(log_density_terp)
+                density_terp = np.exp(log_density_terp - log_density_terp.max())
                 density_terp /= density_terp.sum()
 
             gets = np.linspace(0, 1, self.grid_Nterp)
@@ -1727,7 +1736,8 @@ class SVI_scan(hessian_scan):
                                       data=data, lag=self.estmap_params['lag'],
                                       init_params={'auto_loc': init_loc,
                                                    'auto_scale_tril': init_tril
-                                                   } if not bad_starts else None
+                                                   } if not bad_starts else None,
+                                      progress_bar=self.verbose
                                       )
 
         self.msg_debug("\t Success. Extracting solution")
@@ -1757,7 +1767,7 @@ class SVI_scan(hessian_scan):
                                           init_params={'auto_loc': BEST_loc,
                                                        'auto_scale_tril': BEST_tril
                                                        },
-                                          progress_bar=False
+                                          progress_bar=self.verbose
                                           )
 
             NEW_loc, NEW_tril = svi_loop_result.params['auto_loc'], svi_loop_result.params['auto_scale_tril']

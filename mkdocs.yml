@@ -20,6 +20,8 @@ theme:
     - toc.follow
     - navigation.tracking
     - toc.integrate
+    - content.code.copy  # Adds a copy-to-clipboard button
+    - content.code.annotate  # For annotated lines (optional)
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -37,7 +39,6 @@ theme:
         name: Switch to dark mode
 extra_css: [custom.css]
 plugins:
-  autorefs: {}
   mkdocstrings:
     handlers:
       python:
@@ -72,6 +73,8 @@ plugins:
           use_docstring_inheritance: true
   search: {}
 
+markdown_extensions:
+  - codehilite
 
 
 nav:
@@ -88,7 +91,10 @@ nav:
           - GP_working: GP_working.md
           - logging: logging.md
           - Utilities and Typing: _utils.md
-  - Examples:
+  - Examples & Tutorials:
       - Getting Started: gettingstarted.md
       - LITMUS vs Aliasing: examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison.md
       - Constraining a Lightcurve: examples/lightcurve_gentest/lightcurve_gentest.md
+      - Creating a Custom Statistical Model: examples/Custom_statsmodel_example/Custom_statsmodel_example.md
+      - Using Litmus to Remove False Positives: examples/Model_comparison_example/Model_comparison_example.md
+      

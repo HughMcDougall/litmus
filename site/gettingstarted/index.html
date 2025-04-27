@@ -633,7 +633,7 @@
             
   
   <span class="md-ellipsis">
-    Examples
+    Examples & Tutorials
     
   </span>
   
@@ -644,7 +644,7 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
-            Examples
+            Examples & Tutorials
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -812,6 +812,50 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/Custom_statsmodel_example/Custom_statsmodel_example/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Creating a Custom Statistical Model
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/Model_comparison_example/Model_comparison_example/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Using Litmus to Remove False Positives
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -840,86 +884,98 @@
 <h3 id="simple-installation">Simple Installation</h3>
 <p>First make sure you have a recent version of python running (<code>3.10</code>-<code>3.12</code>)
 and then install directly from the git repo:</p>
-<pre><code>pip install &quot;git+https://github.com/HughMcDougall/litmus&quot;
-</code></pre>
+<div class="codehilite"><pre><span></span><code>pip install &quot;git+https://github.com/HughMcDougall/litmus&quot;
+</code></pre></div>
+
 <h3 id="explicit-installation">Explicit Installation</h3>
 <p>If you find the above doesn't work, try first installing the dependencies one by
 one, starting with the commonplace python packages:</p>
-<pre><code>pip install numpy matplotlib scikit-learn
-</code></pre>
+<div class="codehilite"><pre><span></span><code>pip install numpy matplotlib scikit-learn
+</code></pre></div>
+
 <p>Then the <code>JAX</code> ecosystem and <code>numpyro</code> utilities:</p>
-<pre><code>pip install jax jaxlib jaxopt
+<div class="codehilite"><pre><span></span><code>pip install jax jaxlib jaxopt
 pip install numpyro tinygp
-</code></pre>
+</code></pre></div>
+
 <p>For plotting utilties we need chainconsumer, which needs a newer version of scipy, which in turn requires a newish version of python.</p>
 <p><strong>Requires Using python <code>3.11</code>-<code>3.12</code>:</strong></p>
-<pre><code>pip install scipy
+<div class="codehilite"><pre><span></span><code>pip install scipy
 pip install chainconsumer
-</code></pre>
+</code></pre></div>
+
 <p><strong>Nested Sampling</strong><br />
 If you want to make use of <a href="https://github.com/Joshuaalbert/jaxns"><code>jaxns</code> nested sampling</a>, you'll need to install it with:</p>
-<pre><code>pip install etils tensorflow_probability
+<div class="codehilite"><pre><span></span><code>pip install etils tensorflow_probability
 pip install jaxns
-</code></pre>
+</code></pre></div>
+
 <p><em>Note: You have bump into some trouble installing <code>tensorflow_probability</code> if you don't have <a href="https://cmake.org/"><code>cmake</code></a> installed.</em></p>
 <hr />
 <h2 id="usage">Usage</h2>
 <h3 id="first-timers">First Timers</h3>
-<pre><code>import numpy as np
-import matplotlib.pyplot as plt
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
-import litmus
-</code></pre>
-<pre><code>mymock = litmus.mocks.mock(3)
+<span class="kn">import</span><span class="w"> </span><span class="nn">litmus</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>mymock = litmus.mocks.mock(3)
 lc_1, lc_2 = mymock.lc_1, mymock.lc_2
 mymock.plot()
-</code></pre>
+</code></pre></div>
+
 <p>Now, choose a model and set its priors(at time of writing only <code>GP_simple</code>,
 which models both lightcurves as scaled and shifted damped random walks, is
 implemented). For example suppose we know want to narrow our lag search
 range to <code>[0,100] days</code>, and know that the lightcurves are normalized to
 have zero mean:</p>
-<pre><code>my_model = litmus.models.GP_simple()
-my_model.set_priors(
-    {
-    'lag': [0,100]
-    'mean': [0,0]
-    'rel_mean': [0,0]
-    }
-)
-</code></pre>
+<div class="codehilite"><pre><span></span><code><span class="nx">my_model</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">litmus</span><span class="p">.</span><span class="nx">models</span><span class="p">.</span><span class="nx">GP_simple</span><span class="p">()</span>
+<span class="nx">my_model</span><span class="p">.</span><span class="nx">set_priors</span><span class="p">(</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">    </span><span class="err">&#39;</span><span class="nx">lag</span><span class="err">&#39;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">100</span><span class="p">]</span>
+<span class="w">    </span><span class="err">&#39;</span><span class="nx">mean</span><span class="err">&#39;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+<span class="w">    </span><span class="err">&#39;</span><span class="nx">rel_mean</span><span class="err">&#39;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">)</span>
+</code></pre></div>
+
 <p>Now we choose a fitting method and tune it accordingly.</p>
-<pre><code>fitting_method = litmus.fitting_methods.hessian_scan(stat_model=my_model,
+<div class="codehilite"><pre><span></span><code>fitting_method = litmus.fitting_methods.hessian_scan(stat_model=my_model,
                                                   Nlags=32,
                                                   init_samples=5_000,
                                                   grid_bunching=0.8,
-                                                  optimizer_args={'tol': 1E-3,
-                                                                  'maxiter': 256,
-                                                                  'increase_factor': 1.1,
+                                                  optimizer_args={&#39;tol&#39;: 1E-3,
+                                                                  &#39;maxiter&#39;: 256,
+                                                                  &#39;increase_factor&#39;: 1.1,
                                                                   },
-                                                  optimizer_args_init={'tol': 1E-4,
-                                                                  'maxiter': 1024,
-                                                                  'increase_factor': 1.01,
+                                                  optimizer_args_init={&#39;tol&#39;: 1E-4,
+                                                                  &#39;maxiter&#39;: 1024,
+                                                                  &#39;increase_factor&#39;: 1.01,
                                                                   },
                                                   reverse=False,
                                                   debug=False
                                                   )
-</code></pre>
+</code></pre></div>
+
 <p>Finally, wrap this in a <code>LITMUS</code> object, adding the lightcurves to it, which
 makes running and getting results out as simple as a single line of code:</p>
-<pre><code>litmus_handler = litmus.LITMUS(fitting_method)
+<div class="codehilite"><pre><span></span><code>litmus_handler = litmus.LITMUS(fitting_method)
 
 litmus_handler.add_lightcurve(lc_1)
 litmus_handler.add_lightcurve(lc_2)
-</code></pre>
+</code></pre></div>
+
 <p>Now, fire off the fitting procedure:</p>
-<pre><code>litmus_handler.fit()
-</code></pre>
+<div class="codehilite"><pre><span></span><code>litmus_handler.fit()
+</code></pre></div>
+
 <p>And finally plot the model parameters to see how we did:</p>
-<pre><code>litmus_handler.lag_plot()
+<div class="codehilite"><pre><span></span><code>litmus_handler.lag_plot()
 litmus_handler.plot_parameters()
 litmus_handler.plot_diagnostics()
-</code></pre>
+</code></pre></div>
+
 <hr />
 <hr />
 
@@ -968,7 +1024,7 @@ litmus_handler.plot_diagnostics()
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "..", "features": ["search.suggest", "search.highlight", "search.tabs.link", "navigation.expand", "toc.follow", "navigation.tracking", "toc.integrate"], "search": "../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": ["search.suggest", "search.highlight", "search.tabs.link", "navigation.expand", "toc.follow", "navigation.tracking", "toc.integrate", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../assets/javascripts/bundle.c8b220af.min.js"></script>
