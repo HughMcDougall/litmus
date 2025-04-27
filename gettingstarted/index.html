@@ -884,98 +884,86 @@
 <h3 id="simple-installation">Simple Installation</h3>
 <p>First make sure you have a recent version of python running (<code>3.10</code>-<code>3.12</code>)
 and then install directly from the git repo:</p>
-<div class="codehilite"><pre><span></span><code>pip install &quot;git+https://github.com/HughMcDougall/litmus&quot;
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip install &quot;git+https://github.com/HughMcDougall/litmus&quot;
+</span></code></pre></div>
 <h3 id="explicit-installation">Explicit Installation</h3>
 <p>If you find the above doesn't work, try first installing the dependencies one by
 one, starting with the commonplace python packages:</p>
-<div class="codehilite"><pre><span></span><code>pip install numpy matplotlib scikit-learn
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip install numpy matplotlib scikit-learn
+</span></code></pre></div>
 <p>Then the <code>JAX</code> ecosystem and <code>numpyro</code> utilities:</p>
-<div class="codehilite"><pre><span></span><code>pip install jax jaxlib jaxopt
-pip install numpyro tinygp
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip install jax jaxlib jaxopt
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>pip install numpyro tinygp
+</span></code></pre></div>
 <p>For plotting utilties we need chainconsumer, which needs a newer version of scipy, which in turn requires a newish version of python.</p>
 <p><strong>Requires Using python <code>3.11</code>-<code>3.12</code>:</strong></p>
-<div class="codehilite"><pre><span></span><code>pip install scipy
-pip install chainconsumer
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip install scipy
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pip install chainconsumer
+</span></code></pre></div>
 <p><strong>Nested Sampling</strong><br />
 If you want to make use of <a href="https://github.com/Joshuaalbert/jaxns"><code>jaxns</code> nested sampling</a>, you'll need to install it with:</p>
-<div class="codehilite"><pre><span></span><code>pip install etils tensorflow_probability
-pip install jaxns
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip install etils tensorflow_probability
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>pip install jaxns
+</span></code></pre></div>
 <p><em>Note: You have bump into some trouble installing <code>tensorflow_probability</code> if you don't have <a href="https://cmake.org/"><code>cmake</code></a> installed.</em></p>
 <hr />
 <h2 id="usage">Usage</h2>
 <h3 id="first-timers">First Timers</h3>
-<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">litmus</span>
-</code></pre></div>
-
-<div class="codehilite"><pre><span></span><code>mymock = litmus.mocks.mock(3)
-lc_1, lc_2 = mymock.lc_1, mymock.lc_2
-mymock.plot()
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>import numpy as np
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>import matplotlib.pyplot as plt
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>import litmus
+</span></code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mymock = litmus.mocks.mock(3)
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>lc_1, lc_2 = mymock.lc_1, mymock.lc_2
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>mymock.plot()
+</span></code></pre></div>
 <p>Now, choose a model and set its priors(at time of writing only <code>GP_simple</code>,
 which models both lightcurves as scaled and shifted damped random walks, is
 implemented). For example suppose we know want to narrow our lag search
 range to <code>[0,100] days</code>, and know that the lightcurves are normalized to
 have zero mean:</p>
-<div class="codehilite"><pre><span></span><code><span class="nx">my_model</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">litmus</span><span class="p">.</span><span class="nx">models</span><span class="p">.</span><span class="nx">GP_simple</span><span class="p">()</span>
-<span class="nx">my_model</span><span class="p">.</span><span class="nx">set_priors</span><span class="p">(</span>
-<span class="w">    </span><span class="p">{</span>
-<span class="w">    </span><span class="err">&#39;</span><span class="nx">lag</span><span class="err">&#39;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">100</span><span class="p">]</span>
-<span class="w">    </span><span class="err">&#39;</span><span class="nx">mean</span><span class="err">&#39;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
-<span class="w">    </span><span class="err">&#39;</span><span class="nx">rel_mean</span><span class="err">&#39;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">)</span>
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>my_model = litmus.models.GP_simple()
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>my_model.set_priors(
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    {
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    &#39;lag&#39;: [0,100]
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    &#39;mean&#39;: [0,0]
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    &#39;rel_mean&#39;: [0,0]
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    }
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>)
+</span></code></pre></div>
 <p>Now we choose a fitting method and tune it accordingly.</p>
-<div class="codehilite"><pre><span></span><code>fitting_method = litmus.fitting_methods.hessian_scan(stat_model=my_model,
-                                                  Nlags=32,
-                                                  init_samples=5_000,
-                                                  grid_bunching=0.8,
-                                                  optimizer_args={&#39;tol&#39;: 1E-3,
-                                                                  &#39;maxiter&#39;: 256,
-                                                                  &#39;increase_factor&#39;: 1.1,
-                                                                  },
-                                                  optimizer_args_init={&#39;tol&#39;: 1E-4,
-                                                                  &#39;maxiter&#39;: 1024,
-                                                                  &#39;increase_factor&#39;: 1.01,
-                                                                  },
-                                                  reverse=False,
-                                                  debug=False
-                                                  )
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>fitting_method = litmus.fitting_methods.hessian_scan(stat_model=my_model,
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>                                                  Nlags=32,
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>                                                  init_samples=5_000,
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>                                                  grid_bunching=0.8,
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>                                                  optimizer_args={&#39;tol&#39;: 1E-3,
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>                                                                  &#39;maxiter&#39;: 256,
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>                                                                  &#39;increase_factor&#39;: 1.1,
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>                                                                  },
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>                                                  optimizer_args_init={&#39;tol&#39;: 1E-4,
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>                                                                  &#39;maxiter&#39;: 1024,
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>                                                                  &#39;increase_factor&#39;: 1.01,
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>                                                                  },
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>                                                  reverse=False,
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>                                                  debug=False
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>                                                  )
+</span></code></pre></div>
 <p>Finally, wrap this in a <code>LITMUS</code> object, adding the lightcurves to it, which
 makes running and getting results out as simple as a single line of code:</p>
-<div class="codehilite"><pre><span></span><code>litmus_handler = litmus.LITMUS(fitting_method)
-
-litmus_handler.add_lightcurve(lc_1)
-litmus_handler.add_lightcurve(lc_2)
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>litmus_handler = litmus.LITMUS(fitting_method)
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>litmus_handler.add_lightcurve(lc_1)
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>litmus_handler.add_lightcurve(lc_2)
+</span></code></pre></div>
 <p>Now, fire off the fitting procedure:</p>
-<div class="codehilite"><pre><span></span><code>litmus_handler.fit()
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>litmus_handler.fit()
+</span></code></pre></div>
 <p>And finally plot the model parameters to see how we did:</p>
-<div class="codehilite"><pre><span></span><code>litmus_handler.lag_plot()
-litmus_handler.plot_parameters()
-litmus_handler.plot_diagnostics()
-</code></pre></div>
-
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>litmus_handler.lag_plot()
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>litmus_handler.plot_parameters()
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>litmus_handler.plot_diagnostics()
+</span></code></pre></div>
 <hr />
 <hr />
 
