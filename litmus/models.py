@@ -96,25 +96,21 @@ class stats_model(logger):
             }
 
         # ------------------
-        # Wrapped function signature declarations
-        self._log_density_jit: _types.Callable[[dict, _types.Any], float] = lambda params, data: 0.0
-        self._log_density_uncon_jit: _types.Callable[[dict, _types.Any], float] = lambda params, data: 0.0
-        self._log_likelihood_jit: _types.Callable[[dict, _types.Any], float] = lambda params, data: 0.0
-        self._log_likelihood_jit: _types.Callable[[dict, _types.Any], float] = lambda params, data: 0.0
+        # Wrapped function signature declarations for type hinting
+        self._log_density_jit: _types.Callable[[dict, _types.Any], float]
+        self._log_density_uncon_jit: _types.Callable[[dict, _types.Any], float]
+        self._log_likelihood_jit: _types.Callable[[dict, _types.Any], float]
+        self._log_prior_jit: _types.Callable[[dict], float]
 
-        self._log_density_grad: _types.Callable[[dict, _types.Any], _types.ArrayM] = lambda params, data: np.array(
-            [0.0])
-        self._log_density_uncon_grad: _types.Callable[[dict, _types.Any], _types.ArrayM] = lambda params, data: np.array([0.0])
+        self._log_density_grad: _types.Callable[[dict, _types.Any], _types.ArrayM]
+        self._log_density_uncon_grad: _types.Callable[[dict, _types.Any], _types.ArrayM]
+        self._log_likelihood_grad: _types.Callable[[dict, _types.Any], _types.ArrayM]
+        self._log_prior_grad: _types.Callable[[dict], _types.ArrayM]
 
-        self._log_likelihood_grad: _types.Callable[[dict, _types.Any], _types.ArrayM] = lambda params, data: np.array([0.0])
-        self._log_likelihood_grad: _types.Callable[[dict, _types.Any], _types.ArrayM] = lambda params, data: np.array([0.0])
-
-        self._log_density_hess: _types.Callable[[dict, _types.Any], _types.ArrayMxM] = lambda params, data: np.array([[0.0]])
-        self._log_density_uncon_hess: _types.Callable[[dict, _types.Any], _types.ArrayMxM] = lambda params, data: np.array([[0.0]])
-
-
-        self._log_likelihood_hess: _types.Callable[[dict, _types.Any], _types.ArrayMxM] = lambda params, data: np.array([[0.0]])
-        self._log_likelihood_hess: _types.Callable[[dict, _types.Any], _types.ArrayMxM] = lambda params, data: np.array([[0.0]])
+        self._log_density_hess: _types.Callable[[dict, _types.Any], _types.ArrayMxM]
+        self._log_density_uncon_hess: _types.Callable[[dict, _types.Any], _types.ArrayMxM]
+        self._log_likelihood_hess: _types.Callable[[dict, _types.Any], _types.ArrayMxM]
+        self._log_prior_hess: _types.Callable[[dict], _types.ArrayMxM]
         # ------------------
 
         # Attributes
@@ -131,7 +127,6 @@ class stats_model(logger):
 
         self._prep_funcs()
 
-
     def __setattr__(self, key, value):
         if key == "_default_prior_ranges" and hasattr(self, "_default_prior_ranges"):
             super().__setattr__(key, value | self._default_prior_ranges)
@@ -142,7 +137,6 @@ class stats_model(logger):
 
         if hasattr(self, "_protected_keys") and key in self._protected_keys:
             self._prep_funcs()
-
 
     def _prep_funcs(self):
         """
@@ -176,7 +170,6 @@ class stats_model(logger):
         self.gen_lightcurve = self._gen_lightcurve
 
         ## --------------------------------------
-
 
     def set_priors(self, prior_ranges: dict) -> None:
         """
@@ -214,7 +207,6 @@ class stats_model(logger):
 
         return
 
-
     # --------------------------------
     # MODEL FUNCTIONS
     def prior(self) -> [float, ]:
@@ -225,14 +217,12 @@ class stats_model(logger):
         lag = numpyro.sample('lag', dist.Uniform(self.prior_ranges['lag'][0], self.prior_ranges['lag'][1]))
         return lag
 
-
     def model_function(self, data):
         """
         A NumPyro callable function. Does not return
         :param data: Data to condition the model on
         """
         lag = self.prior()
-
 
     def lc_to_data(self, lc_1: lightcurve, lc_2: lightcurve) -> dict:
         """
@@ -265,7 +255,6 @@ class stats_model(logger):
 
         return data
 
-
     # --------------------------------
     # Parameter transforms and other utils
     def to_uncon(self, params) -> dict[str, float]:
@@ -278,7 +267,6 @@ class stats_model(logger):
         out = numpyro.infer.util.unconstrain_fn(self.prior, params=params, model_args=(), model_kwargs={})
         return out
 
-
     def to_con(self, params) -> dict[str, float]:
         """
         Converts model parametes back into "real" constrained domain values.
@@ -287,7 +275,6 @@ class stats_model(logger):
         """
         out = numpyro.infer.util.constrain_fn(self.prior, params=params, model_args=(), model_kwargs={})
         return out
-
 
     def uncon_grad(self, params) -> float:
         """
@@ -303,7 +290,6 @@ class stats_model(logger):
         uncon_dens = -numpyro.infer.util.potential_energy(self.prior, (), {}, up)
         out = con_dens - uncon_dens
         return out
-
 
     def uncon_grad_lag(self, params) -> float:
         """
@@ -332,7 +318,6 @@ class stats_model(logger):
         out = np.log(abs(tform(lag_con)))
         return out
 
-
     def paramnames(self) -> [str]:
         """
         Returns the names of all model parameters. Purely for brevity of code.
@@ -340,7 +325,6 @@ class stats_model(logger):
         :return: list of param names in order listed in prior_ranges
         """
         return list(self.prior_ranges.keys())
-
 
     def fixed_params(self) -> [str]:
         """
@@ -352,7 +336,6 @@ class stats_model(logger):
         out = [key for key in is_fixed.keys() if is_fixed[key]]
         return out
 
-
     def free_params(self) -> [str]:
         """
         Returns the names of all free model parameters. Purely for brevity of code.
@@ -363,7 +346,6 @@ class stats_model(logger):
         out = [key for key in is_fixed.keys() if not is_fixed[key]]
         return out
 
-
     def dim(self) -> int:
         """
         Quick and easy call for the number of model parameters.
@@ -372,13 +354,11 @@ class stats_model(logger):
         """
         return len(self.free_params())
 
-
     # --------------------------------
     # Un-Jitted / un-vmapped likelihood calls
     """
     Functions in this sector are in their basic form. Those with names appended by '_forgrad' accept inputs as arrays
     """
-
 
     def _log_density(self, params: dict, data):
         """
@@ -394,7 +374,6 @@ class stats_model(logger):
                 0]
         return out
 
-
     def _log_likelihood(self, params, data) -> float:
         """
         WARNING! This function won't work if your model has more than one observation site!
@@ -408,7 +387,6 @@ class stats_model(logger):
         out = self._log_density(params, data) - self._log_prior(params, data)
         return out
 
-
     def _log_density_uncon(self, params, data) -> float:
         """
         Unconstrained space un-normalized posterior log density
@@ -420,14 +398,12 @@ class stats_model(logger):
                                                    model_kwargs={'data': data})
         return out
 
-
     def _log_prior(self, params, data=None) -> float:
         """
         Model prior density in unconstrained space
         """
         out = numpyro.infer.util.log_density(self.prior, (), {}, params)[0]
         return out
-
 
     # --------------------------------
     # Wrapped Function Evaluations
@@ -456,7 +432,6 @@ class stats_model(logger):
 
         return out
 
-
     def log_likelihood(self, params, data, use_vmap=False) -> _types.ArrayN:
         """
         Returns the log likelihood at some constrained space position 'params' and conditioned
@@ -479,7 +454,6 @@ class stats_model(logger):
             out = self._log_likelihood(params, data)
 
         return out
-
 
     def log_density_uncon(self, params, data, use_vmap=False) -> _types.ArrayN:
         """
@@ -505,7 +479,6 @@ class stats_model(logger):
 
         return out
 
-
     def log_prior(self, params, data=None, use_vmap=False) -> _types.ArrayN:
         """
         Returns the log density of the prior  at some constrained space position 'params'
@@ -524,7 +497,6 @@ class stats_model(logger):
             out = self._log_prior_jit(params)
 
         return out
-
 
     # --------------------------------
     # Wrapped Grad evaluations
@@ -555,7 +527,6 @@ class stats_model(logger):
 
         return out
 
-
     def log_density_uncon_grad(self, params, data, use_vmap=False, keys=None, asdict=False) -> float:
         """
         Returns the gradient of the log density of the joint distribution at some unconstrained space position 'params',
@@ -582,7 +553,6 @@ class stats_model(logger):
 
         return out
 
-
     def log_prior_grad(self, params, data=None, use_vmap=False, keys=None) -> dict[str, float]:
         """
         Returns the gradient of the log prior of the prior at some constrained space position 'params'
@@ -606,7 +576,6 @@ class stats_model(logger):
             out = self._log_prior_grad(params)
 
         return out
-
 
     # --------------------------------
     # Wrapped Hessian evaluations
@@ -645,7 +614,6 @@ class stats_model(logger):
 
         return out
 
-
     def log_density_uncon_hess(self, params, data, use_vmap=False, keys=None) -> _types.ArrayNxMxM:
         """
         Returns the hessian matrix of the log joint distribution at some unconstrained space position 'params',
@@ -681,7 +649,6 @@ class stats_model(logger):
 
         return out
 
-
     def log_prior_hess(self, params, data=None, use_vmap=False, keys=None) -> _types.ArrayNxMxM:
         """
         Returns the hessian matrix of the log prior of the prior at some constrained space position 'params'
@@ -716,7 +683,6 @@ class stats_model(logger):
                     out[j, k] = hess_eval[key1][key2]
 
         return out
-
 
     # --------------------------------
     # Wrapped evaluation utilities
@@ -836,9 +802,10 @@ class stats_model(logger):
         else:
             return solver, runsolver
 
-
-    def scan(self, start_params, data, optim_params=None, use_vmap=False, optim_kwargs={}, precondition='diag') -> dict[
-        str, float]:
+    def scan(self, start_params: dict[str:float], data: _types.Any, optim_params: [str] = None, use_vmap: bool = False,
+             optim_kwargs: dict[str:float] = {},
+             precondition: _types.Literal["cholesky", "eig", "half-eig", "diag", "none"] = 'diag',
+             solver: _types.Literal["BFGS", "GradientDescent"] = "BFGS") -> dict[str, float]:
         """
         Beginning at position 'start_params', optimize parameters in 'optim_params' to find maximum.
         optim_kwargs will overwrite defaults and be passed directly to jaxopt.BFGS object
@@ -847,7 +814,7 @@ class stats_model(logger):
             'stepsize': 0.0,
             'min_stepsize': 1E-5,
             'increase_factor': 1.2,
-            'maxiter': 1024,
+            'maxiter': 256,
             'linesearch': 'backtracking',
             'verbose': False,
 
@@ -855,20 +822,31 @@ class stats_model(logger):
         :param data: data to condition the model on
         :param optim_params: parameters to optimize over
         :param use_vmap: Whether to use jax vmapping over multiple start_params (not implemented)
-        :param optim_kwargs: kwargs for the jaxopt.BFGS optimiser
+        :param optim_kwargs: kwargs for the jaxopt optimiser
         :param precondition: Type of preconditioning to use in optimisation. Should be "cholesky", "eig", "half-eig", "diag" or "none"
+        :param solver: Type of jaxopt solver to use. Defaults to "BFGS". Allowed solvers are "BFGS" or "GradientDescent".
 
-        :returns:
+        :returns: Keyed dict of optimised params
         """
 
-        optimizer_args = {
-            'stepsize': 0.0,
-            'min_stepsize': 1E-5,
-            'increase_factor': 1.2,
-            'maxiter': 256,
-            'linesearch': 'backtracking',
-            'verbose': False,
-        }
+        assert solver in ["BFGS", "GradientDescent"]
+
+        if solver == "BFGS":
+            optimizer_args = {
+                'stepsize': 0.0,
+                'min_stepsize': 1E-5,
+                'increase_factor': 1.2,
+                'maxiter': 256,
+                'linesearch': 'backtracking',
+                'verbose': False,
+            }
+        elif solver == "GradientDescent":
+            optimizer_args = {
+                'stepsize': 0.0,
+                'maxiter': 1024,
+                'verbose': False,
+            }
+            precondition="none"
 
         optimizer_args |= optim_kwargs
 
@@ -943,11 +921,18 @@ class stats_model(logger):
         # Jaxopt Work
 
         # Build the optimizer
-        solver = jaxopt.BFGS(fun=optfunc,
-                             value_and_grad=False,
-                             jit=True,
-                             **optimizer_args
-                             )
+        if solver == "BFGS":
+            solver = jaxopt.BFGS(fun=optfunc,
+                                 value_and_grad=False,
+                                 jit=True,
+                                 **optimizer_args
+                                 )
+        elif solver == "GradientDescent":
+            solver = jaxopt.GradientDescent(fun=optfunc,
+                                            value_and_grad=False,
+                                            jit=True,
+                                            **optimizer_args
+                                            )
 
         # Debug safety check to see if something's breaking
 
@@ -971,7 +956,8 @@ class stats_model(logger):
         self.msg_debug("At final uncon position", out, "with keys", optim_params, "eval for optfunc is",
                        optfunc(sol), "a change of", optfunc(sol) - optfunc(np.zeros_like(sol))
                        )
-        assert optfunc(sol) < optfunc(np.zeros_like(sol)), "Optimization has diverged. Try changing the start params or widen your priors"
+        if optfunc(sol) > optfunc(np.zeros_like(sol)):
+            self.msg_err("Optimization may have diverged. Try changing the start params or use a simpler solver type")
 
         # Unpack the results to a dict
         out = {key: out[i] for i, key in enumerate(optim_params)}
@@ -983,7 +969,6 @@ class stats_model(logger):
         out = {key: float(val) for key, val in zip(out.keys(), out.values())}
 
         return out
-
 
     def laplace_log_evidence(self, params, data, integrate_axes=None, use_vmap=False, constrained=False) -> float:
         """
@@ -1029,7 +1014,6 @@ class stats_model(logger):
         self.msg_debug("log-evidence is ~%.2f" % out)
         return out
 
-
     def laplace_log_info(self, params, data, integrate_axes=None, use_vmap=False, constrained=False):
         """
         At some point 'params' in parameter space, gets the hessian in unconstrained space and uses to estimate the
@@ -1068,8 +1052,19 @@ class stats_model(logger):
         out = -(np.log(2 * np.pi) + 1) * (D / 2) - np.log(-dethess) / 2 + np.log(self.prior_volume)
         return out
 
+    def opt_tol(self, params: dict[str, float], data: _types.Any, integrate_axes: [str] = None, use_vmap: bool = False,
+                constrained: bool = False) -> float:
+        """
+        Estimates the number of standard deviations away from the peak that a point is.
+        Only works if you're nearby the local peak.
 
-    def opt_tol(self, params, data, integrate_axes=None, use_vmap=False, constrained=False):
+        :param params: site(s) to evaluate info at in the constrained domain
+        :param data: data to condition the model on
+        :param integrate_axes: free axes to perform laplace approx for. If none, use all
+        :param use_vmap: Whether to use jax vmapping over different params. (Not implemented)
+        :param constrained: If true, calculate distance in constrained domain approx in constrained domain. Default to false
+        :return: Number of "standard deviations" away from local peak
+        """
         if integrate_axes is None:
             integrate_axes = self.paramnames()
 
@@ -1083,6 +1078,8 @@ class stats_model(logger):
             hess = self.log_density_hess(params, data, keys=integrate_axes)
             grad = self.log_density_grad(params, data, keys=integrate_axes)
 
+        self.msg_debug("In .opt_tol, hessian is:\n", hess, "and grad is:\n", grad)
+
         # todo - remove this when properly integrating keys argument into grad funcs
         I = np.where([key in integrate_axes for key in grad.keys()])[0]
         grad = np.array([float(x) for x in grad.values()])[I]
@@ -1091,6 +1088,10 @@ class stats_model(logger):
         # ------------------------------------------------
         # Calculate tolerances
         if np.linalg.det(hess) <= 0 or np.isnan(hess).any():
+            if self.debug:
+                eigs = np.linalg.eig(hess)[0]
+                self.msg_debug("Eig vals are:", eigs, delim="\n\t")
+            self.msg_err("In .opt_tol, Params appear to be diverged, broken or in saddle.")
             return np.inf
 
         try:
@@ -1103,8 +1104,8 @@ class stats_model(logger):
             return np.sqrt(abs(loss))
 
         except:
+            self.msg_err("Undetermined error in .opt_tol. Returning inf.")
             return np.inf
-
 
     # --------------------------------
     # Sampling Utils
@@ -1129,7 +1130,6 @@ class stats_model(logger):
             params = {key: params[key][0] for key in params.keys()}
         return params
 
-
     def realization(self, data=None, num_samples: int = 1, seed: int = None):
         """
         Generates realizations of the observables by blindly sampling from the prior
@@ -1148,7 +1148,6 @@ class stats_model(logger):
         params = pred(rng_key=jax.random.PRNGKey(seed), data=data)
         return params
 
-
     def _gen_lightcurve(self, data, params: dict, Tpred) -> (
             _types.ArrayN, _types.ArrayN, _types.ArrayNxN, _types.ArrayNxN):
         """
@@ -1166,7 +1165,6 @@ class stats_model(logger):
         loc_2, covar_2 = loc_1.copy(), covar_1.copy()
 
         return loc_1, loc_2, covar_1, covar_2
-
 
     def make_lightcurves(self, data, params: dict, Tpred, num_samples: int = 1) -> (lightcurve, lightcurve):
         """
@@ -1216,7 +1214,6 @@ class stats_model(logger):
 
         return outs
 
-
     def params_inprior(self, params) -> bool:
         """
         Utility to check if model params fall within the uniform prior bounds
@@ -1238,7 +1235,6 @@ class stats_model(logger):
                 else:
                     isgood[key] = True
         return isgood
-
 
     def find_seed(self, data, guesses=None, fixed={}) -> (dict, float):
         """

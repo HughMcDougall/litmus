@@ -901,7 +901,8 @@ class hessian_scan(fitting_procedure):
         self.precon_matrix: np.ndarray[np.float64] = np.eye(len(self.params_toscan), dtype=np.float64)
         self.solver: jaxopt.BFGS = None
 
-        self.estmap_params = {}
+        self.estmap_params: dict[str:float] = {}
+        self.estmap_tol: float = 0.0
 
     def readyup(self):
 
@@ -930,6 +931,12 @@ class hessian_scan(fitting_procedure):
     # Setup Funcs
 
     def estimate_MAP(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        """
+        Utility for estimating the MAP, starting from self.seed_params. Updates self.estmap_params
+        :param lc_1: Lightcurve object
+        :param lc_2: Lightcurve object
+        :param seed: Random seed
+        """
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
         # ----------------------------------
@@ -948,26 +955,49 @@ class hessian_scan(fitting_procedure):
             ll_start = self.stat_model.log_density(seed_params,
                                                    data=data
                                                    )
+        ll_best = ll_start
 
         # ----------------------------------
         # SCANNING FOR OPT
 
+        # ------------------------------
+        # Get Best Non-Lag Params
         self.msg_run("Moving non-lag params to new location...")
-        estmap_params = self.stat_model.scan(start_params=seed_params,
-                                             optim_params=[key for key in self.stat_model.free_params() if
-                                                           key != 'lag'],
-                                             data=data,
-                                             optim_kwargs=self.optimizer_args_init,
-                                             precondition=self.precondition
-                                             )
+        do_scan = lambda start, keys, solver: self.stat_model.scan(start_params=start,
+                                                                   optim_params=keys,
+                                                                   data=data,
+                                                                   optim_kwargs=self.optimizer_args_init,
+                                                                   precondition=self.precondition,
+                                                                   solver=solver
+                                                                   )
+
+        try:
+            estmap_params = do_scan(start=seed_params,
+                                    keys=[key for key in self.stat_model.free_params() if key != 'lag'],
+                                    solver="BFGS"
+                                    )
+        except:
+            self.msg_err("Non-lag param scan failed. Reverting to GradientDescent")
+            estmap_params = do_scan(start=seed_params,
+                                    keys=[key for key in self.stat_model.free_params() if key != 'lag'],
+                                    solver="GradientDescent"
+                                    )
         ll_firstscan = self.stat_model.log_density(estmap_params, data)
+
+        self.msg_run("Optimizer settled at new fit:")
+        for it in estmap_params.items():
+            self.msg_run('\t %s: \t %.2f' % (it[0], it[1]))
+        self.msg_run(
+            "Log-Density for this is: %.2f" % ll_firstscan
+        )
+        if ll_firstscan>ll_best:
+            estmap_params = estmap_params
+        else:
+            estmap_params = seed_params
+
+        # ------------------------------
+        # Get Best Lag
         if 'lag' in self.stat_model.free_params():
-            self.msg_run("Optimizer settled at new fit:")
-            for it in estmap_params.items():
-                self.msg_run('\t %s: \t %.2f' % (it[0], it[1]))
-            self.msg_run(
-                "Log-Density for this is: %.2f" % ll_firstscan
-            )
 
             self.msg_run("Finding a good lag...")
             test_lags = self.stat_model.prior_sample(self.init_samples)['lag']
@@ -982,32 +1012,51 @@ class hessian_scan(fitting_procedure):
 
             if ll_test.max() > ll_firstscan:
                 bestlag = bestlag
+                ll_best = ll_test.max()
             else:
                 bestlag = estmap_params['lag']
+                ll_best = ll_firstscan
+
+            # Do Lag in Isolation
+            self.msg_run("Lag Optimization in isolation...")
+            lagopt_params = do_scan(start=estmap_params | {'lag': bestlag},
+                                    keys=["lag"],
+                                    solver="GradientDescent"
+                                    )
+            ll_lagopt = self.stat_model.log_density(lagopt_params, data)
+            self.msg_run("Lag-only opt settled at new lag %.2f..." % lagopt_params['lag'])
+            self.msg_run(
+                "Log-Density for this is: %.2f" % ll_lagopt
+            )
+            if ll_lagopt > ll_best:
+                bestlag = lagopt_params['lag']
+            else:
+                bestlag = estmap_params['lag']
+            estmap_params = estmap_params | {'lag': bestlag}
 
             self.msg_run("Running final optimization...")
-            estmap_params = self.stat_model.scan(start_params=estmap_params | {'lag': bestlag},
-                                                 # optim_params=['lag'],
-                                                 data=data,
-                                                 optim_kwargs=self.optimizer_args_init,
-                                                 precondition=self.precondition
-                                                 )
+            lastscan_params = do_scan(start=estmap_params | {'lag': bestlag},
+                                    keys=None,
+                                    solver="GradientDescent"
+                                    )
 
-            self.msg_run("Lag-only opt settled at new lag %.2f..." % estmap_params['lag'])
-
-        ll_end = self.stat_model.log_density(estmap_params,
+        ll_end = self.stat_model.log_density(lastscan_params,
                                              data=data
                                              )
 
         # ----------------------------------
         # CHECKING OUTPUTS
-
         self.msg_run("Optimizer settled at new fit:")
         for it in estmap_params.items():
             self.msg_run('\t %s: \t %.2f' % (it[0], it[1]))
         self.msg_run(
             "Log-Density for this is: %.2f" % ll_end
         )
+
+        if ll_end > ll_best:
+            estmap_params = lastscan_params
+        else:
+            estmap_params = estmap_params
 
         # ----------------------------------
         # CHECKING OUTPUTS
@@ -1080,7 +1129,7 @@ class hessian_scan(fitting_procedure):
                 density = np.exp(log_density_all - log_density_all.max())
 
                 # Linearly interpolate the density profile
-                log_density_terp = np.interp(lag_terp, log_density_all - log_density_all.max(), density,
+                log_density_terp = np.interp(lag_terp, lags_all, log_density_all - log_density_all.max(),
                                              left=log_density_all[0], right=log_density_all[-1])
                 density_terp = np.exp(log_density_terp - log_density_terp.max())
                 density_terp /= density_terp.sum()
@@ -1109,11 +1158,18 @@ class hessian_scan(fitting_procedure):
 
         # ----------------------------------
         # Estimate the MAP
-
         self.estmap_params = self.estimate_MAP(lc_1, lc_2, seed)
-        self.estmap_tol = self.stat_model.opt_tol(self.estmap_params, data,
-                                                  integrate_axes=self.stat_model.free_params())
-        self.msg_run("Estimated to be within ±%.2eσ of local optimum" % self.estmap_tol)
+        estmap_tol = self.stat_model.opt_tol(self.estmap_params, data,
+                                             integrate_axes=self.stat_model.free_params())
+        if np.isinf or np.isnan(estmap_tol):
+            estmap_tol = self.stat_model.opt_tol(self.estmap_params, data,
+                                                 integrate_axes=[key for key in self.stat_model.free_params() if
+                                                                 key != "lag"])
+            self.msg_run(
+                "Estimated to be within ±%.2eσ of local optimum, but may have strange behaviour on lag axis" % estmap_tol)
+        else:
+            self.msg_run("Estimated to be within ±%.2eσ of local optimum" % estmap_tol)
+        self.estmap_tol = estmap_tol
         # ----------------------------------
 
         # Make a grid
@@ -1213,7 +1269,7 @@ class hessian_scan(fitting_procedure):
                     Z = laplace_int + tgrad
                     assert not np.isnan(Z), "Error in Z calc"
                 except:
-                    self.msg_err("Something wrong in Evidence!:")
+                    self.msg_run("Something wrong in evidence on slice %i, discarding:" %i)
                     is_good[2] = False
 
                 # Check and save if good
@@ -1344,32 +1400,42 @@ class hessian_scan(fitting_procedure):
     # --------------
     # Checks
 
-    def diagnostics(self, plot=True) -> _types.Figure:
+    def diagnostics(self, show=True) -> _types.Figure:
+        """
+        Generates diagnostic plots to check the convergece of the fitter
+        :param show: If true, plt.show() the figure. Defaults to True.
+        :return: Returns the matplotlib figure
+        """
 
         loss = self.log_evidences_uncert
-
         lagplot = self.scan_peaks['lag']
         I = self.scan_peaks['lag'].argsort()
-        lagplot = lagplot[I]
-        Y = self.estmap_tol[I]
+        lagplot, loss = lagplot[I], loss[I]
+
+        Y_estmap = self.estmap_tol
 
         # ---------
-        fig = plt.figure()
+        fig = plt.figure(figsize=(7, 4))
         plt.ylabel("Loss Norm, $ \\vert \Delta x / \sigma_x \\vert$")
         plt.xlabel("Scan Lag No.")
         plt.plot(lagplot, loss, 'o-', c='k', label="Scan Losses")
-        plt.scatter(self.estmap_params['lag'], Y, c='r', marker='x', s=40, label="Initial MAP Scan Loss")
+        plt.scatter(self.estmap_params['lag'], Y_estmap, c='r', marker='x', s=40, label="Initial MAP Scan Loss")
         plt.axhline(self.opt_tol, ls='--', c='k', label="Nominal Tolerance Limit")
         plt.legend(loc='best')
 
-        fig.text(.5, .05, "How far each optimization slice is from its peak. Lower is good.", ha='center')
+        fig.text(.5, -.05, "How far each optimization slice is from its peak. Lower is good.", ha='center')
         plt.yscale('log')
         plt.grid()
-        plt.show()
+        if show: plt.show()
 
         return fig
 
     def diagnostic_lagplot(self, show=True) -> _types.Figure:
+        """
+        Generates diagnostic plots to check the outputs of the lag fit
+        :param show: If true, plt.show() the figure. Defaults to True.
+        :return: Returns the matplotlib figure
+        """
         f, (a1, a2) = plt.subplots(2, 1, sharex=True)
 
         lags_forint, logZ_forint, density_forint = self._get_slices('lags', 'logZ', 'densities')
@@ -1875,7 +1941,7 @@ class SVI_scan(hessian_scan):
 
         return mean, uncert
 
-    def diagnostics(self, plot=True) -> _types.Figure:
+    def diagnostics(self, show=True) -> _types.Figure:
 
         f, (a2, a1) = plt.subplots(2, 1)
 
@@ -1905,7 +1971,7 @@ class SVI_scan(hessian_scan):
 
         f.tight_layout()
 
-        if plot: plt.show()
+        if show: plt.show()
 
         return f
 

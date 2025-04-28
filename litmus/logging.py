@@ -36,8 +36,7 @@ class logger:
         if True:
             for a in x:
                 print(a, file=self.err_stream, end=delim)
-
-        print(end, end='')
+            print('', end=end)
         return
 
     def msg_run(self, *x: str, end='\n', delim=' '):
@@ -48,7 +47,7 @@ class logger:
             for a in x:
                 print(a, file=self.out_stream, end=delim)
 
-            print(end, end='')
+            print('', end=end)
         return
 
     def msg_debug(self, *x: str, end='\n', delim=' '):
@@ -59,5 +58,5 @@ class logger:
             for a in x:
                 print(a, file=self.out_stream, end=delim)
 
-            print(end, end='')
+            print('', end=end)
         return

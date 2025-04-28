@@ -87,9 +87,9 @@ print(fitting_method.get_evidence())
 # -----------------
 # Plotting
 
-fitting_method.diagnostics(plot=True)
+fitting_method.diagnostics(show=True)
 fitting_method.refit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
-fitting_method.diagnostics(plot=True)
+fitting_method.diagnostics(show=True)
 
 # -----------------
 # Plotting

@@ -395,8 +395,8 @@ mock_A()
 
 # ================================================
 # CASE B - SEASONAL GP
-mock_B = mock(lag=256, maxtime=360 * 5, E=[0.01, 0.01], seed=1, season=180)
-"""A standard oz-des like seasonal GP"""
+mock_B = mock(lag=256, maxtime=360 * 5, E=[0.01, 0.01], seed=2, season=180)
+"""A standard oz-des like seasonal GP but with high SNR on the response LC. Good for testing failure states in the lag axis)"""
 
 # ================================================
 # CASE C - UN-SEASONAL GP
