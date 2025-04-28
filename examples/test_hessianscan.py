@@ -29,7 +29,7 @@ from litmus import models
 from litmus.models import _default_config
 from litmus.ICCF_working import *
 from litmus import _utils
-from litmus.models import stats_model, dummy_statmodel, GP_simple
+from litmus.models import stats_model, GP_simple
 from litmus.fitting_methods import hessian_scan, SVI_scan
 from litmus.mocks import mock, mock_A, mock_B, mock_C
 
@@ -65,16 +65,17 @@ Nlags = 32
 print("Doing Hessian Fitting with grid of %i lags" % Nlags)
 fitting_method = hessian_scan(stat_model=test_model,
                               Nlags=Nlags,
-                              init_samples=1_000,
-                              grid_bunching=0.8,
+                              init_samples=5_000,
+                              grid_bunching=0.5,
                               optimizer_args={'tol': 1E-4,
-                                              'increase_factor': 1.2, },
+                                              'increase_factor': 1.1, },
                               optimizer_args_init={'tol': 1E-10,
                                                    'maxiter': 1024,
-                                                   'increase_factor': 1.2, },
+                                                   },
                               reverse=False,
-                              debug=True,
-                              precondition="cholesky"
+                              verbose=2,
+                              debug=False,
+                              precondition="diag"
                               )
 
 print("Doing prefit in main")
@@ -88,7 +89,7 @@ print(fitting_method.get_evidence())
 # Plotting
 
 fitting_method.diagnostics(show=True)
-fitting_method.refit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
+# fitting_method.refit(lc_1=mymock.lc_1, lc_2=mymock.lc_2)
 fitting_method.diagnostics(show=True)
 
 # -----------------

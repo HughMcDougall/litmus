@@ -84,6 +84,12 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Examples & Tutorials:
+      - Getting Started: gettingstarted.md
+      - LITMUS vs Aliasing: examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison.md
+      - Constraining a Lightcurve: examples/lightcurve_gentest/lightcurve_gentest.md
+      - Creating a Custom Statistical Model: examples/Custom_statsmodel_example/Custom_statsmodel_example.md
+      - Using Litmus to Remove False Positives: examples/Model_comparison_example/Model_comparison_example.md
   - Code Docs:
       - For Users:
           - models: models.md
@@ -96,10 +102,4 @@ nav:
           - GP_working: GP_working.md
           - logging: logging.md
           - Utilities and Typing: _utils.md
-  - Examples & Tutorials:
-      - Getting Started: gettingstarted.md
-      - LITMUS vs Aliasing: examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison.md
-      - Constraining a Lightcurve: examples/lightcurve_gentest/lightcurve_gentest.md
-      - Creating a Custom Statistical Model: examples/Custom_statsmodel_example/Custom_statsmodel_example.md
-      - Using Litmus to Remove False Positives: examples/Model_comparison_example/Model_comparison_example.md
       

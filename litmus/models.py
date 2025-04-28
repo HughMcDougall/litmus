@@ -84,8 +84,9 @@ class stats_model(logger):
                  err_stream=sys.stderr,
                  verbose=True,
                  debug=False,
+                 warn=1
                  ):
-        logger.__init__(self, out_stream=out_stream, err_stream=err_stream, verbose=verbose, debug=debug)
+        logger.__init__(self, out_stream=out_stream, err_stream=err_stream, verbose=verbose, debug=debug, warn=warn)
 
         self._protected_keys = []
 
@@ -738,7 +739,6 @@ class stats_model(logger):
                 }
                 return out_params, aux_data
 
-        # todo - deprecated
         def runsolver_jit(solver, start_params, state):
             x0, y0 = converter(start_params)
             outstate = _utils.copy(state)
@@ -746,7 +746,6 @@ class stats_model(logger):
             i = 0
 
             while i == 0 or (outstate.error > solver.tol and i < solver.maxiter):
-                self.msg_debug(i)
                 with _utils.suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
                     x0, outstate = solver.update(x0, outstate, y0, data)
                 i += 1
@@ -774,8 +773,12 @@ class stats_model(logger):
 
         optimizer_args |= optim_kwargs
 
+        x0, y0 = converter(self.prior_sample())
         # Make a jaxopt friendly packed function
-        optfunc = _utils.pack_function(self._log_density_uncon, packed_keys=optim_params, fixed_values={}, invert=True)
+        optfunc = _utils.pack_function(self._log_density_uncon,
+                                       packed_keys=optim_params,
+                                       fixed_values={},
+                                       invert=True)
 
         # Build and run an optimizer
         solver = jaxopt.BFGS(fun=optfunc,
@@ -785,15 +788,14 @@ class stats_model(logger):
                              )
 
         if self.debug:
-            self.msg_debug("Creating and testing solver...")
             try:
-                x0, y0 = converter(self.prior_sample())
-                init_state = solver.init_state(x0, y0, data)
+                self.msg_debug("Creating and testing solver...")
+                init_state = solver.init_state(x0, data=data)
                 with _utils.suppress_stdout():  # TODO - Supressing of warnings, should be patched in newest jaxopt
                     solver.update(params=x0, state=init_state, y0=y0, data=data)
                 self.msg_debug("Jaxopt solver created and running fine")
             except:
-                self.msg_err("Something wrong in creation of jaxopt solver")
+                self.msg_err("Something wrong in creation of jaxopt solver!", lvl=0)
 
         # Return
 
@@ -831,6 +833,8 @@ class stats_model(logger):
 
         assert solver in ["BFGS", "GradientDescent"]
 
+        self.msg_debug("Doing scan with solver:\t %s" % solver)
+
         if solver == "BFGS":
             optimizer_args = {
                 'stepsize': 0.0,
@@ -846,17 +850,19 @@ class stats_model(logger):
                 'maxiter': 1024,
                 'verbose': False,
             }
-            precondition="none"
+            precondition = "none"
 
         optimizer_args |= optim_kwargs
 
         # Convert to unconstrained domain
         start_params_uncon = self.to_uncon(start_params)
 
-        if optim_params is None:
-            optim_params = [name for name in self.paramnames() if
-                            self.prior_ranges[name][0] != self.prior_ranges[name][1]
-                            ]
+        self.msg_debug("Uncon params are:",
+                       *["%s:\t%.2f" % (key, val) for key, val in
+                         zip(start_params_uncon.keys(), start_params_uncon.values())],
+                       delim="\n")
+
+        if optim_params is None: optim_params = self.free_params()
         if len(optim_params) == 0: return start_params
 
         # Get all split into fixed and free params
@@ -867,6 +873,7 @@ class stats_model(logger):
         # Build preconditioning matrix
         H = self.log_density_uncon_hess(start_params_uncon, data, keys=optim_params)
         H *= -1
+
         if precondition == "cholesky":
             H = np.linalg.cholesky(np.linalg.inv(H))
             Hinv = np.linalg.inv(H)
@@ -901,8 +908,12 @@ class stats_model(logger):
             H = np.eye(len(optim_params))
             Hinv = np.eye(len(optim_params))
 
-        self.msg_debug("Scaling matrix:", H)
-        self.msg_debug("Inverse Scaling matrix:", Hinv)
+        if solver == "BFGS":
+            if np.any(np.isnan(H)) or np.any(np.isnan(Hinv)):
+                self.msg_err("scan failed with BFGS due to broken %s scaling matrix" % precondition, lvl=1)
+                return start_params
+            self.msg_debug("Scaling matrix:", H)
+            self.msg_debug("Inverse Scaling matrix:", Hinv)
 
         def optfunc(X):
             Y = jnp.dot(H, X) + x0
@@ -957,7 +968,8 @@ class stats_model(logger):
                        optfunc(sol), "a change of", optfunc(sol) - optfunc(np.zeros_like(sol))
                        )
         if optfunc(sol) > optfunc(np.zeros_like(sol)):
-            self.msg_err("Optimization may have diverged. Try changing the start params or use a simpler solver type")
+            self.msg_err("Optimization may have diverged. Try changing the start params or use a simpler solver type",
+                         lvl=1)
 
         # Unpack the results to a dict
         out = {key: out[i] for i, key in enumerate(optim_params)}
@@ -1091,7 +1103,7 @@ class stats_model(logger):
             if self.debug:
                 eigs = np.linalg.eig(hess)[0]
                 self.msg_debug("Eig vals are:", eigs, delim="\n\t")
-            self.msg_err("In .opt_tol, Params appear to be diverged, broken or in saddle.")
+            self.msg_err("In .opt_tol, Params appear to be diverged, broken or in saddle.", lvl=1)
             return np.inf
 
         try:
@@ -1104,7 +1116,7 @@ class stats_model(logger):
             return np.sqrt(abs(loss))
 
         except:
-            self.msg_err("Undetermined error in .opt_tol. Returning inf.")
+            self.msg_err("Undetermined error in .opt_tol. Returning inf.", lvl=1)
             return np.inf
 
     # --------------------------------
@@ -1180,14 +1192,15 @@ class stats_model(logger):
         len_params = _utils.dict_dim(params)[1]
         if num_samples > len_params:
             self.msg_err("Warning! Tried to call %i samples from only %i parameters in make_lightcurves" % (
-                num_samples, len_params))
+                num_samples, len_params),
+                         lvl=1)
 
         loc_1 = np.zeros_like(Tpred)
         covar_1 = np.zeros([len(Tpred), len(Tpred)])
         loc_2, covar_2 = loc_1.copy(), covar_1.copy()
 
         if self._gen_lightcurve is stats_model._gen_lightcurve:
-            self.msg_err("Warning, called make_lightcurves on a stats_model that doesn't have implementation")
+            self.msg_err("Warning, called make_lightcurves on a stats_model that doesn't have implementation", lvl=0)
 
         if not _utils.isiter_dict(params):
             loc_1, loc_2, covar_1, covar_2 = self.gen_lightcurve(data, params, jnp.array(Tpred))
@@ -1230,7 +1243,10 @@ class stats_model(logger):
                     isgood[key] = True
             else:
                 if np.any(
-                        not ((params[key] >= self.prior_ranges[key][0]) and (params[key] < self.prior_ranges[key][1]))):
+                        not (
+                                (params[key] >= self.prior_ranges[key][0]) * (params[key] < self.prior_ranges[key][1])
+                        )
+                ):
                     isgood[key] = False
                 else:
                     isgood[key] = True
@@ -1366,10 +1382,9 @@ class GP_simple(stats_model):
 
         check_fixed = self.params_inprior(fixed)
         if False in check_fixed:
-            self.msg_err("Warning! Tried to fix seed params at values that lie outside of prior range:")
-            for [key, val] in check_fixed.items():
-                if val == False: self.msg_err('\t%s' % key)
-            self.msg_err("This may be overwritten")
+            bad_keys = ['\t%s' % key for [key, val] in check_fixed.items() if val == False]
+            self.msg_err("Warning! Tried to fix seed params at values that lie outside of prior range:", *bad_keys,
+                         delim="\n", lvl=0)
 
         # -------------------------
         # Estimate Correlation Timescale

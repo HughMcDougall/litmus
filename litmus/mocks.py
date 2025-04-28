@@ -260,7 +260,7 @@ class mock(logger):
         :param true_args: matplotlib plotting kwargs for the true underlying lightcurve
         :param series_args: matplotlib plotting kwargs for the observations
         :param show: If true will use plt.show() at the end fo the plot
-        :return: Plot figure
+        :return: Maplotlib figure
         """
 
         # -----------------
@@ -272,9 +272,10 @@ class mock(logger):
             axis.set_xlabel("Time (days)")
             axis.set_ylabel("Signal Strength")
 
+        c0, c1, c2 = 'k', 'royalblue', 'orchid'
         # -----------------
         # Plot underlying curves
-        true_args = {'lw': 0.5, 'c': ['tab:blue', 'tab:orange'], 'alpha': 0.3, 'label': ['True Signal', 'Response'],
+        true_args = {'lw': 0.5, 'c': [c1, c2], 'alpha': 0.3, 'label': ['True Signal', 'Response'],
                      } | true_args
         true_args_1 = true_args.copy()
         true_args_2 = true_args.copy()
@@ -296,7 +297,7 @@ class mock(logger):
 
         # -----------------
         # Plot errorbars
-        series_args = {'c': ['tab:blue', 'tab:orange'], 'alpha': 1.0, 'capsize': 2, 'lw': 1.5,
+        series_args = {'c': [c1, c2], 'alpha': 1.0, 'capsize': 2, 'lw': 1.5,
                        'label': ["Signal", "Response"]} | series_args
         series_args_1 = series_args.copy()
         series_args_2 = series_args.copy()
@@ -368,6 +369,12 @@ class mock(logger):
             'rel_mean': 0.0,
         }
         return (out)
+
+    def lcs(self) -> (lightcurve, lightcurve):
+        """
+        Utility function for returning the two observed lightcurve, e.g. for fitter.fit(*mock.lcs())
+        """
+        return(self.lc_1, self.lc_2)
 
 
 # ================================================
