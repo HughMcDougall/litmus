@@ -1417,6 +1417,7 @@ class hessian_scan(fitting_procedure):
         peaks, I = np.array(peaks)[select], I[select]
 
         self.msg_run("Doing re-fitting of %i lags" % len(peaks), lvl=1)
+
         newtols = []
         for j, i, peak in zip(range(len(I)), I, peaks):
 

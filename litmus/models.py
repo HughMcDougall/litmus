@@ -849,10 +849,13 @@ class stats_model(logger):
                 'stepsize': 0.0,
                 'maxiter': 1024,
                 'verbose': False,
+                'decrease_factor': 0.5,
             }
             precondition = "none"
 
-        optimizer_args |= optim_kwargs
+        # Overwrite only the keys that work for that jaxopt solver
+        for key in optim_kwargs.keys():
+            if key in optimizer_args.keys(): optim_params[key] = optimizer_args[key]
 
         # Convert to unconstrained domain
         start_params_uncon = self.to_uncon(start_params)

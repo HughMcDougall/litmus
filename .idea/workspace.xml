@@ -10,19 +10,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
-      <change afterPath="$PROJECT_DIR$/examples/feed_test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/New Text Document (2).txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/New Text Document.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/Basic_tutorial.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/Basic_tutorial.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/Custom_statsmodel_example.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/Custom_statsmodel_example.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/Model_comparison_example.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/Model_comparison_example.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/test_hessianscan.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/test_hessianscan.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/Basic_tutorial.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/advanced_fitting.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/logging.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/logging.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/mocks.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/mocks.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mkdocs.yml" beforeDir="false" afterPath="$PROJECT_DIR$/mkdocs.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -262,7 +253,7 @@
       <workItem from="1745569573217" duration="38422000" />
       <workItem from="1745725778805" duration="86000" />
       <workItem from="1745742148983" duration="38081000" />
-      <workItem from="1745825544978" duration="15575000" />
+      <workItem from="1745825544978" duration="27188000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />
