@@ -361,7 +361,7 @@ class ICCF(fitting_procedure):
         # Attributes
         self.name = "ICCF Fitting Procedure"
 
-        self.lags = np.zeros(self.Nterp)
+        self.lags = np.zeros(self.Nlags)
         """Array of lags to test at"""
         self.samples = np.zeros(self.Nboot)
         """The bootstrapped samples of the best fit lag"""
@@ -371,6 +371,10 @@ class ICCF(fitting_procedure):
         """Mean of bootstrapped best fit lags"""
         self.lag_err = 0.0
         """Std err of bootstrapped bestfit lags"""
+        self.rate = np.zeros(self.Nlags)
+        """Fraction of samples that lie at each test lag"""
+        self.rate_err = np.zeros(self.Nlags)
+        """Estimated uncertainty in the rate"""
         # --------------------
 
     # -------------------------
@@ -383,6 +387,7 @@ class ICCF(fitting_procedure):
             w = max(self.stat_model.prior_ranges['lag']) - min(self.stat_model.prior_ranges['lag'])
             self.lags = np.random.rand(self.Nlags) * w + \
                         self.stat_model.prior_ranges['lag'][0]
+            self.lags = self.lags[np.argsort(self.lags())]
         else:
             self.lags = jnp.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags)
         # -----------------
@@ -417,6 +422,12 @@ class ICCF(fitting_procedure):
 
         self.has_run = True
 
+        # Get uncertainties
+        a = np.array([np.sum(self.samples == lag) for lag in self.lags])
+        b = -1*a + a.sum()
+        self.rate = a / (a + b)
+        self.rate_err = np.sqrt(a * b / (a + b) ** 2 / (a + b + 1))
+
     def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
         # -------------------
         fitting_procedure.get_samples(**locals())
@@ -444,6 +455,36 @@ class ICCF(fitting_procedure):
         # --------------
         out = self.lags[np.argmax(self.correls)]
         return {'lag': np.array([out])}
+
+    def diagnostic_lagplot(self, plot=True) -> _types.Figure:
+        nbins = int(np.log2(self.Nboot) + 1)
+        X,E = self.rate.copy(), self.rate_err.copy()
+        c = 'orchid'
+
+        f = plt.figure(figsize=(6, 4))
+        plt.hist(self.samples, bins=nbins, density=True, label="Samples hist", color='royalblue')
+        plt.plot(self.lags, self.rate, label="Est Rate")
+        plt.fill_between(self.lags, self.rate - self.rate_err, self.rate + self.rate_err, alpha=0.25, color=c,
+                         zorder=-1)
+        plt.fill_between(self.lags, self.rate - self.rate_err, self.rate + self.rate_err, alpha=0.15, color=c,
+                         zorder=-2)
+
+        # Plot Correl Peak
+        peak = float(self.lags[np.argmax(self.correls)])
+        peak_err = np.sqrt(np.sum((self.lags - peak) ** 2 * self.correls) / self.correls.sum())
+        plt.axvline(peak, ls='--', c='lightsalmon', label = "Est. Peak")
+        plt.axvspan(peak - peak_err, peak + peak_err, color = 'lightsalmon', alpha=0.25, zorder=-2)
+
+        plt.plot(self.lags,self.correls)
+
+        plt.xlabel("Lag")
+        plt.ylabel("ICCF Density")
+        plt.legend()
+        plt.grid()
+        plt.tight_layout()
+
+        if plot: plt.show()
+        return f
 
 
 # ============================================
@@ -1240,9 +1281,10 @@ class hessian_scan(fitting_procedure):
                 self.msg_err("%i valid test lags supplied but Nlags=%i. Trimming" % (len(I), self.Nlags), lvl=1)
                 test_lags = np.random.choice(test_lags, self.Nlags, replace=False)
             elif len(I) < self.Nlags:
-                self.msg_err("%i valid test lags supplied but Nlags=%i. Padding with makegrid" % (len(I), self.Nlags), lvl=1)
+                self.msg_err("%i valid test lags supplied but Nlags=%i. Padding with makegrid" % (len(I), self.Nlags),
+                             lvl=1)
                 pad_lags = self.make_grid(data, seed_params=self.estmap_params)
-                pad_lags = np.random.choice(pad_lags, self.Nlags-len(I), replace=False)
+                pad_lags = np.random.choice(pad_lags, self.Nlags - len(I), replace=False)
                 test_lags = np.concatenate([test_lags, pad_lags])
 
             lags = test_lags[test_lags.argsort()]
@@ -1294,7 +1336,7 @@ class hessian_scan(fitting_procedure):
         scanned_optima, grads, Hs = [], [], []
         tols, Zs, Ints, tgrads = [], [], [], []
         for i, lag in enumerate(lags_forscan):
-            self.msg_run(":" * 23, "Scanning at lag=%.2f ..." % lag, delim="\n", lvl=2)
+            self.msg_run(":" * 23, "Scanning at itteration %i/%i, lag=%.2f..." % (i, self.Nlags, lag), delim="\n", lvl=2)
 
             # Get current param site in packed-function friendly terms
             opt_params, aux_data, state = runsolver_jit(solver, best_params | {'lag': lag}, state)
@@ -1494,7 +1536,7 @@ class hessian_scan(fitting_procedure):
         # ---------
         fig = plt.figure(figsize=(7, 4))
         plt.ylabel("Loss Norm, $ \\vert \Delta x / \sigma_x \\vert$")
-        plt.xlabel("Scan Lag No.")
+        plt.xlabel("Slice Test Lag")
         plt.plot(lagplot, loss, 'o-', c='k', label="Scan Losses")
         plt.scatter(self.estmap_params['lag'], Y_estmap, c='r', marker='x', s=40, label="Initial MAP Scan Loss")
         plt.axhline(self.opt_tol, ls='--', c='k', label="Nominal Tolerance Limit")
@@ -1522,6 +1564,8 @@ class hessian_scan(fitting_procedure):
         Ym, Yp = np.exp(logZ_forint - logZ_forint_E - logZ_forint.max()), np.exp(
             logZ_forint + logZ_forint_E - logZ_forint.max())
         Em, Ep = abs(Y - Ym), abs(Y + Ym)
+
+        # Plotting Peak
         for a in (a1, a2):
             a.scatter(lags_forint, Y, label="Evidence", color="orchid",
                       marker="o")
@@ -1531,6 +1575,7 @@ class hessian_scan(fitting_procedure):
             a.axvspan(mu - width * 2, mu + width * 2, alpha=0.15, zorder=-10, color="navy")
 
             a.axvline(self.estmap_params["lag"], ls='--', c="lightsalmon", label="Peak location for make_grid")
+            a.axhline(logZ_forint.max(), ls='--', c="navy", label="Max Z")
             a.grid()
         plt.xlabel("Lag (days)")
         a1.set_xlim(*self.stat_model.prior_ranges["lag"])
@@ -1599,7 +1644,7 @@ class hessian_scan(fitting_procedure):
         if args is None:
             return out
         else:
-            return (out[key] for key in args)
+            return [out[key] for key in args]
 
     def get_evidence(self, seed: int = None, return_type='linear') -> [float, float, float]:
         # -------------------
@@ -1924,7 +1969,7 @@ class SVI_scan(hessian_scan):
 
         for i, lag in enumerate(lags_forscan):
 
-            self.msg_run(":" * 23, "Doing SVI fit at lag=%.2f ..." % lag)
+            self.msg_run(":" * 23, "Doing SVI fit at itteration %i/%i, lag=%.2f..." % (i, self.Nlags, lag), lvl=2, delim="\n")
 
             svi_loop_result = autosvi.run(jax.random.PRNGKey(seed),
                                           self.ELBO_Nsteps,

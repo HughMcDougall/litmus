@@ -13,8 +13,8 @@ Firstly, you will need to fork the repository to your own github account. This w
 Next, you will need to clone the repository to your local machine. To do this, open a terminal and navigate to the directory you would like to clone the repository to. Then run the following command:
 
 ```bash
-https://github.com/your-username-here/dLux.git 
-cd dLux
+https://github.com/your-username-here/litmus.git 
+cd litmus
 pip install '.[dev]'
 ```
 

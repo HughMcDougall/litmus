@@ -62,12 +62,19 @@ meth_2 = fitting_methods.hessian_scan(model,
                                       reverse=False
                                       )
 
+meth_3 = fitting_methods.ICCF(model, Nboot = 2048)
+
+
 print("Plots!")
-for meth, name in zip([meth_1, meth_2], ["javelin", 'hessian']):
+for meth, name in zip([meth_3], ["ICCF"]):
     print(name)
-    #meth.prefit(lc_1, lc_2)
-    #meth.fit(lc_1, lc_2)
+    meth.prefit(lc_1, lc_2)
+    meth.fit(lc_1, lc_2)
 
     lt = LITMUS(meth)
     if SAVECHAINS: lt.save_chain("./chain_%s.csv" % name)
-    lt.lag_plot(dir="./lagplot_%s.pdf" % name if SAVEFIGURES else None)
+    f = lt.lag_plot(dir="./lagplot_%s.pdf" % name if SAVEFIGURES else None, truth = mock.params())
+
+print("Done")
+meth_3.diagnostic_lagplot()
+plt.show()

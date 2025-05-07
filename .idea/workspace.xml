@@ -10,9 +10,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
+      <change afterPath="$PROJECT_DIR$/examples/_make_testcurves.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/basic_fitting.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/working_with_models.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/Basic_tutorial.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/advanced_fitting.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CONTRIBUTING.md" beforeDir="false" afterPath="$PROJECT_DIR$/CONTRIBUTING.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/JAVELIKE_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/JAVELIKE_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/advanced_fitting.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/advanced_fitting.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/litmus/litmusclass.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/litmusclass.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -60,60 +66,61 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.1D_lag_posterior.executor&quot;: &quot;Run&quot;,
-    &quot;Python.ICCF_working.executor&quot;: &quot;Run&quot;,
-    &quot;Python.JAVELIKE_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.NS_direct_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.NS_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python._types.executor&quot;: &quot;Run&quot;,
-    &quot;Python._utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.dual_moons.executor&quot;: &quot;Run&quot;,
-    &quot;Python.feed_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.fitting_methods.executor&quot;: &quot;Run&quot;,
-    &quot;Python.fitting_methods_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.gaussian_shells.executor&quot;: &quot;Run&quot;,
-    &quot;Python.gp_working.executor&quot;: &quot;Run&quot;,
-    &quot;Python.grid_plot.executor&quot;: &quot;Run&quot;,
-    &quot;Python.high_SNR_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.integ_compare.executor&quot;: &quot;Run&quot;,
-    &quot;Python.integ_test_01.executor&quot;: &quot;Run&quot;,
-    &quot;Python.jaxns_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.lightcurve.executor&quot;: &quot;Run&quot;,
-    &quot;Python.lightcurve_gentest.executor&quot;: &quot;Run&quot;,
-    &quot;Python.lin_scatter.executor&quot;: &quot;Run&quot;,
-    &quot;Python.litmus_class_example.executor&quot;: &quot;Run&quot;,
-    &quot;Python.litmus_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.litmusclass.executor&quot;: &quot;Run&quot;,
-    &quot;Python.logging.executor&quot;: &quot;Run&quot;,
-    &quot;Python.logging_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.mocks.executor&quot;: &quot;Run&quot;,
-    &quot;Python.mocks_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.models.executor&quot;: &quot;Run&quot;,
-    &quot;Python.null_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.scan_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.subsample_example.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_01.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_hessianscan.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;javascript.add.imports.on.the.completion&quot;: &quot;false&quot;,
-    &quot;javascript.show.imports.popup&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Work/litmus/examples&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.editor&quot;,
-    &quot;typescript.add.imports.on.the.completion&quot;: &quot;false&quot;,
-    &quot;typescript.show.imports.popup&quot;: &quot;false&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.1D_lag_posterior.executor": "Run",
+    "Python.ICCF_working.executor": "Run",
+    "Python.JAVELIKE_test.executor": "Run",
+    "Python.NS_direct_test.executor": "Run",
+    "Python.NS_test.executor": "Run",
+    "Python._make_testcurves.executor": "Run",
+    "Python._types.executor": "Run",
+    "Python._utils.executor": "Run",
+    "Python.dual_moons.executor": "Run",
+    "Python.feed_test.executor": "Run",
+    "Python.fitting_methods.executor": "Run",
+    "Python.fitting_methods_test.executor": "Run",
+    "Python.gaussian_shells.executor": "Run",
+    "Python.gp_working.executor": "Run",
+    "Python.grid_plot.executor": "Run",
+    "Python.high_SNR_test.executor": "Run",
+    "Python.integ_compare.executor": "Run",
+    "Python.integ_test_01.executor": "Run",
+    "Python.jaxns_test.executor": "Run",
+    "Python.lightcurve.executor": "Run",
+    "Python.lightcurve_gentest.executor": "Run",
+    "Python.lin_scatter.executor": "Run",
+    "Python.litmus_class_example.executor": "Run",
+    "Python.litmus_test.executor": "Run",
+    "Python.litmusclass.executor": "Run",
+    "Python.logging.executor": "Run",
+    "Python.logging_test.executor": "Run",
+    "Python.mocks.executor": "Run",
+    "Python.mocks_test.executor": "Run",
+    "Python.models.executor": "Run",
+    "Python.null_test.executor": "Run",
+    "Python.scan_test.executor": "Run",
+    "Python.subsample_example.executor": "Run",
+    "Python.test.executor": "Run",
+    "Python.test_01.executor": "Run",
+    "Python.test_hessianscan.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "javascript.add.imports.on.the.completion": "false",
+    "javascript.show.imports.popup": "false",
+    "last_opened_file_path": "C:/Work/litmus/examples",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "run.code.analysis.last.selected.profile": "aDefault",
+    "settings.editor.selected.configurable": "preferences.editor",
+    "typescript.add.imports.on.the.completion": "false",
+    "typescript.show.imports.popup": "false",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Work\litmus\examples" />
@@ -254,6 +261,9 @@
       <workItem from="1745725778805" duration="86000" />
       <workItem from="1745742148983" duration="38081000" />
       <workItem from="1745825544978" duration="27188000" />
+      <workItem from="1745933071534" duration="6503000" />
+      <workItem from="1746409341616" duration="2959000" />
+      <workItem from="1746503364094" duration="8160000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />

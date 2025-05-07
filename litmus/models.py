@@ -855,7 +855,7 @@ class stats_model(logger):
 
         # Overwrite only the keys that work for that jaxopt solver
         for key in optim_kwargs.keys():
-            if key in optimizer_args.keys(): optim_params[key] = optimizer_args[key]
+            if key in optimizer_args.keys(): optimizer_args[key] = optim_kwargs[key]
 
         # Convert to unconstrained domain
         start_params_uncon = self.to_uncon(start_params)
@@ -1106,7 +1106,7 @@ class stats_model(logger):
             if self.debug:
                 eigs = np.linalg.eig(hess)[0]
                 self.msg_debug("Eig vals are:", eigs, delim="\n\t")
-            self.msg_err("In .opt_tol, Params appear to be diverged, broken or in saddle.", lvl=1)
+            self.msg_err("In .opt_tol, Params appear to be diverged, broken or in saddle.", lvl=2)
             return np.inf
 
         try:

@@ -9,7 +9,6 @@ todo
     - Possibly add hdf5 saving to chain output
     - Maybe add save_litmus() /w pickling?
     - Need to have better handling of the "fitting method inherit" feature, especially with refactor / redo
-    -
 '''
 
 # ============================================
@@ -55,10 +54,10 @@ class LITMUS(logger):
         # ----------------------------
 
         if fitproc is None:
-            self.msg_err("Didn't set a fitting method, using GP_simple")
+            self.msg_err("Didn't set a fitting method, using GP_simple", lvl=2)
             self.model = models.GP_simple()
 
-            self.msg_err("Didn't set a fitting method, using hessian scan")
+            self.msg_err("Didn't set a fitting method, using hessian scan", lvl=2)
 
             fitproc = fitting_methods.hessian_scan(stat_model=self.model)
 
@@ -81,7 +80,8 @@ class LITMUS(logger):
             self.samples = self.fitproc.get_samples(self.Nsamples)
             self.samples = self.fitproc.get_samples(self.Nsamples)
             self.C.add_chain(Chain(samples=DataFrame.from_dict(self.samples), name="Lightcurves %i-%i"))
-            self.msg_err("Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour.")
+            self.msg_err("Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour.",
+                         lvl=2)
 
         return
 
@@ -106,7 +106,7 @@ class LITMUS(logger):
         if i < N:
             del self.lightcurves[i]
         else:
-            self.msg_err("Tried to delete lightcurve %i but only have %i lightcurves. Skipping" % (i, N))
+            self.msg_err("Tried to delete lightcurve %i but only have %i lightcurves. Skipping" % (i, N), lvl=1)
         return
 
     # ----------------------
@@ -169,9 +169,9 @@ class LITMUS(logger):
 
         if out.keys() <= set(self.fitproc.stat_model.paramnames()):
             self.samples = out
-            self.msg_run("Loaded chain /w headings", *keys)
+            self.msg_run("Loaded chain /w headings", *keys, lvl=1)
         else:
-            self.msg_err("Tried to load chain with different parameter names to model")
+            self.msg_err("Tried to load chain with different parameter names to model", lvl=1)
 
     def config(self, **kwargs):
         '''
@@ -190,14 +190,14 @@ class LITMUS(logger):
         """
         Plots the interpolated lightcurves for one of the fitted models
         :param model_no: Which model to plot the lightcurves for
-        :parameter Nsamples: Number of posterior samples to draw from when plotting
-        :parameter Tspan: Span of time values to plot over. If None, will use the max / min times of lc_1 and lc_2
-        :parameter Nplot: Number of points in the interpolated lightcurve
-        :parameter dir: If not None, will save to this filepath
-        :parameter show: If True, will plt.show() the plot
+        :param Nsamples: Number of posterior samples to draw from when plotting
+        :param Tspan: Span of time values to plot over. If None, will use the max / min times of lc_1 and lc_2
+        :param Nplot: Number of points in the interpolated lightcurve
+        :param dir: If not None, will save to this filepath
+        :param show: If True, will plt.show() the plot
         """
 
-        self.msg_err("plot_lightcurve() not yet implemented")
+        self.msg_err("plot_lightcurve() not yet implemented", lvl=0)
         fig = plt.figure()
         return fig
 
@@ -209,12 +209,12 @@ class LITMUS(logger):
         Creates a nicely formatted chainconsumer plot of the parameters
         :param model_no: Which model to plot the lightcurves for. If None, will plot for all
         :param Nsamples: Number of posterior samples to draw from when plotting
-        :parameter CC_kwargs: Keyword arguments to pass to the chainconsumer constructor
-        :parameter truth: Dictionary of parameter names to truth values
-        :parameter params: List of parameters to plot
-        :parameter show: If True, will show the plot
-        :parameter prior_extents: If True, will use the model prior range for the axes limits (Defaults to false if multiple models used)
-        :parameter dir: If not None, will save to this filepath
+        :param CC_kwargs: Keyword arguments to pass to the chainconsumer constructor
+        :param truth: Dictionary of parameter names to truth values
+        :param params: List of parameters to plot
+        :param show: If True, will show the plot
+        :param prior_extents: If True, will use the model prior range for the axes limits (Defaults to false if multiple models used)
+        :param dir: If not None, will save to this filepath
         :return: Returns the matplotlib figure
         """
 
@@ -259,20 +259,21 @@ class LITMUS(logger):
 
         return fig
 
-    def lag_plot(self, Nsamples: int = None, show: bool = True, extras: bool = True, prior_extents=False,
+    def lag_plot(self, Nsamples: int = None, truth: dict = None,
+                 show: bool = True, extras: bool = True, prior_extents=False,
                  dir: str | None = None, ) -> matplotlib.figure.Figure:
         """
         Creates a nicely formatted chainconsumer plot of the marginalized lag plot
         :param Nsamples: Number of posterior samples to draw from when plotting
-        :parameter show: If True, will show the plot
-        :parameter extras: If True, will add any fitting method specific extras to the plot
-        :parameter dir: If not None, will save to this filepath
-        :parameter prior_extents: If True, will use the model prior range for the axes limits (Defaults to false if multiple models used)
+        :param truth: Dictionary of parameter names to truth values        :param show: If True, will show the plot
+        :param extras: If True, will add any fitting method specific extras to the plot
+        :param dir: If not None, will save to this filepath
+        :param prior_extents: If True, will use the model prior range for the axes limits (Defaults to false if multiple models used)
 
         Returns the matplotlib figure
         """
         if 'lag' not in self.model.free_params():
-            self.msg_err("Can't plot lags for a model without lags.")
+            self.msg_err("Can't plot lags for a model without lags.", lvl=0)
             return
 
         if Nsamples is not None and Nsamples != self.Nsamples:
@@ -310,6 +311,10 @@ class LITMUS(logger):
 
                 plt.scatter(self.fitproc.lags, np.zeros_like(self.fitproc.lags), c='red', s=20)
                 plt.scatter(X, np.zeros_like(X), c='black', s=20)
+
+        if truth is not None:
+            plt.axvline(truth['lag'], ls='--', c='navy', lw=2)
+
         if dir is not None:
             plt.savefig(dir)
         if show: fig.show()
@@ -326,7 +331,7 @@ class LITMUS(logger):
         if hasattr(self.fitproc, "diagnostics"):
             self.fitproc.diagnostics()
         else:
-            self.msg_err("diagnostic_plots() not yet implemented for fitting method %s" % (self.fitproc.name))
+            self.msg_err("diagnostic_plots() not yet implemented for fitting method %s" % (self.fitproc.name), lvl=0)
 
         if dir is not None:
             plt.savefig(dir, **kwargs)
