@@ -85,7 +85,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Examples & Tutorials:
-      - Getting Started: gettingstarted.md
+      - Fitting your First Signal: examples/basic_fitting/basic_fitting.md
       - LITMUS vs Aliasing: examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison.md
       - Constraining a Lightcurve: examples/lightcurve_gentest/lightcurve_gentest.md
       - Creating a Custom Statistical Model: examples/Custom_statsmodel_example/Custom_statsmodel_example.md
