@@ -10,19 +10,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
-      <change afterPath="$PROJECT_DIR$/examples/nested_sampling.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/examples/JAVELIN_HeScan_Comparison/output_3_0.png" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/JAVELIN_HeScan_Comparison/output_3_0.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/lightcurve_gentest.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/lightcurve_gentest.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/output_15_2.png" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/output_15_2.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/output_17_1.png" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/output_17_1.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/output_3_0.png" beforeDir="false" afterPath="$PROJECT_DIR$/docs/examples/lightcurve_gentest/output_3_0.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/index.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/index.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/JAVELIN_HeScan_Comparison.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/JAVELIN_HeScan_Comparison.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/feed_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/feed_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/examples/lightcurve_gentest.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/examples/lightcurve_gentest.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -269,7 +257,8 @@
       <workItem from="1746503364094" duration="8160000" />
       <workItem from="1746682815399" duration="1130000" />
       <workItem from="1748147943404" duration="5114000" />
-      <workItem from="1748153116770" duration="212000" />
+      <workItem from="1748153116770" duration="904000" />
+      <workItem from="1748161637730" duration="101000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />
