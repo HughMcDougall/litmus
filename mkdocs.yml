@@ -86,8 +86,8 @@ nav:
   - Home: index.md
   - Examples & Tutorials:
       - Fitting your First Signal: examples/basic_fitting/basic_fitting.md
-      - Advanced Fitting & Trouble Shooting: examples/basic_fitting/advanced_fitting.md
-      - Nested Sampling in LITMUS: examples/basic_fitting/nested_sampling.md
+      - Advanced Fitting & Trouble Shooting: examples/advanced_fitting/advanced_fitting.md
+      - Nested Sampling in LITMUS: examples/nested_sampling/nested_sampling.md
       - LITMUS vs Aliasing: examples/JAVELIN_HeScan_Comparison/JAVELIN_HeScan_Comparison.md
       - Constraining a Lightcurve: examples/lightcurve_gentest/lightcurve_gentest.md
       - Creating a Custom Statistical Model: examples/Custom_statsmodel_example/Custom_statsmodel_example.md
