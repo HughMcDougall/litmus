@@ -1,6 +1,7 @@
 # JAVELIN Hessian Scan Comparison
 
-In this example we use 
+In this example we use two fitting methods: `javelike`, which mimics the behaviour of the lag fitting program [`JAVELIN`](https://github.com/nye17/javelin/commits?author=nye17), and litmus's signature INLA based `hessian_scan`. We'll show how, in even simple well characterized signals, seasonal gaps can cause MCMC-like samplers such as `JAVELIN` uses to fall afoul of the aliasing problem and severely distort out answers.
+
 To begin, we'll import all the relevant modules:
 
 
@@ -11,9 +12,6 @@ import jax
 jax.config.update("jax_enable_x64", True)
 plt.rcParams['mathtext.fontset'] = 'stix'
 ```
-
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
 
 Now we'll use the `litmus.mocks` module to generate some mock data:
 
@@ -118,35 +116,9 @@ for meth, name in zip([meth_1, meth_2], ["javelin", 'hessian']):
     lt = LITMUS(meth)
     lt.lag_plot()
 ```
-
-    Plots!
-    javelin
-
-
-    Tried to get 99840 sub-samples from chain of 50000 total samples. Tried to get 99840 sub-samples from chain of 50000 total samples. Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour. 
-
-    
-    
-    
-
-
-    WARNING:chainconsumer:Parameter lag in chain Lightcurves %i-%i is not constrained
-
-
-    hessian
-
-
-    Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour. 
-
-    
-
-
-
     
 ![png](output_11_7.png)
     
-
-
 
     
 ![png](output_11_8.png)

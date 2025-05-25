@@ -1,6 +1,6 @@
 # Constrained Light Curve Example
 
-In this example we show how you can use posterior sample chains to generate nice visualisations of constrained lightcurves. Per usual we begin by importing some modules:
+In this example we show how you can use posterior sample chains to generate nice visualisations of constrained lightcurves. Per usual, we begin by importing some modules:
 
 
 
@@ -10,8 +10,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from litmus._utils import dict_extend
 ```
-
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
 
 
 Now generate some mock signals a'la OzDES data:
@@ -140,16 +138,9 @@ We'll wrap a `LITMUS` plotter around this method to check what the parameters ar
 
 ```python
 lt = litmus.LITMUS(my_fitter)
-lt.plot_parameters(prior_extents = True)
+lt.plot_parameters(prior_extents = True, truth=mock.params())
 plt.show()
 ```
-
-    Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour. WARNING:chainconsumer:Parameter lag in chain Lightcurves %i-%i is not constrained
-
-
-    
-
-
 
     
 ![png](output_15_2.png)
@@ -173,7 +164,6 @@ f.show()
 
     Predictions Clear. Plotting
     Plots done
-
 
 
     

@@ -1,4 +1,3 @@
-_HUGH MCDOUGALL 2024_
 
 -----
 
@@ -8,14 +7,14 @@ _HUGH MCDOUGALL 2024_
 
 <u>**L**ag **I**nference **T**hrough the **M**ixed **U**se of **S**amplers</u>
 
-LITMUS is an in-progress program that uses modern statistical techniques, like nested sampling and stochastic variational inference, in combination with cutting edge programming tools like the just-in-time compilation framework
-`jax` and its bayesian modelling package
-`NumPyro`, to perform the messy task of lag recovery in AGN reverberation mapping.
+LITMUS is a python package that uses modern statistical techniques like nested sampling and stochastic variational inference, in combination with cutting edge programming tools like the just-in-time compilation framework `jax` and its bayesian modelling package `NumPyro`, to perform the messy task of lag recovery in AGN reverberation mapping.
 
 
 ![LITMUS](assets/logo.png)
 
-This project is still very much in the early stages. If you have any questions, contact the author directly at [hughmcdougallemail@gmail.com](mailto:hughmcdougallemail@gmail.com).
+You can find the code in a [github repo](https://github.com/HughMcDougall/litmus) and a writeup of the theory and methods  on [arXiv](https://arxiv.org/abs/2505.09832).
+
+If you have any questions, contact the author directly at [hughmcdougallemail@gmail.com](mailto:hughmcdougallemail@gmail.com).
 
 -----
 # Getting Started
@@ -24,8 +23,7 @@ This project is still very much in the early stages. If you have any questions, 
 
 ### Simple Installation
 
-First make sure you have a recent version of python running (`3.10`-`3.12`)
-and then install directly from the git repo:
+First make sure you have a recent version of python running (`3.10`-`3.12`) and then install directly from the git repo:
 
 ```
 pip install "git+https://github.com/HughMcDougall/litmus"
@@ -33,8 +31,7 @@ pip install "git+https://github.com/HughMcDougall/litmus"
 
 ### Explicit Installation
 
-If you find the above doesn't work, try first installing the dependencies one by
-one, starting with the commonplace python packages:
+If you find the above doesn't work, try first installing the dependencies one by one, starting with the commonplace python packages:
 
 ```
 pip install numpy matplotlib scikit-learn
@@ -85,11 +82,7 @@ lc_1, lc_2 = mymock.lc_1, mymock.lc_2
 mymock.plot()
 ```
 
-Now, choose a model and set its priors(at time of writing only `GP_simple`,
-which models both lightcurves as scaled and shifted damped random walks, is
-implemented). For example suppose we know want to narrow our lag search
-range to `[0,100] days`, and know that the lightcurves are normalized to
-have zero mean:
+Now, choose a model and set its priors(at time of writing only `GP_simple`, which models both lightcurves as scaled and shifted damped random walks, is implemented). For example suppose we know want to narrow our lag search range to `[0,100] days`, and know that the lightcurves are normalized to have zero mean:
 
 ```
 my_model = litmus.models.GP_simple()
@@ -149,3 +142,5 @@ litmus_handler.plot_diagnostics()
 -----
 
 -----
+
+_[HUGH MCDOUGALL](https://hughmcdougall.github.io/) 2025_

@@ -1,3 +1,6 @@
+"""
+A quick test .py to debug the feeding of test lags to a scan fitter
+"""
 import litmus.models
 from litmus import *
 import matplotlib.pyplot as plt

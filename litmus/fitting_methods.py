@@ -653,7 +653,6 @@ class nested_sampling(fitting_procedure):
         self._jaxnsmodel = None
         self._jaxnsresults = None
         self._jaxnstermination = None
-        self._jaxnsresults = None
 
         # --------------------
         # Attributes
@@ -678,6 +677,7 @@ class nested_sampling(fitting_procedure):
 
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
+        self.msg_debug("Constructing functions for JAXNS", lvl=1)
         # Construct jaxns friendly prior & likelihood
         def prior_model():
             x = yield jaxns.Prior(tfpd.Uniform(low=lo, high=hi), name='x')
@@ -699,6 +699,8 @@ class nested_sampling(fitting_procedure):
             max_samples=self.max_samples,
         )
 
+        self.msg_debug("Constructing JAXNS sampler", lvl = 1)
+
         # Build jaxns Nested Sampler
         self.sampler = jaxns.NestedSampler(
             model=self._jaxnsmodel,
@@ -708,6 +710,7 @@ class nested_sampling(fitting_procedure):
             num_parallel_workers=self.num_parallel_samplers,
             difficult_model=True,
         )
+
         self.has_prefit = True
 
     # --------------
@@ -723,15 +726,20 @@ class nested_sampling(fitting_procedure):
 
         # -----------------
         # Run the sampler!
+        self.msg_run("Nested Starting...", lvl=1)
+
         termination_reason, state = self.sampler(jax.random.PRNGKey(seed),
                                                  self._jaxnstermination)
 
         # -----------------
         # Extract & save results
+        self.msg_run("Extracting Results", lvl=2)
         self._jaxnsresults = self.sampler.to_results(
             termination_reason=termination_reason,
             state=state
         )
+
+        self.msg_run("Nested Sampling Complete", lvl=1)
 
         self.has_run = True
 
