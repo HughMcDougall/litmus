@@ -792,16 +792,14 @@
 
 
 <h1 id="javelin-hessian-scan-comparison">JAVELIN Hessian Scan Comparison</h1>
-<p>In this example we use 
-To begin, we'll import all the relevant modules:</p>
+<p>In this example we use two fitting methods: <code>javelike</code>, which mimics the behaviour of the lag fitting program <a href="https://github.com/nye17/javelin/commits?author=nye17"><code>JAVELIN</code></a>, and litmus's signature INLA based <code>hessian_scan</code>. We'll show how, in even simple well characterized signals, seasonal gaps can cause MCMC-like samplers such as <code>JAVELIN</code> uses to fall afoul of the aliasing problem and severely distort out answers.</p>
+<p>To begin, we'll import all the relevant modules:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">litmus</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">litmus._utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">dict_extend</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">jax</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;jax_enable_x64&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;mathtext.fontset&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;stix&#39;</span>
 </span></code></pre></div>
-<div class="language-text highlight"><pre><span></span><code>An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-</code></pre></div>
 <p>Now we'll use the <code>litmus.mocks</code> module to generate some mock data:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">mock</span> <span class="o">=</span> <span class="n">mocks</span><span class="o">.</span><span class="n">mock</span><span class="p">(</span><span class="n">lag</span><span class="o">=</span><span class="mi">180</span><span class="p">,</span> <span class="n">cadende</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">30</span><span class="p">],</span> <span class="n">E</span><span class="o">=</span><span class="p">[</span><span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">],</span> <span class="n">tau</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">mock</span> <span class="o">=</span> <span class="n">mock</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
@@ -875,25 +873,6 @@ To begin, we'll import all the relevant modules:</p>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">lt</span> <span class="o">=</span> <span class="n">LITMUS</span><span class="p">(</span><span class="n">meth</span><span class="p">)</span>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">lt</span><span class="o">.</span><span class="n">lag_plot</span><span class="p">()</span>
 </span></code></pre></div>
-<div class="language-text highlight"><pre><span></span><code>Plots!
-javelin
-
-
-Tried to get 99840 sub-samples from chain of 50000 total samples. Tried to get 99840 sub-samples from chain of 50000 total samples. Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour.
-
-
-
-
-
-
-WARNING:chainconsumer:Parameter lag in chain Lightcurves %i-%i is not constrained
-
-
-hessian
-
-
-Warning! LITMUS object built on pre-run fitting_procedure. May have unexpected behaviour.
-</code></pre></div>
 <p><img alt="png" src="../output_11_7.png" /></p>
 <p><img alt="png" src="../output_11_8.png" /></p>
 <p>There's one immediately obvious difference between the two contours: the <code>JAVELIN</code>-like <code>meth_1</code> has summoned a bimodal distribution out of nowhere, while the hessian scan of <code>meth_2</code> has not.</p>

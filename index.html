@@ -789,27 +789,23 @@
 
 
 
-<p><em>HUGH MCDOUGALL 2024</em></p>
 <hr />
 <hr />
 <h1 id="litmus-documentation">LITMUS Documentation</h1>
 <p><u><strong>L</strong>ag <strong>I</strong>nference <strong>T</strong>hrough the <strong>M</strong>ixed <strong>U</strong>se of <strong>S</strong>amplers</u></p>
-<p>LITMUS is an in-progress program that uses modern statistical techniques, like nested sampling and stochastic variational inference, in combination with cutting edge programming tools like the just-in-time compilation framework
-<code>jax</code> and its bayesian modelling package
-<code>NumPyro</code>, to perform the messy task of lag recovery in AGN reverberation mapping.</p>
+<p>LITMUS is a python package that uses modern statistical techniques like nested sampling and stochastic variational inference, in combination with cutting edge programming tools like the just-in-time compilation framework <code>jax</code> and its bayesian modelling package <code>NumPyro</code>, to perform the messy task of lag recovery in AGN reverberation mapping.</p>
 <p><img alt="LITMUS" src="assets/logo.png" /></p>
-<p>This project is still very much in the early stages. If you have any questions, contact the author directly at <a href="mailto:hughmcdougallemail@gmail.com">hughmcdougallemail@gmail.com</a>.</p>
+<p>You can find the code in a <a href="https://github.com/HughMcDougall/litmus">github repo</a> and a writeup of the theory and methods  on <a href="https://arxiv.org/abs/2505.09832">arXiv</a>.</p>
+<p>If you have any questions, contact the author directly at <a href="mailto:hughmcdougallemail@gmail.com">hughmcdougallemail@gmail.com</a>.</p>
 <hr />
 <h1 id="getting-started">Getting Started</h1>
 <h2 id="installation">Installation</h2>
 <h3 id="simple-installation">Simple Installation</h3>
-<p>First make sure you have a recent version of python running (<code>3.10</code>-<code>3.12</code>)
-and then install directly from the git repo:</p>
+<p>First make sure you have a recent version of python running (<code>3.10</code>-<code>3.12</code>) and then install directly from the git repo:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip install &quot;git+https://github.com/HughMcDougall/litmus&quot;
 </span></code></pre></div>
 <h3 id="explicit-installation">Explicit Installation</h3>
-<p>If you find the above doesn't work, try first installing the dependencies one by
-one, starting with the commonplace python packages:</p>
+<p>If you find the above doesn't work, try first installing the dependencies one by one, starting with the commonplace python packages:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip install numpy matplotlib scikit-learn
 </span></code></pre></div>
 <p>Then the <code>JAX</code> ecosystem and <code>numpyro</code> utilities:</p>
@@ -839,11 +835,7 @@ If you want to make use of <a href="https://github.com/Joshuaalbert/jaxns"><code
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>lc_1, lc_2 = mymock.lc_1, mymock.lc_2
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>mymock.plot()
 </span></code></pre></div>
-<p>Now, choose a model and set its priors(at time of writing only <code>GP_simple</code>,
-which models both lightcurves as scaled and shifted damped random walks, is
-implemented). For example suppose we know want to narrow our lag search
-range to <code>[0,100] days</code>, and know that the lightcurves are normalized to
-have zero mean:</p>
+<p>Now, choose a model and set its priors(at time of writing only <code>GP_simple</code>, which models both lightcurves as scaled and shifted damped random walks, is implemented). For example suppose we know want to narrow our lag search range to <code>[0,100] days</code>, and know that the lightcurves are normalized to have zero mean:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>my_model = litmus.models.GP_simple()
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>my_model.set_priors(
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    {
@@ -887,6 +879,7 @@ makes running and getting results out as simple as a single line of code:</p>
 </span></code></pre></div>
 <hr />
 <hr />
+<p><em><a href="https://hughmcdougall.github.io/">HUGH MCDOUGALL</a> 2025</em></p>
 
 
 
