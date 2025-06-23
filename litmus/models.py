@@ -42,7 +42,7 @@ import contextlib
 import os
 
 
-def quickprior(targ, key):
+def quickprior(targ, key) -> float:
     p = targ.prior_ranges[key]
     distrib = dist.Uniform(float(p[0]), float(p[1])) if p[0] != p[1] else dist.Delta(float(p[0]))
     out = numpyro.sample(key, distrib)
@@ -171,6 +171,7 @@ class stats_model(logger):
         self.gen_lightcurve = self._gen_lightcurve
 
         ## --------------------------------------
+
 
     def set_priors(self, prior_ranges: dict) -> None:
         """

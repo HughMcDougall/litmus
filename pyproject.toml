@@ -21,10 +21,6 @@ dependencies = [
   'chainconsumer>=1.1.2',
   'typing>=2.50'
 ]
-classifiers=[
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
-]
 
 
 [build-system]

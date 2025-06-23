@@ -424,7 +424,7 @@ class ICCF(fitting_procedure):
 
         # Get uncertainties
         a = np.array([np.sum(self.samples == lag) for lag in self.lags])
-        b = -1*a + a.sum()
+        b = -1 * a + a.sum()
         self.rate = a / (a + b)
         self.rate_err = np.sqrt(a * b / (a + b) ** 2 / (a + b + 1))
 
@@ -458,7 +458,7 @@ class ICCF(fitting_procedure):
 
     def diagnostic_lagplot(self, plot=True) -> _types.Figure:
         nbins = int(np.log2(self.Nboot) + 1)
-        X,E = self.rate.copy(), self.rate_err.copy()
+        X, E = self.rate.copy(), self.rate_err.copy()
         c = 'orchid'
 
         f = plt.figure(figsize=(6, 4))
@@ -472,10 +472,10 @@ class ICCF(fitting_procedure):
         # Plot Correl Peak
         peak = float(self.lags[np.argmax(self.correls)])
         peak_err = np.sqrt(np.sum((self.lags - peak) ** 2 * self.correls) / self.correls.sum())
-        plt.axvline(peak, ls='--', c='lightsalmon', label = "Est. Peak")
-        plt.axvspan(peak - peak_err, peak + peak_err, color = 'lightsalmon', alpha=0.25, zorder=-2)
+        plt.axvline(peak, ls='--', c='lightsalmon', label="Est. Peak")
+        plt.axvspan(peak - peak_err, peak + peak_err, color='lightsalmon', alpha=0.25, zorder=-2)
 
-        plt.plot(self.lags,self.correls)
+        plt.plot(self.lags, self.correls)
 
         plt.xlabel("Lag")
         plt.ylabel("ICCF Density")
@@ -574,7 +574,9 @@ class prior_sampling(fitting_procedure):
                 self.msg_err("Warning, tried to get %i sub-samples from %i samples" % (N, self.Nsamples))
 
         if importance_sampling:
-            weights = self.weights / self.weights.sum()
+            weights = self.weights
+            weights = np.where(np.isnan(weights), 0, weights)
+            weights /= weights.sum()
         else:
             weights = None
 
@@ -678,6 +680,7 @@ class nested_sampling(fitting_procedure):
         data = self.stat_model.lc_to_data(lc_1, lc_2)
 
         self.msg_debug("Constructing functions for JAXNS", lvl=1)
+
         # Construct jaxns friendly prior & likelihood
         def prior_model():
             x = yield jaxns.Prior(tfpd.Uniform(low=lo, high=hi), name='x')
@@ -699,7 +702,7 @@ class nested_sampling(fitting_procedure):
             max_samples=self.max_samples,
         )
 
-        self.msg_debug("Constructing JAXNS sampler", lvl = 1)
+        self.msg_debug("Constructing JAXNS sampler", lvl=1)
 
         # Build jaxns Nested Sampler
         self.sampler = jaxns.NestedSampler(
@@ -1344,7 +1347,8 @@ class hessian_scan(fitting_procedure):
         scanned_optima, grads, Hs = [], [], []
         tols, Zs, Ints, tgrads = [], [], [], []
         for i, lag in enumerate(lags_forscan):
-            self.msg_run(":" * 23, "Scanning at itteration %i/%i, lag=%.2f..." % (i, self.Nlags, lag), delim="\n", lvl=2)
+            self.msg_run(":" * 23, "Scanning at itteration %i/%i, lag=%.2f..." % (i, self.Nlags, lag), delim="\n",
+                         lvl=2)
 
             # Get current param site in packed-function friendly terms
             opt_params, aux_data, state = runsolver_jit(solver, best_params | {'lag': lag}, state)
@@ -1977,7 +1981,8 @@ class SVI_scan(hessian_scan):
 
         for i, lag in enumerate(lags_forscan):
 
-            self.msg_run(":" * 23, "Doing SVI fit at itteration %i/%i, lag=%.2f..." % (i, self.Nlags, lag), lvl=2, delim="\n")
+            self.msg_run(":" * 23, "Doing SVI fit at itteration %i/%i, lag=%.2f..." % (i, self.Nlags, lag), lvl=2,
+                         delim="\n")
 
             svi_loop_result = autosvi.run(jax.random.PRNGKey(seed),
                                           self.ELBO_Nsteps,
