@@ -30,11 +30,6 @@ build-backend = "setuptools.build_meta"
 [project.optional-dependencies]
 jaxns = ["etils", "tensorflow_probability", "jaxns"]
 
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
 
 [project.urls]
 repository = "https://github.com/HughMcDougall/LITMUS"
