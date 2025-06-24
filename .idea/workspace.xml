@@ -10,11 +10,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a27d0913-0adb-46b7-ba10-9a5864ee49e5" name="Changes" comment="commit from pycharm">
-      <change afterPath="$PROJECT_DIR$/examples/example.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/testing/multilag_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/neglag_work/AS_mock_run.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/neglag_work/load_lcs.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/neglag_work/neglag_model_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/fitting_methods.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/fitting_methods.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/litmus/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/litmus/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/example.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,6 +65,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Python.1D_lag_posterior.executor": "Run",
+    "Python.AS_mock_run.executor": "Run",
     "Python.ICCF_working.executor": "Run",
     "Python.JAVELIKE_test.executor": "Run",
     "Python.NS_direct_test.executor": "Run",
@@ -89,6 +91,7 @@
     "Python.litmus_class_example.executor": "Run",
     "Python.litmus_test.executor": "Run",
     "Python.litmusclass.executor": "Run",
+    "Python.load_lcs.executor": "Run",
     "Python.logging.executor": "Run",
     "Python.logging_test.executor": "Run",
     "Python.mocks.executor": "Run",
@@ -105,7 +108,7 @@
     "git-widget-placeholder": "main",
     "javascript.add.imports.on.the.completion": "false",
     "javascript.show.imports.popup": "false",
-    "last_opened_file_path": "C:/Work/litmus/examples",
+    "last_opened_file_path": "C:/Work/litmus/neglag_work",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -120,6 +123,7 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Work\litmus\neglag_work" />
       <recent name="C:\Work\litmus\examples" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
@@ -272,6 +276,7 @@
       <workItem from="1750140406598" duration="393000" />
       <workItem from="1750225609870" duration="8247000" />
       <workItem from="1750295652825" duration="15085000" />
+      <workItem from="1750662051680" duration="7516000" />
     </task>
     <task id="LOCAL-00001" summary="commit from pycharm">
       <option name="closed" value="true" />

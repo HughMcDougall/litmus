@@ -33,3 +33,7 @@ jaxns = ["etils", "tensorflow_probability", "jaxns"]
 
 [project.urls]
 repository = "https://github.com/HughMcDougall/LITMUS"
+
+
+[tool.setuptools]
+packages = ["litmus"]
