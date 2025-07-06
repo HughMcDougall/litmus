@@ -194,7 +194,7 @@ class mock(logger):
         :param seed: seed for random generation
         :return: Array tuple (T,Y), underlying curve extending to maxtime + 2 * lag
         """
-        T = np.linspace(0.0, self.maxtime + self.lag * 2, self.N)
+        T = np.linspace(-self.lag*2, self.maxtime + self.lag * 2, self.N)
         Y = gp_realization(T, tau=self.tau, seed=seed).Y
         self.lc = lightcurve(T, Y)  # .trim(Tmin=0, Tmax=self.maxtime)
         return (T, Y)

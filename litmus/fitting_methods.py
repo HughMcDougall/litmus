@@ -1119,6 +1119,8 @@ class hessian_scan(fitting_procedure):
                                       solver="GradientDescent",
                                       addtl_kwargs={'decrease_factor': 0.25}
                                       )
+        else:
+            lastscan_params=estmap_params.copy()
 
         ll_end = self.stat_model.log_density(lastscan_params,
                                              data=data
@@ -1336,7 +1338,7 @@ class hessian_scan(fitting_procedure):
         solver, runsolver, [converter, deconverter, optfunc, runsolver_jit] = self.stat_model._scanner(data,
                                                                                                        optim_params=params_toscan,
                                                                                                        optim_kwargs=self.optimizer_args,
-                                                                                                       return_aux=True
+                                                                                                       return_aux=True,
                                                                                                        )
         self.solver = solver
         x0, y0 = converter(best_params)

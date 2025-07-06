@@ -47,9 +47,9 @@ select = np.argwhere(select).flatten()
 plt.rc('font', size=12)
 
 print("Doing plot")
-#c1, c2, c3 = 'plum', 'lightsalmon', 'skyblue'
+# c1, c2, c3 = 'plum', 'lightsalmon', 'skyblue'
 c1, c2, c3, c4 = 'skyblue', 'lightsalmon', 'plum', 'w'
-a, b = 4,4
+a, b = 4, 4
 f1, f2, f3 = [plt.figure(figsize=(a, b)),
               plt.figure(figsize=(a, b)),
               plt.figure(figsize=(a, b))]
@@ -70,20 +70,19 @@ for j, f in enumerate([f1, f2, f3]):
 
     # --------------------
     I_forplot = select[::12]
-    if j!=2: ax.plot_wireframe(X, Y, np.exp(Z - Z.max()), color=c1, lw=1, alpha=0.75, rstride=6, cstride=4,
+    if j != 2: ax.plot_wireframe(X, Y, np.exp(Z - Z.max()), color=c1, lw=1, alpha=0.75, rstride=6, cstride=4,
                                  zorder=-1)
     ax.plot_wireframe(X, Y, np.zeros_like(Z), color='w', lw=2, alpha=0.25, rstride=6, cstride=4, zorder=-10)
     if j == 0: continue
     ax.plot(Xbest, Ybest, np.exp(Zbest - Z.max()), c=c2, lw=2, zorder=np.inf)
+    ax.plot(Xbest, Ybest, np.zeros_like(Xbest), c=c2, lw=2, zorder=-np.inf, alpha=0.25)
     ax.scatter(Xbest[I_forplot], Ybest[I_forplot], np.exp((Zbest[I_forplot] - Z.max())), c=c4, lw=2, zorder=np.inf, s=4)
     if j == 1: continue
 
-
     for i in I_forplot:
         x = np.ones(N) * Xbest[i]
-        y = np.linspace(Ybest[i]-3*E[i], Ybest[i]+3*E[i], N)
+        y = np.linspace(Ybest[i] - 3 * E[i], Ybest[i] + 3 * E[i], N)
         z = np.exp((Zbest[i] - Z.max()) - 1 / 2 * ((y - Ybest[i]) / E[i]) ** 2)
-
 
         Y_fill = np.tile(y, (N, 1))
         X_fill = np.ones([N, N]) * Xbest[i]
@@ -92,25 +91,31 @@ for j, f in enumerate([f1, f2, f3]):
             Z_fill[:, k] *= z[k]
 
         ax.plot(x, y, z, c=c3, lw=2, zorder=2 * i + 1)
-        ax.plot(x, y, z*0, c=c3, lw=1, zorder=2 * i + 1)
+        ax.plot(x, y, z * 0, c=c3, lw=1, zorder=2 * i + 1)
         ax.plot_surface(X_fill, Y_fill, Z_fill, color=c3, alpha=0.5, lw=0, zorder=2 * i)
-for i,f in enumerate([f1, f2, f3]):
+        ax.plot([Xbest[i]] * 2, [Ybest[i]] * 2, [np.exp((Zbest[i] - Z.max())), 0], c=c4, lw=2, zorder=2 * i,
+                alpha=0.75)
+    ax.plot(Xbest, Ybest, np.zeros_like(Xbest), c=c2, lw=2, zorder=-np.inf, alpha=0.75)
+for i, f in enumerate([f1, f2, f3]):
     f.tight_layout()
-    f.savefig("Contour_fig_%i.png"%i, bbox_inches='tight', dpi=300)
+    f.savefig("Contour_fig_%i.png" % i, bbox_inches='tight', dpi=300)
 plt.show()
 
 # -----------------------------------------------
-print("Doing heatmap")
-plt.figure()
-plt.imshow(np.exp(Z - Z.max()), extent=np.array([model.prior_ranges[key] for key in keys]).flatten(), origin='lower',
-           aspect='auto')
-ALPHA = np.exp(Zbest - Zbest.max()) * E
-ALPHA /= ALPHA.max()
-ALPHA = 0.5 + ALPHA * 0.5
-for i in select:
-    plt.errorbar(Xbest[i], Ybest[i], E[i], c='r', capsize=2, fmt='none', alpha=ALPHA[i])
-plt.xlabel(key1)
-plt.ylabel(key2)
-plt.show()
+if False:
+    print("Doing heatmap")
+
+    plt.figure()
+    plt.imshow(np.exp(Z - Z.max()), extent=np.array([model.prior_ranges[key] for key in keys]).flatten(),
+               origin='lower',
+               aspect='auto')
+    ALPHA = np.exp(Zbest - Zbest.max()) * E
+    ALPHA /= ALPHA.max()
+    ALPHA = 0.5 + ALPHA * 0.5
+    for i in select:
+        plt.errorbar(Xbest[i], Ybest[i], E[i], c='r', capsize=2, fmt='none', alpha=ALPHA[i])
+    plt.xlabel(key1)
+    plt.ylabel(key2)
+    plt.show()
 
 print("All groovy")
