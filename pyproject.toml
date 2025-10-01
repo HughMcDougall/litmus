@@ -39,3 +39,10 @@ repository = "https://github.com/HughMcDougall/LITMUS"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+
+[dependency-groups]
+doc = [
+    "mkdocs-material>=9.6.21",
+    "mkdocstrings[python]>=0.30.1",
+    "pymdown-extensions>=10.16.1",
+]
