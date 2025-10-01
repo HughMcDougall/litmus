@@ -1,5 +1,5 @@
 if __name__ == "__main__":
-    from litmus.lin_scatter import *
+    from litmus_rm.lin_scatter import *
     import matplotlib.pyplot as plt
 
     X = [0, 10, 18]

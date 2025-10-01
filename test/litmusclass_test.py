@@ -3,13 +3,13 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     import matplotlib
-    from litmus.litmusclass import *
+    from litmus_rm.litmusclass import *
 
     matplotlib.use('module://backend_interagg')
 
     #::::::::::::::::::::
     # Mock Data
-    from litmus.mocks import *
+    from litmus_rm.mocks import *
 
     # mymock = mymock.copy(E=[0.05,0.1], lag=300)
     mymock = mock(cadence=[7, 30], E=[0.15, 1.0], season=180, lag=180 * 3, tau=200.0)

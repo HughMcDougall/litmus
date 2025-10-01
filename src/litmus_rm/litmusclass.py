@@ -20,7 +20,7 @@ import pandas as pd
 from chainconsumer import ChainConsumer, Chain, ChainConfig, PlotConfig, Truth
 
 import matplotlib
-import litmus._types as _types
+import litmus_rm._types as _types
 
 from pandas import DataFrame
 
@@ -29,14 +29,14 @@ import jax.numpy as jnp
 
 import matplotlib.pyplot as plt
 
-import litmus.models as models
-from litmus.models import stats_model
-import litmus.fitting_methods as fitting_methods
-from litmus.fitting_methods import fitting_procedure
-from litmus.lightcurve import lightcurve
-from litmus._utils import *
+import litmus_rm.models as models
+from litmus_rm.models import stats_model
+import litmus_rm.fitting_methods as fitting_methods
+from litmus_rm.fitting_methods import fitting_procedure
+from litmus_rm.lightcurve import lightcurve
+from litmus_rm._utils import *
 
-from litmus.logging import logger
+from litmus_rm.logging import logger
 
 
 # =========================================================

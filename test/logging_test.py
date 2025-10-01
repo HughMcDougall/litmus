@@ -1,4 +1,4 @@
-from litmus.logging import *
+from litmus_rm.logging import *
 
 if __name__ == '__main__':
     print("Making Logger")

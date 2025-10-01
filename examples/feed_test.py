@@ -1,11 +1,11 @@
 """
 A quick test .py to debug the feeding of test lags to a scan fitter
 """
-import litmus.models
-from litmus import *
+import litmus_rm.models
+from litmus_rm import *
 import matplotlib.pyplot as plt
 import numpy as np
-from litmus._utils import dict_extend
+from litmus_rm._utils import dict_extend
 
 mock = mocks.mock_B
 mock.plot()

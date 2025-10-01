@@ -1,18 +1,18 @@
-import litmus
+import litmus_rm
 import numpy as np
 import matplotlib.pyplot as plt
-from litmus._utils import *
+from litmus_rm._utils import *
 
-from litmus.mocks import mock_A, mock_B, mock_C
+from litmus_rm.mocks import mock_A, mock_B, mock_C
 
-mock = litmus.mocks.mock(lag=180,
+mock = litmus_rm.mocks.mock(lag=180,
                          E=[0.1, 0.25],
                          tau=400)
 mock.plot()
 
 lc_1, lc_2 = mock.lc_1, mock.lc_2
 
-model = litmus.models.GP_simple(verbose=True,
+model = litmus_rm.models.GP_simple(verbose=True,
                                 prior_ranges=mock.params() | {'lag': [0, 800], 'logtau': [np.log(10), np.log(5000)]})
 data = model.lc_to_data(lc_1, lc_2)
 Tpred = np.linspace(-1000, 2500, 512)
@@ -74,11 +74,11 @@ f.suptitle("Constrained Lightcurves at true values")
 f.tight_layout()
 f.show()
 
-my_fitter = litmus.fitting_methods.SVI_scan(model, verbose=True, debug=False)
+my_fitter = litmus_rm.fitting_methods.SVI_scan(model, verbose=True, debug=False)
 my_fitter.fit(lc_1, lc_2)
 p_varied = my_fitter.get_samples()
 
-lt = litmus.LITMUS(my_fitter)
+lt = litmus_rm.LITMUS(my_fitter)
 lt.lag_plot()
 lt.plot_parameters()
 plt.show()

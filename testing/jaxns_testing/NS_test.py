@@ -24,11 +24,11 @@ import jax
 from jax.random import PRNGKey
 import jax.numpy as jnp
 
-import litmus
-from litmus import _utils
-from litmus.models import stats_model, dummy_statmodel, GP_simple
-from litmus.fitting_methods import *
-from litmus.mocks import mock, mock_A, mock_B, mock_C
+import litmus_rm
+from litmus_rm import _utils
+from litmus_rm.models import stats_model, dummy_statmodel, GP_simple
+from litmus_rm.fitting_methods import *
+from litmus_rm.mocks import mock, mock_A, mock_B, mock_C
 
 # ============================================
 # Generate a mock fit
@@ -73,7 +73,7 @@ print(fitting_method.get_evidence())
 # Plotting
 
 fitting_method.diagnostics()
-handler = litmus.LITMUS(fitting_method)
+handler = litmus_rm.LITMUS(fitting_method)
 handler.lag_plot()
 handler.plot_parameters(prior_extents=False)
 handler.diagnostic_plots()

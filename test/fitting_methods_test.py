@@ -1,11 +1,11 @@
-from litmus.fitting_methods import *
+from litmus_rm.fitting_methods import ICCF, prior_sampling
 
 # =====================================================
 if __name__ == "__main__":
-    import mocks
+    from litmus_rm import mocks
 
     import matplotlib.pyplot as plt
-    from litmus.models import dummy_statmodel
+    from litmus_rm.models import dummy_statmodel
 
     #::::::::::::::::::::
 

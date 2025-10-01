@@ -18,7 +18,7 @@ from IPython.utils import io
 import sys, os
 from copy import copy
 
-import litmus._types as _types
+import litmus_rm._types as _types
 
 from scipy.special import jnp_zeros
 

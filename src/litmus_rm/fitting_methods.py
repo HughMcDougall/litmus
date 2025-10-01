@@ -10,8 +10,8 @@ import importlib.util
 import sys
 from typing import Callable
 
-import litmus.models
-from litmus.logging import logger
+import litmus_rm.models
+from litmus_rm.logging import logger
 
 import jax
 
@@ -38,15 +38,15 @@ if _has_polychord:
 
 # ------
 # Internal
-import litmus._utils as _utils
-import litmus._types as _types
+import litmus_rm._utils as _utils
+import litmus_rm._types as _types
 # import litmus._ss.clustering as clustering
-import litmus.ICCF_working as iccf
+import litmus_rm.ICCF_working as iccf
 
-from litmus.models import quickprior
-from litmus.models import stats_model
-from litmus.lightcurve import lightcurve
-from litmus.lin_scatter import linscatter, expscatter
+from litmus_rm.models import quickprior
+from litmus_rm.models import stats_model
+from litmus_rm.lightcurve import lightcurve
+from litmus_rm.lin_scatter import linscatter, expscatter
 
 # ============================================
 __all__ = ["fitting_procedure", "prior_sampling", "nested_sampling", "hessian_scan", "SVI_scan",
@@ -89,7 +89,7 @@ class fitting_procedure(logger):
 
         # --------------------
         # Attributes
-        self.stat_model: litmus.models.stats_model = stat_model
+        self.stat_model: litmus_rm.models.stats_model = stat_model
         """Stats model to do fitting for"""
         self.name = "Base Fitting Procedure"
         """Name for string printing"""
@@ -1840,7 +1840,7 @@ class hessian_scan(fitting_procedure):
 
     def get_peaks(self, seed=None):
         i = np.argmax(self.log_evidences)
-        return litmus._utils.dict_divide(self.scan_peaks)[i]
+        return litmus_rm._utils.dict_divide(self.scan_peaks)[i]
 
 
 # -----------------------------------

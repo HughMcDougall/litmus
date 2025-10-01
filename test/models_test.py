@@ -1,15 +1,15 @@
 # ============================================
 # ============================================
 # Testing
-from litmus.models import *
+from litmus_rm.models import *
 
 if __name__ == "__main__":
     print("Testing models.py")
 
-    from litmus.mocks import mock
+    from litmus_rm.mocks import mock
     import matplotlib
 
-    matplotlib.use('module://backend_interagg')
+    # matplotlib.use('module://backend_interagg')
 
     print("Creating mocks...")
     mymock = mock(cadence=[7, 7])

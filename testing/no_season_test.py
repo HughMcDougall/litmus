@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import litmus
-from litmus.mocks import mock
+import litmus_rm
+from litmus_rm.mocks import mock
 
 # ----------------------------
 
@@ -11,10 +11,10 @@ my_mock.plot()
 
 lc_1, lc_2 = my_mock.lc_1, my_mock.lc_2
 
-my_model = litmus.models.GP_simple()
+my_model = litmus_rm.models.GP_simple()
 
 data = my_model.lc_to_data(lc_1, lc_2)
 
-fitting_procedure = litmus.fitting_methods.hessian_scan(my_model,
+fitting_procedure = litmus_rm.fitting_methods.hessian_scan(my_model,
                                                         Nlags = 32,
                                                         )

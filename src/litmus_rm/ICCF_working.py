@@ -14,7 +14,7 @@ import jax.numpy as jnp
 
 # =================================================
 
-def correl_jax(X1: [float], Y1: [float], X2: [float], Y2: [float], Nterp=1024) -> float:
+def correl_jax(X1: list[float], Y1: list[float], X2: list[float], Y2: list[float], Nterp=1024) -> float:
     """
     Calculates a linearly interpolated correlation value for two data series {X1,Y1} and {X2,Y2}, with Nterp interpolation points
 

@@ -1,7 +1,7 @@
 '''
 Attempt at demonstrating a litmus scan
 '''
-from litmus import *
+from litmus_rm import *
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -13,10 +13,10 @@ key1, key2 = 'lag', 'logtau'
 keys = [key1, key2]
 N = 128
 
-mock = litmus.mocks.mock_C.copy(E=[.25, .25], cadence=[30, 30], maxtime=360 * 2, season=60)
+mock = litmus_rm.mocks.mock_C.copy(E=[.25, .25], cadence=[30, 30], maxtime=360 * 2, season=60)
 mock.plot()
 
-model = litmus.models.GP_simple()
+model = litmus_rm.models.GP_simple()
 model.set_priors({'lag': [0, 300], 'logtau': [4, 10]})
 model.set_priors(mock.params() | {key: model.prior_ranges[key] for key in keys})
 data = model.lc_to_data(mock.lc_1, mock.lc_2)
@@ -25,7 +25,7 @@ print("Settup done")
 Xl, Yl = [np.linspace(*model.prior_ranges[key], N) for key in keys]
 X, Y = np.meshgrid(Xl, Yl)
 params_grid = {key1: X.reshape(N * N), key2: Y.reshape(N * N)}
-params = litmus._utils.dict_extend(mock.params(), params_grid)
+params = litmus_rm._utils.dict_extend(mock.params(), params_grid)
 
 print("Doing evals")
 Z = model.log_density(params, data)
@@ -35,7 +35,7 @@ I, J = np.argmax(Z, axis=0), np.argmax(Z, axis=1)
 Xbest, Ybest = X[0, :], Y[I, 0]
 Zbest = Z[:, :].max(axis=0)
 params_grid = {key1: Xbest, key2: Ybest}
-params_best = params = litmus._utils.dict_extend(mock.params(), params_grid)
+params_best = params = litmus_rm._utils.dict_extend(mock.params(), params_grid)
 Zcurve = model.log_density_hess(params_best, data)
 Zcurve = np.array([c[1, 1] for c in Zcurve])
 E = np.sqrt(-Zcurve) ** -1

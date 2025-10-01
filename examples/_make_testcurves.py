@@ -4,9 +4,9 @@ This is the file to generate the lightcurves in basic_fitting
 
 import numpy as np
 
-from litmus import *
+from litmus_rm import *
 
-mock = litmus.mocks.mock(seed=3,
+mock = litmus_rm.mocks.mock(seed=3,
                          tau=600,
                          lag=300
                          )

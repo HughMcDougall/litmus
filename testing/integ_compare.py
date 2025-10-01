@@ -1,5 +1,5 @@
-from litmus import *
-from litmus.fitting_methods import fitting_procedure
+from litmus_rm import *
+from litmus_rm.fitting_methods import fitting_procedure
 from copy import copy as shallowcopy
 
 mock = mocks.mock(1, cadence=[60, 60], E=[0.25, 0.25], season=0, maxtime=365 * 3)

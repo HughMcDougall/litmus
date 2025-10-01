@@ -31,11 +31,11 @@ from numpyro import handlers
 import tinygp
 from tinygp import GaussianProcess
 
-from litmus.lightcurve import lightcurve
-import litmus.gp_working as gpw
-import litmus._utils as _utils
-import litmus._types as _types
-from litmus.logging import logger
+from litmus_rm.lightcurve import lightcurve
+import litmus_rm.gp_working as gpw
+import litmus_rm._utils as _utils
+import litmus_rm._types as _types
+from litmus_rm.logging import logger
 
 import contextlib
 
@@ -1393,7 +1393,7 @@ class GP_simple(stats_model):
         # -------------------------
         # Estimate Correlation Timescale
         if 'logtau' not in fixed.keys():
-            from litmus.ICCF_working import correlfunc_jax_vmapped
+            from litmus_rm.ICCF_working import correlfunc_jax_vmapped
             approx_season = np.diff(T1).max()
 
             if approx_season > np.median(np.diff(T1)) * 5:

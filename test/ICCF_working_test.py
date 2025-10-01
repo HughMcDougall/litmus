@@ -5,11 +5,11 @@ if __name__ == "__main__":
     import numpy as np
     import matplotlib.pyplot as plt
 
-    from litmus.ICCF_working import *
+    from litmus_rm.ICCF_working import *
 
     #::::::::::::::::::::
     # Mock Data
-    from litmus.mocks import mock_A, mock_B, mock_C
+    from litmus_rm.mocks import mock_A, mock_B, mock_C
 
     mock = mock_A
     mock01 = mock.lc_1

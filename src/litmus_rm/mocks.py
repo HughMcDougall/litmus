@@ -14,16 +14,16 @@ import matplotlib
 import numpy as np
 import pylab as pl
 import matplotlib.pyplot as plt
-from litmus.logging import logger
+from litmus_rm.logging import logger
 
 import jax
 
 import tinygp
 from tinygp import GaussianProcess
 
-import litmus._types as _types
-from litmus._utils import randint, isiter
-from litmus.lightcurve import lightcurve
+import litmus_rm._types as _types
+from litmus_rm._utils import randint, isiter
+from litmus_rm.lightcurve import lightcurve
 
 
 # ===================================================

@@ -25,9 +25,9 @@ from tinygp import GaussianProcess
 from typing import Any
 from nptyping import NDArray
 
-import litmus._utils as _utils
-import litmus._types as _types
-from litmus.lightcurve import lightcurve
+import litmus_rm._utils as _utils
+import litmus_rm._types as _types
+from litmus_rm.lightcurve import lightcurve
 
 
 # ============================================

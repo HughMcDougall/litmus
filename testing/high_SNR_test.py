@@ -3,16 +3,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import litmus
+import litmus_rm
 
-mymock = litmus.mocks.mock_C.copy(tau=np.exp(5.56), lag=106, cadence=(7, 7), E=[0.1, 0.1], season=0.0)
+mymock = litmus_rm.mocks.mock_C.copy(tau=np.exp(5.56), lag=106, cadence=(7, 7), E=[0.1, 0.1], season=0.0)
 
 mymock = mymock(3)
 
 mymock.plot()
 plt.show()
 
-model = litmus.models.GP_simple()
+model = litmus_rm.models.GP_simple()
 model.debug = False
 lc_1, lc_2 = mymock.lc_1, mymock.lc_2
 
@@ -25,7 +25,7 @@ print("\t Param \t Est \t True")
 for key in seed_params.keys():
     print("\t %s: \t%.2f \t %.2f" % (key, seed_params[key], mymock.params()[key]))
 
-fitting_method = litmus.fitting_methods.hessian_scan(model,
+fitting_method = litmus_rm.fitting_methods.hessian_scan(model,
                                                      Nlags=64,
                                                      init_samples=5_000,
                                                      grid_bunching=0.8,
@@ -41,7 +41,7 @@ fitting_method = litmus.fitting_methods.hessian_scan(model,
                                                      precondition = 'half-eig'
                                                      )
 
-litmus_handler = litmus.LITMUS(fitting_method)
+litmus_handler = litmus_rm.LITMUS(fitting_method)
 litmus_handler.add_lightcurve(lc_1)
 litmus_handler.add_lightcurve(lc_2)
 

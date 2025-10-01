@@ -16,7 +16,7 @@ import numpy as np
 from scipy import optimize
 import matplotlib.pyplot as plt
 
-import litmus._types as _types
+import litmus_rm._types as _types
 
 
 # ============================================
@@ -119,13 +119,13 @@ class lightcurve(object):
 
     # Dict-Like
 
-    def keys(self) -> [str, str, str]:
+    def keys(self) -> tuple[str, str, str]:
         """
         Returns the string-like names of the lightcurve's attributes
         """
-        return ["T", "Y", "E"]
+        return ("T", "Y", "E")
 
-    def values(self) -> (_types.ArrayN, _types.ArrayN, _types.ArrayN):
+    def values(self) -> tuple[_types.ArrayN, _types.ArrayN, _types.ArrayN]:
         """
         Returns the lightcurves' value series' in the order of keys
         """

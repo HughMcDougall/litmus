@@ -2,7 +2,7 @@
 # ================================================
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    from litmus.mocks import *
+    from litmus_rm.mocks import *
 
     print("Running mock test code")
 

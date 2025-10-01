@@ -3,7 +3,7 @@
 # Testing
 if __name__ == "__main__":
 
-    from litmus._utils import *
+    from litmus_rm._utils import *
 
     a, b = 1, [1, 2, 3]
     DICT_NOITER = {'a': 3}

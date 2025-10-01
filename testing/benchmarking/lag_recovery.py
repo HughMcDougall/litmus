@@ -1,17 +1,17 @@
-import litmus.fitting_methods
-from litmus.mocks import mock
+import litmus_rm.fitting_methods
+from litmus_rm.mocks import mock
 import numpy as np
 
 import pickle
 
 import os
 
-model = litmus.models.GP_simple()
-null = litmus.models.GP_simple_null()
-noise = litmus.models.whitenoise_null()
+model = litmus_rm.models.GP_simple()
+null = litmus_rm.models.GP_simple_null()
+noise = litmus_rm.models.whitenoise_null()
 
-fitter_model = litmus.fitting_methods.hessian_scan(model, verbose=5, LL_threshold = 200)
-fitter_null = litmus.fitting_methods.hessian_scan(null, verbose=5, LL_threshold = 200)
+fitter_model = litmus_rm.fitting_methods.hessian_scan(model, verbose=5, LL_threshold = 200)
+fitter_null = litmus_rm.fitting_methods.hessian_scan(null, verbose=5, LL_threshold = 200)
 # fitter_noise = litmus.fitting_methods.hessian_scan(noise)
 
 for seed in range(256):
