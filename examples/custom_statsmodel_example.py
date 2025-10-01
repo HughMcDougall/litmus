@@ -3,13 +3,13 @@ This is an example of how to implement your own stats model
 '''
 
 # ============================================
-from litmus.models import _default_config, stats_model, quickprior
+from litmus_rm.models import _default_config, stats_model, quickprior
 import numpyro
 import numpyro.distributions as dist
 import numpy as np
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
-import litmus.gp_working as gpw
+import litmus_rm.gp_working as gpw
 
 
 # ============================================

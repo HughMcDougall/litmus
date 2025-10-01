@@ -3,8 +3,8 @@ Demonstration of how the lag posterior smooths with bootstrapping
 '''
 import numpy as np
 
-from litmus import *
-from litmus import _utils
+from litmus_rm import *
+from litmus_rm import _utils
 
 
 mock = mocks.mock(lag=200)

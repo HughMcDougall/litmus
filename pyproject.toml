@@ -1,6 +1,6 @@
 
 [project]
-name = "LITMUS"
+name = "litmus-rm"
 version = "1.0.0"
 authors = [
   { name="Hugh McDougall", email="hughmcdougallemail@gmail.com" },
@@ -19,21 +19,23 @@ dependencies = [
   'scikit-learn>1.5.2',
   'scipy>=1.14.1',
   'chainconsumer>=1.1.2',
-  'typing>=2.50'
+  'typing>=2.50',
+  'ipython>=8.29.0',
+  'nptyping>=2.5.0',
 ]
 
-
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.8.22,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+packages = ["litmus"]
 
 [project.optional-dependencies]
 jaxns = ["etils", "tensorflow_probability", "jaxns"]
 
-
 [project.urls]
 repository = "https://github.com/HughMcDougall/LITMUS"
 
-
-[tool.setuptools]
-packages = ["litmus"]
+[tool.pytest.ini_options]
+pythonpath = ["src"]

@@ -3,8 +3,8 @@ Generates posteriors for lag + logtau
 for a single mock using AEIS and HS.
 Used for demonstrating aliasing failure mode.
 '''
-from litmus import *
-from litmus._utils import dict_extend
+from litmus_rm import *
+from litmus_rm._utils import dict_extend
 
 # -------------------
 SAVECHAINS = True

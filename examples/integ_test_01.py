@@ -2,33 +2,33 @@
 An attempt to ensure normalization is correct and that the constrained / unconstrained
 jacobian factor is being applied properly
 '''
-import litmus.fitting_methods
-from litmus import *
+import litmus_rm.fitting_methods
+from litmus_rm import *
 
-model_1 = litmus.models.dummy_statmodel()
+model_1 = litmus_rm.models.dummy_statmodel()
 
-model_2 = litmus.models.dummy_statmodel()
+model_2 = litmus_rm.models.dummy_statmodel()
 model_2.set_priors({'lag': 250.0})
-model_3 = litmus.models.dummy_statmodel()
+model_3 = litmus_rm.models.dummy_statmodel()
 model_3.set_priors({'lag': [250.0 - 0.0001, 250.0 + 0.0001]})
 
-model_4 = litmus.models.dummy_statmodel()
+model_4 = litmus_rm.models.dummy_statmodel()
 model_4.set_priors({'logtau': 0.5})
-model_5 = litmus.models.dummy_statmodel()
+model_5 = litmus_rm.models.dummy_statmodel()
 model_5.set_priors({'logtau': [0.5 - 0.00001, 0.5 + 0.00001]})
 
-model_6 = litmus.models.dummy_statmodel()
+model_6 = litmus_rm.models.dummy_statmodel()
 model_6.set_priors({'logtau': [-100.0, 100.0],
                     'logamp': [-30.0, 30.0]})
 
-model_7a = litmus.models.dummy_statmodel()
+model_7a = litmus_rm.models.dummy_statmodel()
 model_7a.set_priors({'lag': [-1000, 1000.0],
                      'logtau': [-10.0, 10.0]})
-model_7b = litmus.models.dummy_statmodel()
+model_7b = litmus_rm.models.dummy_statmodel()
 model_7b.set_priors({'lag': [-1000, 1000.0],
                      'logtau': [-20.0, 20.0]})
 
-model_7c = litmus.models.dummy_statmodel()
+model_7c = litmus_rm.models.dummy_statmodel()
 model_7c.set_priors({'lag': [-1000, 1000.0],
                      'logtau': [-30.0, 30.0]})
 
@@ -37,7 +37,7 @@ model_7c.set_priors({'lag': [-1000, 1000.0],
 models = [model_1, model_7a, model_7b, model_7c ]
 model_names = ["normal"] + list('abc')
 
-mock = litmus.mocks.mock_C()
+mock = litmus_rm.mocks.mock_C()
 lc_1, lc_2 = mock.lc_1, mock.lc_2
 
 Z = []
@@ -47,15 +47,15 @@ FM = []
 for model, name in zip(models, model_names):
     data = model.lc_to_data(lc_1, lc_2)
 
-    PS = litmus.fitting_methods.prior_sampling(model, Nsamples=32 ** len(model.free_params()))
+    PS = litmus_rm.fitting_methods.prior_sampling(model, Nsamples=32 ** len(model.free_params()))
 
-    HS1 = litmus.fitting_methods.hessian_scan(model, Nlags=64)
-    HS2 = litmus.fitting_methods.hessian_scan(model, Nlags=64, interp_scale = 'linear')
+    HS1 = litmus_rm.fitting_methods.hessian_scan(model, Nlags=64)
+    HS2 = litmus_rm.fitting_methods.hessian_scan(model, Nlags=64, interp_scale = 'linear')
     HS2.name += "-Linear Interp Scale"
 
-    SV = litmus.fitting_methods.SVI_scan(model, Nlags=64, ELBO_Nsteps = 256, ELBO_particles = 128, constrained_domain = False)
+    SV = litmus_rm.fitting_methods.SVI_scan(model, Nlags=64, ELBO_Nsteps = 256, ELBO_particles = 128, constrained_domain = False)
 
-    NS = litmus.fitting_methods.nested_sampling(model, num_live_points =800, max_samples = 200_000)
+    NS = litmus_rm.fitting_methods.nested_sampling(model, num_live_points =800, max_samples = 200_000)
     methods = [HS1, HS2, NS]
 
     for method in methods:
@@ -64,7 +64,7 @@ for model, name in zip(models, model_names):
         method.debug = True
         method.name += "-" + name
         print(method.name)
-        while isinstance(method, litmus.fitting_methods.hessian_scan):
+        while isinstance(method, litmus_rm.fitting_methods.hessian_scan):
             method.prefit(lc_1, lc_2)
             if not np.isnan(model.log_density(method.estmap_params, data)): break
         method.fit(lc_1, lc_2)

@@ -1,6 +1,6 @@
 import os, sys
 sys.path.append("../../")
-import litmus
+import litmus_rm
 
 '''
 A quick and nasty test file to confirm everything's working

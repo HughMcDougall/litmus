@@ -2,15 +2,15 @@
 Demonstration of model comparison testing
 '''
 
-from litmus import *
+from litmus_rm import *
 
 # ------
 # MODELS
-model_alt = litmus.models.GP_simple()
-model_alt_norm = litmus.models.GP_simple_normalprior()
+model_alt = litmus_rm.models.GP_simple()
+model_alt_norm = litmus_rm.models.GP_simple_normalprior()
 model_alt_norm.mu_lagpred = 4.3
-model_null = litmus.models.GP_simple_null()
-model_whitenoise = litmus.models.whitenoise_null()
+model_null = litmus_rm.models.GP_simple_null()
+model_whitenoise = litmus_rm.models.whitenoise_null()
 
 MODELS = [model_alt, model_null, model_whitenoise]
 
@@ -19,13 +19,13 @@ MODELS = [model_alt, model_null, model_whitenoise]
 vague = True
 
 if not vague:
-    mock1 = litmus.mocks.mock(1, lag=540, tau=200, E=[0.01, 0.1])
+    mock1 = litmus_rm.mocks.mock(1, lag=540, tau=200, E=[0.01, 0.1])
     mock2 = mock1.copy(seed=5)
-    mock3 = litmus.mocks.mock(8, lag=180, tau=0.001, E=[0.01, 0.1])
+    mock3 = litmus_rm.mocks.mock(8, lag=180, tau=0.001, E=[0.01, 0.1])
 else:
-    mock1 = litmus.mocks.mock(3, lag=540, tau=50, E=[0.2, 0.5])
+    mock1 = litmus_rm.mocks.mock(3, lag=540, tau=50, E=[0.2, 0.5])
     mock2 = mock1.copy(seed=5)
-    mock3 = litmus.mocks.mock(8, lag=180, tau=0.001, E=[0.2, 0.5])
+    mock3 = litmus_rm.mocks.mock(8, lag=180, tau=0.001, E=[0.2, 0.5])
 
 mock1_null, mock1_whitenoise = mock1.copy(), mock1.copy()
 mock1_null.swap_response(mock2)
@@ -60,7 +60,7 @@ for mock in MOCKS:
         if i < len(Z):
             i += 1
             continue
-        fitter = litmus.fitting_methods.SVI_scan(model, Nlags=64, precondition="diag", ELBO_Nsteps=512,
+        fitter = litmus_rm.fitting_methods.SVI_scan(model, Nlags=64, precondition="diag", ELBO_Nsteps=512,
                                                  grid_bunching=0.25)
         fitter.name = mock.name + " " + model.name
         fitter.verbose = True

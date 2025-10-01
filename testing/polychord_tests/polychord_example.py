@@ -20,8 +20,8 @@ from anesthetic import read_chains
 
 from chainconsumer import ChainConsumer
 
-from litmus.mocks import mock, mock_A, mock_B, mock_C
-from litmus.models import GP_simple
+from litmus_rm.mocks import mock, mock_A, mock_B, mock_C
+from litmus_rm.models import GP_simple
 
 # =======================================
 mymock = mock_B.copy(lag=256, E=[0.01,0.1])

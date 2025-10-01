@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from litmus import *
+from litmus_rm import *
 import numpy as np
 
 # ----------------
@@ -26,7 +26,7 @@ mock = mock(3)
 lc_1, lc_2 = mock.lc_1, mock.lc_2
 mock.plot()
 
-model = litmus.models.GP_simple()
+model = litmus_rm.models.GP_simple()
 data = model.lc_to_data(lc_1, lc_2)
 
 fixed_params = mock.params()

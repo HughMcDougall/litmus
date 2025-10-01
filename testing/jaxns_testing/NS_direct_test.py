@@ -24,13 +24,13 @@ import jax
 from jax.random import PRNGKey
 import jax.numpy as jnp
 
-from litmus import models
-from litmus.models import _default_config
-from litmus.ICCF_working import *
-from litmus import _utils
-from litmus.models import stats_model, dummy_statmodel, GP_simple
-from litmus.fitting_methods import *
-from litmus.mocks import mock, mock_A, mock_B, mock_C
+from litmus_rm import models
+from litmus_rm.models import _default_config
+from litmus_rm.ICCF_working import *
+from litmus_rm import _utils
+from litmus_rm.models import stats_model, dummy_statmodel, GP_simple
+from litmus_rm.fitting_methods import *
+from litmus_rm.mocks import mock, mock_A, mock_B, mock_C
 
 from chainconsumer import ChainConsumer
 

@@ -1,11 +1,11 @@
 from tinygp.helpers import JAXArray
 
 import numpy as np
-from litmus import *
+from litmus_rm import *
 
 from tinygp import GaussianProcess
 import tinygp
-from litmus import _types
+from litmus_rm import _types
 
 import jax.numpy as jnp
 import jax
