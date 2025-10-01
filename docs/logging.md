@@ -1,3 +1,3 @@
-# `litmus.logging`
+# `litmus_rm.logging`
 
-::: litmus.logging
+::: litmus_rm.logging

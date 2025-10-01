@@ -1,3 +1,3 @@
-# `litmus.GP_working`
+# `litmus_rm.GP_working`
 
-::: litmus.gp_working
+::: litmus_rm.gp_working

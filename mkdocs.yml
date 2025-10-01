@@ -42,7 +42,7 @@ plugins:
   mkdocstrings:
     handlers:
       python:
-        paths: [.]
+        paths: [src/litmus_rm]
         import:
           - https://docs.python.org/3/objects.inv
           - https://docs.pydantic.dev/latest/objects.inv

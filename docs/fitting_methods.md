@@ -1,3 +1,3 @@
-# `litmus.fitting_methods`
+# `litmus_rm.fitting_methods`
 
-::: litmus.fitting_methods
+::: litmus_rm.fitting_methods

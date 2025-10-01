@@ -1,3 +1,3 @@
-# `litmus.lightcurve`
+# `litmus_rm.lightcurve`
 
-::: litmus.lightcurve
+::: litmus_rm.lightcurve

@@ -1,3 +1,3 @@
-# `litmus.litmusclass`
+# `litmus_rm.litmusclass`
 
-::: litmus.litmusclass
+::: litmus_rm.litmusclass

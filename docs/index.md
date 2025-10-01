@@ -26,7 +26,7 @@ If you have any questions, contact the author directly at [hughmcdougallemail@gm
 First make sure you have a recent version of python running (`3.10`-`3.12`) and then install directly from the git repo:
 
 ```
-pip install "git+https://github.com/HughMcDougall/litmus"
+pip install litmus-rm
 ```
 
 ### Explicit Installation

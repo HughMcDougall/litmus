@@ -1,3 +1,3 @@
-# `litmus.models`
+# `litmus_rm.models`
 
-::: litmus.models
+::: litmus_rm.models

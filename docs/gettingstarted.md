@@ -8,7 +8,7 @@ First make sure you have a recent version of python running (`3.10`-`3.12`)
 and then install directly from the git repo:
 
 ```
-pip install "git+https://github.com/HughMcDougall/litmus"
+pip install litmus-rm
 ```
 
 ### Explicit Installation
@@ -56,7 +56,7 @@ _Note: You have bump into some trouble installing `tensorflow_probability` if yo
 import numpy as np
 import matplotlib.pyplot as plt
 
-import litmus
+import litmus_rm as litmus
 ```
 
 ```

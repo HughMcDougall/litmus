@@ -1,3 +1,3 @@
-# `litmus.mocks`
+# `litmus_rm.mocks`
 
-::: litmus.mocks
+::: litmus_rm.mocks
