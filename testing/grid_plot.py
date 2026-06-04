@@ -7,13 +7,13 @@ import numpy as np
 
 import matplotlib as mpl
 
-mpl.use('TkAgg')
+#mpl.use('TkAgg')
 
 key1, key2 = 'lag', 'logtau'
 keys = [key1, key2]
 N = 128
 
-mock = litmus_rm.mocks.mock_C.copy(E=[.25, .25], cadence=[30, 30], maxtime=360 * 2, season=60)
+mock = litmus_rm.mocks.mock_C.copy(E=[.5, .5], cadence=[30, 30], maxtime=360 * 4, season=60, lag = 180)
 mock.plot()
 
 model = litmus_rm.models.GP_simple()
@@ -69,13 +69,13 @@ for j, f in enumerate([f1, f2, f3]):
     ax.set_box_aspect([1, 1, 0.25])
 
     # --------------------
-    I_forplot = select[::12]
+    I_forplot = select[1::10]
     if j != 2: ax.plot_wireframe(X, Y, np.exp(Z - Z.max()), color=c1, lw=1, alpha=0.75, rstride=6, cstride=4,
                                  zorder=-1)
     ax.plot_wireframe(X, Y, np.zeros_like(Z), color='w', lw=2, alpha=0.25, rstride=6, cstride=4, zorder=-10)
     if j == 0: continue
     ax.plot(Xbest, Ybest, np.exp(Zbest - Z.max()), c=c2, lw=2, zorder=np.inf)
-    ax.plot(Xbest, Ybest, np.zeros_like(Xbest), c=c2, lw=2, zorder=-np.inf, alpha=0.25)
+    ax.plot(Xbest, Ybest, np.zeros_like(Xbest), c=c2, lw=1, zorder=-np.inf, alpha=0.5)
     ax.scatter(Xbest[I_forplot], Ybest[I_forplot], np.exp((Zbest[I_forplot] - Z.max())), c=c4, lw=2, zorder=np.inf, s=4)
     if j == 1: continue
 

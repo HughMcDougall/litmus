@@ -5,7 +5,7 @@ A handy object clas for lightcurves
 
 HM 2024
 """
-
+import warnings
 # ============================================
 # IMPORTS
 
@@ -37,14 +37,17 @@ class lightcurve(object):
     # ----------
 
     def __init__(self, T, Y, E=None):
-        self.T = np.array(T, dtype=np.float64)
-        self.Y = np.array(Y, dtype=np.float64)
+        if T is None and Y is None and E is None:
+            T = np.ones([0])
+            Y = np.ones([0])
+            E = np.ones([0])
+
+        self.T = np.atleast_1d(np.array(T, dtype=np.float64))
+        self.Y = np.atleast_1d(np.array(Y, dtype=np.float64))
         if E is None:
             self.E = np.zeros_like(T)
         else:
             self.E = E
-
-        self._data = np.vstack(self.values()).T
 
         self._norm_mean, self._norm_amp = 0.0, 1.0
         self.normalized = False
@@ -57,13 +60,10 @@ class lightcurve(object):
 
     def __getitem__(self, key):
 
-        if isinstance(key, slice):
-            return self._data[key, :]
+        if isinstance(key, (int, slice, np.ndarray, list, tuple)):
+            return lightcurve(*self._data[key, :].T)
 
-        elif isinstance(key, int):
-            return self._data[key, :]
-
-        else:
+        elif isinstance(key, str):
             if key == "T":
                 return self.T
             elif key == "Y":
@@ -71,6 +71,7 @@ class lightcurve(object):
             elif key == "E":
                 return self.E
             else:
+                raise KeyError("lightcurve only has keys T,Y,E")
                 return None
 
     def __str__(self):
@@ -117,6 +118,9 @@ class lightcurve(object):
 
         # ----------
 
+    def to_array(self):
+        return self._data
+
     # Dict-Like
 
     def keys(self) -> tuple[str, str, str]:
@@ -132,19 +136,19 @@ class lightcurve(object):
         return [self[key] for key in self.keys()]
 
     # ----------
+    @property
+    def _data(self):
+        return np.vstack(self.values()).T
 
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
-        '''
-        if key in self.keys() or key in ["_data", "_norm_mean", "_norm_amp", "normalized"]:
-            super(lightcurve, self).__setattr__(key, value)
 
-            if False not in [hasattr(self, test) for test in self.keys()]:
-                if key in self.keys():
-                    self._data = np.vstack(self.values()).T
+        """
+        if key in self.keys() or key in ["_norm_mean", "_norm_amp", "normalized"]:
+            super(lightcurve, self).__setattr__(key, value)
         else:
             raise Warning("Tried to set nonexistant lightcurve attribute %s" % key)
-        '''
+        """
 
     def normalize(self) -> _types.Self:
         """
@@ -169,8 +173,10 @@ class lightcurve(object):
         if no_errs:
             meanbest, varbest = mean0, var0
         else:
-            L = lambda X: ((self.Y - X[0]) ** 2 / (self.E ** 2 + X[1]) + np.log(self.E ** 2 + X[1])).sum()
-            meanbest, varbest = optimize.minimize(L, np.array([mean0, var0]), method='Nelder-Mead').x
+            L = lambda X: (
+                    (self.Y - X[0]) ** 2 / (self.E ** 2 + X[1]) + np.log(self.E ** 2 + X[1])
+            ).sum()
+            meanbest, varbest = optimize.minimize(L, np.array([mean0, var0]), method='nelder-mead').x
 
         # Make and return copy
         out = copy(self)
@@ -178,7 +184,7 @@ class lightcurve(object):
         out /= np.sqrt(varbest)
 
         # If any errors, revert to simple estiamte
-        if np.any(np.isnan(out._data)):
+        if np.any(np.isnan(out.Y) + np.isnan(out.E)):
             meanbest, varbest = mean0, var0
             out = copy(self)
             out -= meanbest
@@ -296,6 +302,10 @@ class lightcurve_iter(lightcurve):
         self.T, self.Y, self.E = self._T[I], self._Y[I], self._E[I]
         if self.Evary: self.Y += np.random.randn(self.N) * self.E
 
+
+# =========================================================
+
+nullcurve = lightcurve(None, None, None)
 
 # =========================================================
 # TESTING

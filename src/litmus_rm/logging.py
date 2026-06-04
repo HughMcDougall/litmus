@@ -14,24 +14,24 @@ class logger:
     Internal behaviour may change in future releases
     """
 
-    def __init__(self, out_stream=sys.stdout, err_stream=sys.stderr,
-                 verbose: Union[bool, int] = True,
+    def __init__(self, verbose: Union[bool, int] = True,
                  debug: Union[bool, int] = False,
                  warn: Union[bool, int] = 0):
         """
-        :param out_stream: Stream to print run and debug messages to
-        :param err_stream: Stream to print error messages to
+        # :param out_stream: Stream to print run and debug messages to [removed as it breaks pickling]
+        # :param err_stream: Stream to print error messages to  [removed as it breaks pickling]
         :param verbose: Whether to print msg_run statements / lvl of reporting
         :param debug: Whether to print msg_debug statements / lvl of reporting
         :param warn: Whether to print msg_debug statements / lvl of warnings
         """
         # ----------------------------
 
-        self.out_stream = out_stream
-        self.err_stream = err_stream
+        # self.out_stream = out_stream
+        # self.err_stream = err_stream
         self.verbose = verbose
         self.debug = debug
         self.warn = warn
+        self.flush = True
 
     # ----------------------
     # Error message printing
@@ -46,8 +46,8 @@ class logger:
         lvl = max(lvl, 0)
         if self.warn >= lvl:
             for i, a in enumerate(x):
-                print(a, file=self.err_stream, end=delim if i != len(x) else "")
-            print('', end=end)
+                print(a, file=sys.stderr, end=delim if i != len(x) else "", flush=False)
+            print('', end=end, flush=self.flush)
         return
 
     def msg_run(self, *x: str, end: str = '\n', delim: str = ' ', lvl: int = 1):
@@ -61,8 +61,8 @@ class logger:
         lvl = max(lvl, 1)
         if self.verbose >= lvl:
             for i, a in enumerate(x):
-                print(a, file=self.out_stream, end=delim if i != len(x) else "")
-            print('', end=end)
+                print(a, file=sys.stdout, end=delim if i != len(x) else "", flush=False)
+            print('', end=end, flush=self.flush)
         return
 
     def msg_debug(self, *x: str, end: str = '\n', delim: str = ' ', lvl: int = 1):
@@ -76,7 +76,6 @@ class logger:
         lvl = max(lvl, 1)
         if self.debug >= lvl:
             for i, a in enumerate(x):
-                print(a, file=self.out_stream, end=delim if i != len(x) else "")
-
-            print('', end=end)
+                print(a, file=sys.stdout, end=delim if i != len(x) else "", flush=False)
+            print('', end=end, flush=self.flush)
         return

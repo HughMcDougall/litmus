@@ -1,6 +1,5 @@
 import numpy as np
 from typing import Any
-from nptyping import NDArray
 
 
 def linscatter(X: np.array, Y: np.array, N: int) -> np.ndarray[Any, np.float64]:

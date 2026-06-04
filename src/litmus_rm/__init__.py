@@ -16,6 +16,7 @@ import litmus_rm.ICCF_working
 import litmus_rm.fitting_methods
 import litmus_rm.mocks
 import litmus_rm.logging
+import litmus_rm.cleaners
 
 from litmus_rm.lightcurve import *
 from litmus_rm.litmusclass import LITMUS

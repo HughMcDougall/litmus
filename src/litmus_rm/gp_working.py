@@ -22,8 +22,6 @@ import jax.numpy as jnp
 
 import tinygp
 from tinygp import GaussianProcess
-from typing import Any
-from nptyping import NDArray
 
 import litmus_rm._utils as _utils
 import litmus_rm._types as _types
@@ -99,3 +97,66 @@ def build_gp(T: _types.ArrayN, Y: _types.ArrayN, diag: _types.ArrayNxN, bands: _
         mean=meanf
     )
     return (gp)
+
+
+
+class DRW_tophat(tinygp.kernels.Kernel):
+    '''
+    A custom tinyGP kernel that emulates JAVELIN's tophat kernel
+    '''
+
+    amp1: jax.Array
+    amp2: jax.Array
+    tau: jax.Array
+    w_tophat: jax.Array
+
+    norm_linevar: jax.Array = 1.0
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.amp1 = kwargs["amp1"]
+        self.amp2 = kwargs["amp2"]
+        self.tau = kwargs["tau"]
+        self.w_tophat = kwargs["w_tophat"]
+        # self.b = self.w_tophat / self.tau
+        b = self.w_tophat / self.tau
+        self.norm_linevar = (1 - jnp.exp(-b / 2)) / jnp.sqrt(0.5 * (b - 1 + jnp.exp(-b)))
+
+    def evaluate(self, X1, X2):
+        band1, band2 = X1[1], X2[1]
+        b = self.w_tophat / self.tau  # move to init
+        dx = jnp.abs(X1[0] - X2[0]) / self.tau
+
+        a1 = jax.lax.select(band1 == 0, self.amp1, self.amp2)
+        a2 = jax.lax.select(band2 == 0, self.amp1, self.amp2)
+        amp = a1 * a2
+
+        cc = jnp.exp(-dx)
+        cr = jax.lax.select(dx < b / 2,
+                            1 - (jnp.cosh(dx) - 1) / (jnp.exp(b / 2) - 1),
+                            jnp.exp(-dx) * (jnp.sinh(b / 2)) / (1 - jnp.exp(-b / 2))
+                            )
+
+        rc = cr
+        rr = jax.lax.select(dx < b,
+                            (b - dx) + jnp.exp(-b) * jnp.cosh(dx) - jnp.exp(-dx),
+                            jnp.exp(-dx) * (jnp.cosh(b) - 1)
+                            )
+        rr /= (b + jnp.exp(-b) - 1)
+
+        cr *= self.norm_linevar
+        rc *= self.norm_linevar
+
+        out = jax.lax.select(band1 == 0,
+                             jax.lax.select(band2 == 0,
+                                            cc,
+                                            cr
+                                            ),
+                             jax.lax.select(band2 == 0,
+                                            rc,
+                                            rr
+                                            ),
+                             )
+
+        out *= amp
+        return out

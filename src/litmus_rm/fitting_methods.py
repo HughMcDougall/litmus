@@ -12,6 +12,12 @@ from typing import Callable
 
 import litmus_rm.models
 from litmus_rm.logging import logger
+from litmus_rm.nestedsampling import NS_wrapper, NS_JAXNS, NS_dynestystatic, NS_dynestydynamic, _samplertypes
+
+try:
+    from litmus_rm.nestedsampling import NS_jaxns
+except ImportError:
+    pass
 
 import jax
 
@@ -20,6 +26,7 @@ import numpyro
 import numpy as np
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
+from copy import deepcopy as copy
 
 # ------
 # Samplers, stats etc
@@ -62,8 +69,6 @@ class fitting_procedure(logger):
     """
 
     def __init__(self, stat_model: stats_model,
-                 out_stream=sys.stdout,
-                 err_stream=sys.stderr,
                  verbose=2,
                  debug=0,
                  warn=1,
@@ -77,8 +82,6 @@ class fitting_procedure(logger):
         """
 
         logger.__init__(self,
-                        out_stream=out_stream,
-                        err_stream=err_stream,
                         verbose=verbose,
                         debug=debug,
                         warn=warn,
@@ -101,7 +104,7 @@ class fitting_procedure(logger):
         """Flag to see if fitting procedure has run to completion"""
         self.fitting_params = {} | self._default_params
         """A keyed dict of tuning parameters for the fitting method"""
-        self.seed = _utils.randint() if "seed" not in fit_params.keys() else fit_params['seed']
+        self.seed = np.random.randint(2 ** 32 - 1) if "seed" not in fit_params.keys() else fit_params['seed']
         """Int seed for any randomized elements in the fitting method"""
         # --------------------
 
@@ -330,7 +333,6 @@ class ICCF(fitting_procedure):
     """
 
     def __init__(self, stat_model: stats_model,
-                 out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
 
         """
@@ -387,7 +389,7 @@ class ICCF(fitting_procedure):
             w = max(self.stat_model.prior_ranges['lag']) - min(self.stat_model.prior_ranges['lag'])
             self.lags = np.random.rand(self.Nlags) * w + \
                         self.stat_model.prior_ranges['lag'][0]
-            self.lags = self.lags[np.argsort(self.lags())]
+            self.lags = self.lags[np.argsort(self.lags)]
         else:
             self.lags = jnp.linspace(*self.stat_model.prior_ranges['lag'], self.Nlags)
         # -----------------
@@ -498,7 +500,6 @@ class prior_sampling(fitting_procedure):
     """
 
     def __init__(self, stat_model: stats_model,
-                 out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
 
         """
@@ -624,7 +625,6 @@ class nested_sampling(fitting_procedure):
     """
 
     def __init__(self, stat_model: stats_model,
-                 out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
         """
         :param stats_model stat_model: Statistics model to fit for
@@ -864,8 +864,257 @@ class nested_sampling(fitting_procedure):
     def diagnostics(self, show=True) -> _types.Figure:
 
         # todo fix this to make the show work properly
+        plt.ioff()
         jaxns.plot_diagnostics(self._jaxnsresults)
-        return plt.gcf()
+        f = plt.gcf()
+        plt.ion()
+        return f
+
+
+# ------------------------------------------------------
+
+class NestedSampling(fitting_procedure):
+    """
+    Fits the Bayesian model with Nested Sampling by using JAXNS. Highly accurate evidence / posterior distributions,
+    but can be slow for models with more than a few parameters. Use only if hessian_scan and SVI_scan fail.
+    """
+
+    def __init__(self, stat_model: stats_model,
+                 verbose=True, debug=False, **fit_params):
+        """
+        :param stats_model stat_model: Statistics model to fit for
+        :param fitter_type str: Type of nested sampler to use
+        :param int Nlive: Number of live points to use in nested sampling fitting. Defaults to 500.
+        :param int max_samples: Maximum samples before terminating the run. Defaults to 10_000.
+        :param int num_parallel_samplers: Number of parallel samplers to fit with. Defaults to 1.
+        :param float evidence_uncert: Termination condition for evidence uncertainty. Default to 1E-3.
+        :param float live_evidence_frac: Termination condition for live fraction of evidence remaining. Defaults to log(1 + 1e-3).
+        """
+
+        args_in = {**locals(), **fit_params}
+        del args_in['self']
+        del args_in['__class__']
+        del args_in['fit_params']
+
+        if not hasattr(self, '_default_params'):
+            self._default_params = {}
+        self._default_params |= {
+            'fitter_type': 'JAXNS',
+            'Nlive': 500,
+            'max_samples': 100_000,
+            'max_evals': 1_000_000,
+            'num_parallel_samplers': 1,
+            'evidence_uncert': 1E-3,
+            'N_effective': 10_000,
+            'addtl_args': {}
+        }
+
+        super().__init__(**args_in)
+
+        self._sampler: NS_wrapper = None
+
+        assert self.fitter_type in _samplertypes, "Tried to make a NestedSampler fitting procedure with a bad fitter type."
+
+        # --------------------
+        # Attributes
+        self.name = "NestedSampling Fitting Procedure"
+        # --------------------
+
+    def prefit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        # ---------------------
+        fitting_procedure.prefit(**locals())
+        if seed is None: seed = _utils.randint()
+        # ---------------------
+
+        # Get uniform prior bounds
+        bounds = np.array([self.stat_model.prior_ranges[key] for key in self.stat_model.paramnames()])
+        lo, hi = jnp.array(bounds[:, 0]), jnp.array(bounds[:, 1])
+
+        data = self.stat_model.lc_to_data(lc_1, lc_2)
+
+        self.msg_debug("Constructing NS functions", lvl=1)
+
+        # Construct sampler friendly prior & likelihood
+
+        def log_likelihood(x):
+            params = _utils.dict_unpack(x, keys=self.stat_model.paramnames())
+            with numpyro.handlers.block(hide=self.stat_model.paramnames()):
+                LL = self.stat_model._log_likelihood(params, data=data)
+            return LL
+
+        if self.fitter_type == "JAXNS":
+            def prior_model():
+                x = yield jaxns.Prior(tfpd.Uniform(low=lo, high=hi), name='x')
+                return x
+        elif "dynesty" in self.fitter_type:
+            def prior_model(x):
+                x = lo + (hi - lo) * x
+                return x
+
+            # JIT manually if using dynesty
+            log_likelihood = jax.jit(log_likelihood)
+
+        else:
+            assert False, "Something wrong in sampler_type in NestedSampler prefit"
+
+        # =================
+        sampler_kwargs = {
+            'ndim': len(self.stat_model.paramnames()),
+            'Nlive': self.Nlive,
+            'num_parallel': self.num_parallel_samplers,
+            'tol': self.evidence_uncert,
+            'seed': self.seed,
+            'verbose': self.verbose,
+            'debug': self.debug,
+            'warn': self.warn,
+            'addtl_args': self.addtl_args,
+        }
+
+        try:
+            if self.fitter_type == "JAXNS":
+                self._sampler = NS_JAXNS(loglike_func=log_likelihood, prior_func=prior_model,
+                                         **sampler_kwargs)
+            elif self.fitter_type == "dynesty_static":
+                self._sampler = NS_dynestystatic(loglike_func=log_likelihood, prior_func=prior_model,
+                                                 **sampler_kwargs)
+            elif self.fitter_type == "dynesty_dynamic":
+                sampler_kwargs |= {'N_effective': self.N_effective}
+                self._sampler = NS_dynestydynamic(loglike_func=log_likelihood, prior_func=prior_model,
+                                                  **sampler_kwargs)
+            elif self.fitter_type == "polychord":
+                raise NotImplementedError("polychord Nested Sampling not implemented yet")
+        except ImportError:
+            raise ImportError("Sampler type %s has a bad import. Check your environment / versions" % self.fitter_type)
+
+        self.has_prefit = True
+
+    # --------------
+    def fit(self, lc_1: lightcurve, lc_2: lightcurve, seed: int = None):
+        # ---------------------
+        fitting_procedure.fit(**locals())
+        if seed is None: seed = _utils.randint()
+        # ---------------------
+        self.readyup()
+
+        if not self.has_prefit:
+            self.prefit(lc_1, lc_2, seed)
+
+        # ---------------------
+
+        # Run the sampler!
+        self.msg_run("Nested Starting...", lvl=1)
+        self._sampler.run()
+        self.msg_run("Nested Sampling Complete", lvl=1)
+
+        self.has_run = True
+
+    def get_samples(self, N: int = None, seed: int = None, importance_sampling: bool = False) -> {str: [float]}:
+        if seed is None: seed = self.seed
+
+        if not importance_sampling:
+            samples = self._sampler.posterior_samples(N=N, seed=seed)
+        else:
+            samples = self._sampler.live_samples[::self._sampler.Ndead // N]
+
+        # Unwrap unto a dict
+        out = {key: samples.T[i] for i, key in enumerate(self.stat_model.paramnames())}
+
+        return out
+
+    def get_evidence(self, seed: int = None, return_type='linear') -> [float, float, float]:
+        """
+        Returns the -1, 0 and +1 sigma values for model evidence from nested sampling.
+        This represents an estimate of numerical uncertainty
+        """
+
+        if seed is None: seed = _utils.randint()
+
+        l, l_e = self._sampler.log_Z_and_err
+
+        if return_type == 'linear':
+
+            out = np.exp([
+                l,
+                l - l_e,
+                l + l_e
+            ])
+
+            out -= np.array([0, out[0], out[0]])
+        elif return_type == 'log':
+            out = np.array([l, -l_e, l_e])
+        else:
+            self.msg_err(
+                "Warning! Tried to call get_evidence in %s with bad return_type. Should be 'log' or 'linear'" % self.name)
+            out = [0.0, 0.0, 0.0]
+
+        return out
+
+    def get_information(self, seed: int = None) -> [float, float, float]:
+        """
+        Use the Nested Sampling shells to estimate the model information relative to prior
+        """
+        # todo - this is outmoded
+
+        if seed is None: seed = _utils.randint()
+
+        samples, logweights = self._jaxnsresults.samples, self._jaxnsresults.log_dp_mean
+
+        weights = np.exp(logweights)
+        weights /= weights.sum()
+
+        log_density = self._jaxnsresults.log_posterior_density
+        prior_values = self.stat_model.log_prior(samples)
+
+        info = np.sum((log_density - prior_values) * weights)
+
+        partial_info = np.random.choice((log_density - prior_values), len(log_density), p=weights)
+        uncert = partial_info.std() / np.sqrt(len(log_density))
+
+        return np.array(info, uncert, uncert)
+
+    def get_peaks(self, seed: int = None) -> ({str: [float]}, float):
+
+        # todo - this is outmoded
+
+        # ---------------------
+        if seed is None: seed = _utils.randint()
+        # ---------------------
+
+        self.msg_err("get_peaks currently placeholder.")
+        return ({key: np.array([]) for key in self.stat_model.paramnames()}, np.array([]))
+
+        # ---------------------
+
+        NS = self.sampler
+        samples = self.get_samples()
+        log_densities = NS._results.log_posterior_density
+
+        # Find clusters
+        indices = clustering.clusterfind_1D(samples['lag'])
+
+        # Break samples and log-densities up into clusters
+        sorted_samples = clustering.sort_by_cluster(samples, indices)
+        sort_logdens = clustering.sort_by_cluster(log_densities, indices)
+
+        Nclusters = len(sorted_samples)
+
+        # Make an empty dictionary to store positions in
+        peak_locations = {key: np.zeros([Nclusters]) for key in samples.keys()}
+        peaklikes = np.zeros([Nclusters])
+
+        for i, group, lds in enumerate(sorted_samples, sort_logdens):
+            j = np.argmax(lds)
+            for key in samples.keys():
+                peak_locations[key][i] = group[key][j]
+            peaklikes[i] = lds[j]
+
+        return (peak_locations, peaklikes)
+
+    def diagnostics(self, show=True) -> _types.Figure:
+
+        f = self._sampler.diagnostic_plot()
+        if show: plt.show()
+        return f
 
 
 # ------------------------------------------------------
@@ -875,7 +1124,6 @@ class hessian_scan(fitting_procedure):
     """
 
     def __init__(self, stat_model: stats_model,
-                 out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
 
         """
@@ -1120,7 +1368,7 @@ class hessian_scan(fitting_procedure):
                                       addtl_kwargs={'decrease_factor': 0.25}
                                       )
         else:
-            lastscan_params=estmap_params.copy()
+            lastscan_params = estmap_params.copy()
 
         ll_end = self.stat_model.log_density(lastscan_params,
                                              data=data
@@ -1348,9 +1596,24 @@ class hessian_scan(fitting_procedure):
         # Sweep over lags
         scanned_optima, grads, Hs = [], [], []
         tols, Zs, Ints, tgrads = [], [], [], []
+
+        checksplit = (len(lags_forscan) > 1) * self.split_lags
+
+        if checksplit:
+            split_state = copy(state)
+            split_params = copy(best_params)
+            init_dlag = lags_forscan[1] - lags_forscan[0]
+
         for i, lag in enumerate(lags_forscan):
             self.msg_run(":" * 23, "Scanning at itteration %i/%i, lag=%.2f..." % (i, self.Nlags, lag), delim="\n",
                          lvl=2)
+
+            # If lags have been split and you're at the edge, reset fitting params
+            if checksplit:
+                if i >= 1 and np.sign(lags_forscan[i] - lags_forscan[i - 1]) != np.sign(init_dlag):
+                    self.msg_debug("Split lag limit has been hit. resetting state to estmap.")
+                    state = split_state
+                    best_params = split_params
 
             # Get current param site in packed-function friendly terms
             opt_params, aux_data, state = runsolver_jit(solver, best_params | {'lag': lag}, state)
@@ -1368,6 +1631,7 @@ class hessian_scan(fitting_procedure):
             if not bigdrop and not diverged:
                 self.converged[i] = True
 
+                # Storage of failure modes in order [eval, hessian, evidence]
                 is_good = [True, True, True]
 
                 # ======
@@ -1376,7 +1640,7 @@ class hessian_scan(fitting_procedure):
                     uncon_params = self.stat_model.to_uncon(opt_params)
                     log_height = self.stat_model.log_density_uncon(uncon_params, data)
                 except:
-                    self.msg_err("Undermined error at slice %i, Discarding" % i, lvl=2)
+                    self.msg_err("Undetermined error at slice %i, Discarding" % i, lvl=2)
                     is_good[0] = False
 
                 # ======
@@ -1589,12 +1853,13 @@ class hessian_scan(fitting_procedure):
             a.axvspan(mu - width * 2, mu + width * 2, alpha=0.15, zorder=-10, color="navy")
 
             a.axvline(self.estmap_params["lag"], ls='--', c="lightsalmon", label="Peak location for make_grid")
-            a.axhline(logZ_forint.max(), ls='--', c="navy", label="Max Z")
+            a.axhline(Y.max(), ls='--', c="navy", label="Max Z")
             a.grid()
+
         plt.xlabel("Lag (days)")
         a1.set_xlim(*self.stat_model.prior_ranges["lag"])
         a1.set_ylabel("Density")
-        a1.set_ylabel("Log Density")
+        a2.set_ylabel("Log Density")
         a2.set_yscale('log')
         a1.legend()
         f.text(.5, -.05,
@@ -1708,7 +1973,6 @@ class hessian_scan(fitting_procedure):
                 uncert_tol = np.square(dZ * logZ_uncert_forint).sum()
                 uncert_tol = np.sqrt(uncert_tol)
                 uncert_tol *= np.exp(dlogZ.max())
-
 
             elif self.interp_scale == 'log':
                 # dZ = dXdY/dln|Y|
@@ -1852,7 +2116,6 @@ class SVI_scan(hessian_scan):
     """
 
     def __init__(self, stat_model: stats_model,
-                 out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, warn=1, **fit_params):
 
         """
@@ -2148,7 +2411,6 @@ class JAVELIKE(fitting_procedure):
     """
 
     def __init__(self, stat_model: stats_model,
-                 out_stream=sys.stdout, err_stream=sys.stderr,
                  verbose=True, debug=False, **fit_params):
 
         """

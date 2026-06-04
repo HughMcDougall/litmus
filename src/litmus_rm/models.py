@@ -49,6 +49,14 @@ def quickprior(targ, key) -> float:
     return out
 
 
+def quickprior_doublewide(targ, key, r=2) -> float:
+    p = targ.prior_ranges[key]
+    a, b = float(p[1]) / 2 + float(p[0]) / 2, float(p[1]) / 2 - float(p[0]) / 2
+    distrib = dist.Uniform(a - r * b, a + r * b) if p[0] != p[1] else dist.Delta(a)
+    out = numpyro.sample(key, distrib)
+    return out
+
+
 # ============================================
 #
 
@@ -80,13 +88,11 @@ class stats_model(logger):
     """
 
     def __init__(self, prior_ranges=None,
-                 out_stream=sys.stdout,
-                 err_stream=sys.stderr,
                  verbose=True,
                  debug=False,
                  warn=1
                  ):
-        logger.__init__(self, out_stream=out_stream, err_stream=err_stream, verbose=verbose, debug=debug, warn=warn)
+        logger.__init__(self, verbose=verbose, debug=debug, warn=warn)
 
         self._protected_keys = []
 
@@ -166,12 +172,12 @@ class stats_model(logger):
             self.__setattr__(name + "_jit", jitted_func)
             self.__setattr__(name + "_grad", graded_func)
             self.__setattr__(name + "_hess", hessed_func)
+
         # ------------------
         # Aux functions
-        self.gen_lightcurve = self._gen_lightcurve
+        self.gen_lightcurve = jax.jit(self._gen_lightcurve)
 
         ## --------------------------------------
-
 
     def set_priors(self, prior_ranges: dict) -> None:
         """
@@ -689,7 +695,8 @@ class stats_model(logger):
     # --------------------------------
     # Wrapped evaluation utilities
 
-    def _scanner(self, data, optim_params=None, use_vmap=False, optim_kwargs={}, return_aux=False, precondition='diag'):
+    def _scanner(self, data, optim_params=None, use_vmap=False, optim_kwargs={}, return_aux=False, precondition='diag',
+                 solvertype="BFGS"):
         """
         Creates a black-box jitted optimizer for when we want to perform many scans in a row
         """
@@ -779,7 +786,8 @@ class stats_model(logger):
         optfunc = _utils.pack_function(self._log_density_uncon,
                                        packed_keys=optim_params,
                                        fixed_values={},
-                                       invert=True)
+                                       invert=True,
+                                       )
 
         # Build and run an optimizer
         solver = jaxopt.BFGS(fun=optfunc,
@@ -804,6 +812,47 @@ class stats_model(logger):
             return solver, runsolver, [converter, deconverter, optfunc, runsolver_jit]
         else:
             return solver, runsolver
+
+    def precon_matrix(self, params, data, precondition, keys=None):
+        if keys is None: keys = self.free_params()
+        H = self.log_density_uncon_hess(params, data, keys=keys)
+        H *= -1
+
+        if precondition == "cholesky":
+            H = np.linalg.cholesky(np.linalg.inv(H))
+            Hinv = np.linalg.inv(H)
+
+        elif precondition == "eig":
+            D, P = np.linalg.eig(H)
+            if D.min() < 0:
+                D[np.where(D < 0)[0].min()] = 1.0
+            D, P = D.astype(float), P.astype(float)
+            D **= -0.5
+
+            H = np.dot(P, np.dot(np.diag(D), P.T))
+            Hinv = np.dot(P, np.dot(np.diag(D ** -1), P.T))
+
+        elif precondition == "half-eig":
+            D, P = np.linalg.eig(H)
+            if D.min() < 0:
+                D[np.where(D < 0)[0].min()] = 1.0
+            D, P = D.astype(float), P.astype(float)
+            D **= -0.5
+
+            H = np.dot(P, np.diag(D))
+            Hinv = np.dot(np.diag(D ** -1), P.T)
+
+        elif precondition == "diag":
+            D = np.diag(H) ** -0.5
+            D = np.where(D > 0, D, 1.0)
+            H = np.diag(D)
+            Hinv = np.diag(1 / D)
+
+        else:
+            H = np.eye(len(keys))
+            Hinv = np.eye(len(keys))
+
+        return H, Hinv
 
     def scan(self, start_params: dict[str:float], data: _types.Any, optim_params: [str] = None, use_vmap: bool = False,
              optim_kwargs: dict[str:float] = {},
@@ -875,42 +924,7 @@ class stats_model(logger):
 
         # -------------------------------------
         # Build preconditioning matrix
-        H = self.log_density_uncon_hess(start_params_uncon, data, keys=optim_params)
-        H *= -1
-
-        if precondition == "cholesky":
-            H = np.linalg.cholesky(np.linalg.inv(H))
-            Hinv = np.linalg.inv(H)
-
-        elif precondition == "eig":
-            D, P = np.linalg.eig(H)
-            if D.min() < 0:
-                D[np.where(D < 0)[0].min()] = 1.0
-            D, P = D.astype(float), P.astype(float)
-            D **= -0.5
-
-            H = np.dot(P, np.dot(np.diag(D), P.T))
-            Hinv = np.dot(P, np.dot(np.diag(D ** -1), P.T))
-
-        elif precondition == "half-eig":
-            D, P = np.linalg.eig(H)
-            if D.min() < 0:
-                D[np.where(D < 0)[0].min()] = 1.0
-            D, P = D.astype(float), P.astype(float)
-            D **= -0.5
-
-            H = np.dot(P, np.diag(D))
-            Hinv = np.dot(np.diag(D ** -1), P.T)
-
-        elif precondition == "diag":
-            D = np.diag(H) ** -0.5
-            D = np.where(D > 0, D, 1.0)
-            H = np.diag(D)
-            Hinv = np.diag(1 / D)
-
-        else:
-            H = np.eye(len(optim_params))
-            Hinv = np.eye(len(optim_params))
+        H, Hinv = self.precon_matrix(start_params_uncon, data, precondition, keys=optim_params)
 
         if solver == "BFGS":
             if np.any(np.isnan(H)) or np.any(np.isnan(Hinv)):
@@ -1146,7 +1160,7 @@ class stats_model(logger):
             params = {key: params[key][0] for key in params.keys()}
         return params
 
-    def realization(self, data=None, num_samples: int = 1, seed: int = None):
+    def realization(self, data=None, params=None, num_samples: int = 1, seed: int = None):
         """
         Generates realizations of the observables by blindly sampling from the prior
         :param data: data to condition the lightcurve on
@@ -1156,7 +1170,11 @@ class stats_model(logger):
         """
         if seed == None: seed = _utils.randint()
 
+        if params is None:
+            params = self.prior_sample(num_samples=num_samples, seed=seed)
+
         pred = numpyro.infer.Predictive(self.model_function,
+                                        posterior_samples=params,
                                         num_samples=num_samples,
                                         return_sites=None
                                         )
@@ -1484,6 +1502,57 @@ class GP_simple(stats_model):
         return out, ll_out
 
 
+class GP_simple_constraineddomain(GP_simple):
+    def prior(self) -> list[float, float, float, float, float, float]:
+        # Sample distributions
+        lag = quickprior_doublewide(self, 'lag')
+
+        logtau = quickprior_doublewide(self, 'logtau')
+        logamp = quickprior_doublewide(self, 'logamp')
+
+        rel_amp = quickprior_doublewide(self, 'rel_amp')
+        mean = quickprior_doublewide(self, 'mean')
+        rel_mean = quickprior_doublewide(self, 'rel_mean')
+
+        # -----------
+        return lag, logtau, logamp, rel_amp, mean, rel_mean
+
+    def model_function(self, data) -> None:
+        lag, logtau, logamp, rel_amp, mean, rel_mean = self.prior()
+
+        T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
+
+        # Conversions to gp-friendly form
+        amp, tau = jnp.exp(logamp), jnp.exp(logtau)
+
+        diag = jnp.square(E)
+
+        delays = jnp.array([0, lag])
+        amps = jnp.array([amp, rel_amp * amp])
+        means = jnp.array([mean, mean + rel_mean])
+
+        T_delayed = T - delays[bands]
+        I = T_delayed.argsort()
+
+        # Build and sample GP
+
+        gp = gpw.build_gp(T_delayed[I], Y[I], diag[I], bands[I], tau, amps, means, basekernel=self.basekernel)
+        numpyro.sample("Y", gp.numpyro_dist(), obs=Y[I])
+
+        p = {'lag': lag,
+             'logtau': logtau,
+             'logamp': logamp,
+             'rel_amp': rel_amp,
+             'mean': mean,
+             'rel_mean': rel_mean
+             }
+
+        for key, val in p.items():
+            cond = (val > self.prior_ranges[key][0]) * (val < self.prior_ranges[key][1])
+            out = jax.lax.cond(cond, lambda: 0.0, lambda: -1E10)
+            numpyro.factor("ll_" + key, out)
+
+
 # ------------------
 class GP_simple_null(GP_simple):
     """
@@ -1564,7 +1633,7 @@ class GP_simple_null(GP_simple):
         return loc1, loc2, var1, var2
 
 
-class whitenoise_null(GP_simple_null):
+class GP_whitenoise(GP_simple_null):
 
     def model_function(self, data) -> None:
         lag, logtau, logamp, rel_amp, mean, rel_mean = self.prior()
@@ -1673,3 +1742,223 @@ class GP_simple_normalprior(GP_simple):
         tform = jax.grad(tform)
         out = np.log(abs(tform(lag_con)))
         return out
+
+
+# =================================================
+# GP_JITTER
+# =================================================
+class GP_jitter(GP_simple):
+    # --------------------
+
+    def __init__(self, prior_ranges=None, **kwargs):
+        self._default_prior_ranges = {
+            'jitter_1': np.array([0.0, 1.0]),
+            'jitter_2': np.array([0.0, 1.0])
+        }
+        super().__init__(prior_ranges=prior_ranges, **kwargs)
+
+    def prior(self) -> list[float, float, float, float, float, float, float, float]:
+        # Sample distributions
+        lag, logtau, logamp, rel_amp, mean, rel_mean = super().prior()
+
+        jitter_1 = quickprior(self, 'jitter_1')
+        jitter_2 = quickprior(self, 'jitter_2')
+
+        return lag, logtau, logamp, rel_amp, mean, rel_mean, jitter_1, jitter_2
+
+    def model_function(self, data) -> None:
+        lag, logtau, logamp, rel_amp, mean, rel_mean, jitter_1, jitter_2 = self.prior()
+
+        T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
+
+        # Conversions to gp-friendly form
+        amp, tau = jnp.exp(logamp), jnp.exp(logtau)
+
+        diag = jnp.square(E)
+
+        delays = jnp.array([0, lag])
+
+        a1, a2 = amp, rel_amp * amp
+
+        jitter_diag = jnp.array([jitter_1 * a1, jitter_2 * a2])
+        jitter_diag = jnp.square(jitter_diag)
+
+        amps = jnp.array([a1, a2])
+        amps = jnp.square(amps) - jitter_diag
+        amps = jnp.sqrt(amps)
+
+        means = jnp.array([mean, mean + rel_mean])
+
+        diag += jitter_diag[bands]
+
+        T_delayed = T - delays[bands]
+        I = T_delayed.argsort()
+
+        # Build and sample GP
+
+        gp = gpw.build_gp(T_delayed[I], Y[I], diag[I], bands[I], tau, amps, means, basekernel=self.basekernel)
+        numpyro.sample("Y", gp.numpyro_dist(), obs=Y[I])
+
+
+class GP_jitter_null(GP_simple_null):
+    # --------------------
+
+    def __init__(self, prior_ranges=None, **kwargs):
+        self._default_prior_ranges = {
+            'jitter_1': np.array([0.0, 1.0]),
+            'jitter_2': np.array([0.0, 1.0])
+        }
+        super().__init__(prior_ranges=prior_ranges, **kwargs)
+
+    def prior(self) -> list[float, float, float, float, float, float, float, float]:
+        # Sample distributions
+        lag, logtau, logamp, rel_amp, mean, rel_mean = super().prior()
+
+        jitter_1 = quickprior(self, 'jitter_1')
+        jitter_2 = quickprior(self, 'jitter_2')
+
+        return lag, logtau, logamp, rel_amp, mean, rel_mean, jitter_1, jitter_2
+
+    def model_function(self, data) -> None:
+        lag, logtau, logamp, rel_amp, mean, rel_mean, jitter_1, jitter_2 = self.prior()
+
+        T1, Y1, E1 = [data[key] for key in ['T1', 'Y1', 'E1']]
+        T2, Y2, E2 = [data[key] for key in ['T2', 'Y2', 'E2']]
+
+        # Conversions to gp-friendly form
+        amp, tau = jnp.exp(logamp), jnp.exp(logtau)
+
+        diag1, diag2 = jnp.square(E1) + jnp.square(jitter_1 * amp), jnp.square(E2) + jnp.square(
+            jitter_2 * amp * rel_amp)
+
+        # amps = jnp.array([amp, rel_amp * amp])
+        # means = jnp.array([mean, mean + rel_mean])
+        Y1 -= mean
+        Y2 -= (mean + rel_mean)
+
+        # Build and sample GP
+        kernel1 = tinygp.kernels.quasisep.Exp(scale=tau, sigma=amp * jnp.sqrt(1 - jnp.square(jitter_1)))
+        kernel2 = tinygp.kernels.quasisep.Exp(scale=tau, sigma=amp * rel_amp * jnp.sqrt(1 - jnp.square(jitter_2)))
+
+        gp1 = tinygp.GaussianProcess(kernel1, T1, diag=diag1)
+        gp2 = tinygp.GaussianProcess(kernel2, T2, diag=diag2)
+        numpyro.sample("Y1", gp1.numpyro_dist(), obs=Y1)
+        numpyro.sample("Y2", gp2.numpyro_dist(), obs=Y2)
+
+
+# =================================================
+# GP_TOPHAT
+# =================================================
+class GP_tophat(GP_simple):
+    def __init__(self, **kwargs):
+        self._default_prior_ranges = {
+            'logw_tophat': [-2.30258509, 5.70378247],
+        }
+        super().__init__(**kwargs)
+
+    def prior(self) -> list[float, float, float, float, float, float, float]:
+        lag, logtau, logamp, rel_amp, mean, rel_mean = super().prior()
+        logw_tophat = quickprior(self, 'logw_tophat')
+
+        return lag, logtau, logamp, rel_amp, mean, rel_mean, logw_tophat
+
+    def model_function(self, data) -> None:
+        lag, logtau, logamp, rel_amp, mean, rel_mean, logw_tophat = self.prior()
+
+        T, Y, E, bands = [data[key] for key in ['T', 'Y', 'E', 'bands']]
+
+        # Conversions to gp-friendly form
+        amp, tau, w_tophat = jnp.exp(logamp), jnp.exp(logtau), jnp.exp(logw_tophat)
+
+        diag = jnp.square(E)
+
+        delays = jnp.array([0, lag + w_tophat / 2])
+        # amps = jnp.array([amp, rel_amp * amp])
+        means = jnp.array([mean, mean + rel_mean])
+
+        Y -= means[bands]
+
+        T_delayed = T - delays[bands]
+        I = T_delayed.argsort()
+
+        # Build and sample GP
+        # meanf = lambda X: gpw.mean_func(means, X)
+
+        kern = gpw.DRW_tophat(amp1=amp, amp2=rel_amp * amp, tau=tau, w_tophat=w_tophat)
+        gp = tinygp.GaussianProcess(kern, (T_delayed[I], bands[I]), diag=diag[I])
+        numpyro.sample("Y", gp.numpyro_dist(), obs=Y[I])
+
+
+# -------------------------------------------------------------------------
+class GP_tophat_null(GP_simple_null):
+
+    def __init__(self, **kwargs):
+        self._default_prior_ranges = {
+            'logw_tophat': [-2.30258509, 5.70378247],
+        }
+        super().__init__(**kwargs)
+
+    def prior(self) -> list[float, float, float, float, float, float, float]:
+        lag, logtau, logamp, rel_amp, mean, rel_mean = super().prior()
+        logw_tophat = quickprior(self, 'logw_tophat')
+
+        return lag, logtau, logamp, rel_amp, mean, rel_mean, logw_tophat
+
+    def model_function(self, data) -> None:
+        lag, logtau, logamp, rel_amp, mean, rel_mean, logw_tophat = self.prior()
+
+        T1, Y1, E1 = [data[key] for key in ['T1', 'Y1', 'E1']]
+        T2, Y2, E2 = [data[key] for key in ['T2', 'Y2', 'E2']]
+
+        bands1 = jnp.zeros(len(T1))
+        bands2 = jnp.ones(len(T2))
+
+        # Conversions to gp-friendly form
+        amp, tau, w_tophat = jnp.exp(logamp), jnp.exp(logtau), jnp.exp(logw_tophat)
+
+        # amps = jnp.array([amp, rel_amp * amp])
+        # means = jnp.array([mean, mean + rel_mean])
+        Y1 -= mean
+        Y2 -= (mean + rel_mean)
+
+        # Build and sample GP
+
+        diag1, diag2 = jnp.square(E1), jnp.square(E2)
+
+        kern1 = gpw.DRW_tophat(amp1=amp, amp2=amp, tau=tau, w_tophat=w_tophat)
+        gp1 = tinygp.GaussianProcess(kern1, (T1, bands1), diag=diag1)
+
+        kern2 = gpw.DRW_tophat(amp1=rel_amp * amp, amp2=rel_amp * amp, tau=tau, w_tophat=w_tophat)
+        gp2 = tinygp.GaussianProcess(kern2, (T2, bands2), diag=diag2)
+
+        numpyro.sample("Y1", gp1.numpyro_dist(), obs=Y1)
+        numpyro.sample("Y2", gp2.numpyro_dist(), obs=Y2)
+
+
+# -------------------------------------------------------------------------
+class whitenoise(GP_whitenoise):
+
+    def __init__(self, prior_ranges=None, **kwargs):
+        self._default_prior_ranges = {
+            'logtau': [0.0, 0.0]
+        }
+        super().__init__(prior_ranges=prior_ranges, **kwargs)
+
+    def model_function(self, data) -> None:
+        lag, logtau, logamp, rel_amp, mean, rel_mean = self.prior()
+
+        T1, Y1, E1 = [data[key] for key in ['T1', 'Y1', 'E1']]
+        T2, Y2, E2 = [data[key] for key in ['T2', 'Y2', 'E2']]
+
+        amp = jnp.exp(logamp)
+
+        # Build and sample GP
+        with numpyro.plate("whitenoise_cont", len(Y1)):
+            numpyro.sample('Y1',
+                           dist.Normal(mean, jnp.sqrt(amp ** 2 + E1 ** 2)),
+                           obs=Y1)
+
+        with numpyro.plate("whitenoise_resp", len(Y2)):
+            numpyro.sample('Y2',
+                           dist.Normal(mean + rel_mean, jnp.sqrt((amp * rel_amp) ** 2 + E2 ** 2)),
+                           obs=Y2)

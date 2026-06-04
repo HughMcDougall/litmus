@@ -13,13 +13,15 @@ import jax.numpy as jnp
 import jax
 
 from contextlib import contextmanager
-from IPython import get_ipython
-from IPython.utils import io
+try:
+    from IPython import get_ipython
+    from IPython.utils import io
+except ImportError:
+    print("Warning! Some error messages may appear if running in Jupyter Notebook.", file=sys.stderr)
 import sys, os
 from copy import copy
 
 import litmus_rm._types as _types
-
 from scipy.special import jnp_zeros
 
 # ============================================

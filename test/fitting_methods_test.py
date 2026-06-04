@@ -5,7 +5,7 @@ if __name__ == "__main__":
     from litmus_rm import mocks
 
     import matplotlib.pyplot as plt
-    from litmus_rm.models import dummy_statmodel
+    from litmus_rm.models import GP_simple as dummy_statmodel
 
     #::::::::::::::::::::
 
