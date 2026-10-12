@@ -29,7 +29,7 @@ from litmus_rm.lightcurve import lightcurve
 # ===================================================
 
 def mock_cadence(maxtime, seed: int = 0, cadence: float = 7, cadence_var: float = 1, season: float = 180,
-                 season_var: float = 14, N: int = 1024):
+                 season_var: float = 14, Nobs_test: int = 1024):
     """
     Returns time series X values for a mock signal
     :param maxtime: Length of simulation
@@ -38,45 +38,45 @@ def mock_cadence(maxtime, seed: int = 0, cadence: float = 7, cadence_var: float 
     :param cadence_var: Standard deviation of the cadence
     :param season: Average length of the observation season (default 180 days)
     :param season_var: Standard deviation of the season length (default 14 days)
-    :param N: Number of observations used prior to trimming. This is auto-tuned and is deprecated
+    :param Nobs_test: Number of observations used prior to trimming. This is auto-tuned and is deprecated
 
     :return: returns as array of sample times
     """
 
     np.random.seed(seed)
 
-    assert N > 0, "Invalid N. Must be <=0"
+    assert Nobs_test > 0, "Invalid Nobs_test. Must be >0, you supplied %s" % Nobs_test
 
-    # Generate Measurements
+    # Generate Measurement times
     while True:
-        diffs = np.random.randn(N) * cadence_var / np.sqrt(2) + cadence
-        T = np.cumsum(diffs)
-        if T.max() <= maxtime:
-            N *= 2
+        diffs = np.random.randn(Nobs_test) * cadence_var / np.sqrt(2) + cadence
+        T_obs = np.cumsum(diffs)
+        if T_obs.max() <= maxtime:
+            Nobs_test *= 2
         else:
             break
-    T = T[np.where((T < (maxtime * 2)))[0]]
-    T += np.random.randn(len(T)) * cadence_var / np.sqrt(2)
+    T_obs = T_obs[np.where((T_obs < (maxtime * 2)))[0]]
+    T_obs += np.random.randn(len(T_obs)) * cadence_var / np.sqrt(2)
 
     # Make windowing function
     if season is not None and season != 0:
 
         no_seasons = int(maxtime / season)
-        window = np.zeros(len(T))
+        window = np.zeros(len(T_obs))
         for n in range(no_seasons):
-            if n % 2 == 0: continue
-            tick = np.tanh((T - season * n) / season_var)
-            tick -= np.tanh((T - season * (n + 1)) / season_var)
+            if n % 2 == 1: continue
+            tick = np.tanh((T_obs - season * n) / season_var)
+            tick -= np.tanh((T_obs - season * (n + 1)) / season_var)
             tick /= 2
             window += tick
 
         R = np.random.rand(len(window))
 
-        T = T[np.where((R < window) * (T < maxtime))[0]]
+        T_obs = T_obs[np.where((R < window) * (T_obs < maxtime))[0]]
     else:
-        T = T[np.where(T < maxtime)[0]]
+        T_obs = T_obs[np.where(T_obs < maxtime)[0]]
 
-    return (T)
+    return (T_obs)
 
 
 def subsample(T: _types.ArrayN, Y: _types.ArrayN, Tsample: _types.ArrayN) -> _types.ArrayN:
@@ -171,7 +171,7 @@ class mock(logger):
 
         self.seed: int = seed
         self.lc, self.lc_1, self.lc_2 = None, None, None
-        self.lag:float = 0.0
+        self.lag: float = 0.0
         kwargs = defaultkwargs | kwargs
         self.args = {}
 
@@ -194,8 +194,9 @@ class mock(logger):
         :param seed: seed for random generation
         :return: Array tuple (T,Y), underlying curve extending to maxtime + 2 * lag
         """
-        T = np.linspace(-self.lag*2, self.maxtime + self.lag * 2, self.N)
+        T = np.linspace(0, self.maxtime + self.lag * 4, self.N)
         Y = gp_realization(T, tau=self.tau, seed=seed).Y
+        T -= self.lag * 2
         self.lc = lightcurve(T, Y)  # .trim(Tmin=0, Tmax=self.maxtime)
         return (T, Y)
 
@@ -211,10 +212,10 @@ class mock(logger):
 
         T1 = mock_cadence(self.maxtime, seed, cadence=self.cadence[0], cadence_var=self.cadence_var[0],
                           season=self.season, season_var=self.season_var,
-                          N=self.N)
+                          Nobs_test=int(self.maxtime / self.cadence[0]) * 2)
         T2 = mock_cadence(self.maxtime, seed, cadence=self.cadence[1], cadence_var=self.cadence_var[1],
                           season=self.season, season_var=self.season_var,
-                          N=self.N)
+                          Nobs_test=int(self.maxtime / self.cadence[1]) * 2)
 
         Y1, Y2 = subsample(T, Y, T1), subsample(T + self.lag, Y, T2)
         E1, E2 = [np.random.randn(len(x)) * ev + e for x, ev, e in zip([T1, T2], self.E_var, self.E)]
@@ -229,7 +230,7 @@ class mock(logger):
 
     def copy(self, seed: int = None, **kwargs) -> _types.Self:
         """
-        Returns a copy of the mock while over-writing certain params.
+        Returns a copy of the mock while over-writing certain params_med.
         :param seed: int seed for random generation
         :param kwargs: kwargs to pass to the new lightcurve object, will overwrite self.kwargs in the copy
         :return: A copy of self with kwargs and seed changed accordingly
@@ -275,7 +276,7 @@ class mock(logger):
         c0, c1, c2 = 'k', 'royalblue', 'orchid'
         # -----------------
         # Plot underlying curves
-        true_args = {'lw': 0.5, 'c': [c1, c2], 'alpha': 0.3, 'label': ['True Signal', 'Response'],
+        true_args = {'lw': 0.5, 'c': [c1, c2], 'alpha': 0.3, 'label': ['True Cont.', 'True Resp.'],
                      } | true_args
         true_args_1 = true_args.copy()
         true_args_2 = true_args.copy()
@@ -298,7 +299,7 @@ class mock(logger):
         # -----------------
         # Plot errorbars
         series_args = {'c': [c1, c2], 'alpha': 1.0, 'capsize': 2, 'lw': 1.5,
-                       'label': ["Signal", "Response"]} | series_args
+                       'label': ["Cont. Obs", "Resp. Obs"]} | series_args
         series_args_1 = series_args.copy()
         series_args_2 = series_args.copy()
 
@@ -374,7 +375,7 @@ class mock(logger):
         """
         Utility function for returning the two observed lightcurve, e.g. for fitter.fit(*mock.lcs())
         """
-        return(self.lc_1, self.lc_2)
+        return (self.lc_1, self.lc_2)
 
 
 # ================================================

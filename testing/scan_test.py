@@ -16,7 +16,7 @@ import matplotlib
 import numpy as np
 
 import numpyro
-from jax.experimental.jax2tf.examples.mnist_lib import step_size
+#from jax.experimental.jax2tf.examples.mnist_lib import step_size
 from numpyro import distributions as dist
 from tinygp import GaussianProcess
 # from numpyro.contrib.nested_sampling import NestedSampler
@@ -30,7 +30,7 @@ from litmus_rm import models
 from litmus_rm.models import _default_config
 from litmus_rm.ICCF_working import *
 from litmus_rm import _utils
-from litmus_rm.models import stats_model, dummy_statmodel, GP_simple
+from litmus_rm.models import stats_model, GP_simple
 from litmus_rm.fitting_methods import hessian_scan
 from litmus_rm.mocks import mock, mock_A, mock_B, mock_C
 
